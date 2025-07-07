@@ -1,0 +1,243 @@
+export interface Campaign {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  images?: string[];
+  video?: string;
+  targetAmount: number;
+  currentAmount: number;
+  category: 'urgence' | 'education' | 'sante' | 'developpement' | 'refugies';
+  location: string;
+  endDate: string;
+  impact: string;
+  beneficiaries: number;
+  status: 'active' | 'completed' | 'upcoming';
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  points: number;
+  totalDonations: number;
+  joinDate: string;
+  preferences: {
+    notifications: boolean;
+    newsletter: boolean;
+    language: 'fr' | 'en' | 'ar';
+  };
+}
+
+export interface Transaction {
+  id: string;
+  type: 'donation' | 'zakat' | 'investment' | 'takaful';
+  amount: number;
+  campaignId?: string;
+  description: string;
+  date: string;
+  status: 'completed' | 'pending' | 'failed';
+}
+
+export interface TakafulProduct {
+  id: string;
+  name: string;
+  description: string;
+  monthlyPremium: number;
+  coverage: string;
+  features: string[];
+  category: 'sante' | 'automobile' | 'habitation' | 'vie';
+}
+
+export interface InvestmentProduct {
+  id: string;
+  name: string;
+  description: string;
+  expectedReturn: number;
+  riskLevel: 'faible' | 'modere' | 'eleve';
+  minInvestment: number;
+  duration: string;
+  category: 'immobilier' | 'agriculture' | 'technologie' | 'energie';
+}
+
+// Données fictives
+export const campaigns: Campaign[] = [
+  {
+    id: '1',
+    title: 'Aide d\'urgence pour les réfugiés syriens',
+    description: 'Soutien vital pour les familles déplacées en Turquie et au Liban',
+    image: 'https://images.unsplash.com/photo-1724349620843-99aba60eab8d?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    images: [
+      'https://images.unsplash.com/photo-1724349620843-99aba60eab8d?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=600&fit=crop'
+    ],
+    video: 'https://youtu.be/31XuSE4QOl8?si=nEritLEIM3b5rqUj',
+    targetAmount: 50000,
+    currentAmount: 32450,
+    category: 'refugies',
+    location: 'Turquie, Liban',
+    endDate: '2024-12-31',
+    impact: 'Aide alimentaire et médicale pour 500 familles',
+    beneficiaries: 2500,
+    status: 'active'
+  },
+  {
+    id: '2',
+    title: 'Construction d\'une école au Mali',
+    description: 'Bâtir l\'avenir avec une école primaire moderne',
+    image: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&h=600&fit=crop',
+    targetAmount: 75000,
+    currentAmount: 45600,
+    category: 'education',
+    location: 'Mali',
+    endDate: '2025-11-30',
+    impact: 'Éducation pour 200 enfants',
+    beneficiaries: 200,
+    status: 'active'
+  },
+  {
+    id: '3',
+    title: 'Centre médical mobile au Bangladesh',
+    description: 'Soins de santé primaires pour les communautés rurales',
+    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&h=600&fit=crop',
+    targetAmount: 30000,
+    currentAmount: 18900,
+    category: 'sante',
+    location: 'Bangladesh',
+    endDate: '2024-10-15',
+    impact: 'Soins pour 1000 patients',
+    beneficiaries: 1000,
+    status: 'active'
+  },
+  {
+    id: '4',
+    title: 'Microcrédits pour entrepreneurs',
+    description: 'Soutenir les petites entreprises locales',
+    image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=600&fit=crop',
+    targetAmount: 100000,
+    currentAmount: 67800,
+    category: 'developpement',
+    location: 'Sénégal',
+    endDate: '2024-12-15',
+    impact: 'Soutien à 50 entrepreneurs',
+    beneficiaries: 50,
+    status: 'active'
+  }
+];
+
+export const currentUser: User = {
+  id: '1',
+  name: 'Vadjeneka Meite',
+  email: 'vadjeneka.meite@email.com',
+  avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+  points: 1250,
+  totalDonations: 850,
+  joinDate: '2023-03-15',
+  preferences: {
+    notifications: true,
+    newsletter: true,
+    language: 'fr'
+  }
+};
+
+export const transactions: Transaction[] = [
+  {
+    id: '1',
+    type: 'donation',
+    amount: 100,
+    campaignId: '1',
+    description: 'Don pour les réfugiés syriens',
+    date: '2024-01-15',
+    status: 'completed'
+  },
+  {
+    id: '2',
+    type: 'zakat',
+    amount: 250,
+    description: 'Zakat annuelle',
+    date: '2024-01-10',
+    status: 'completed'
+  },
+  {
+    id: '3',
+    type: 'investment',
+    amount: 500,
+    description: 'Investissement immobilier halal',
+    date: '2024-01-05',
+    status: 'completed'
+  }
+];
+
+export const takafulProducts: TakafulProduct[] = [
+  {
+    id: '1',
+    name: 'Takaful Santé Premium',
+    description: 'Couverture santé complète pour toute la famille',
+    monthlyPremium: 45,
+    coverage: 'Jusqu\'à 50,000XOF par an',
+    features: ['Consultations illimitées', 'Hospitalisation', 'Médicaments', 'Chirurgie'],
+    category: 'sante'
+  },
+  {
+    id: '2',
+    name: 'Takaful Automobile',
+    description: 'Protection complète pour votre véhicule',
+    monthlyPremium: 35,
+    coverage: 'Valeur du véhicule',
+    features: ['Accidents', 'Vol', 'Incendie', 'Assistance routière'],
+    category: 'automobile'
+  },
+  {
+    id: '3',
+    name: 'Takaful Habitation',
+    description: 'Sécurisez votre logement',
+    monthlyPremium: 25,
+    coverage: 'Valeur du bien',
+    features: ['Incendie', 'Vol', 'Dégâts des eaux', 'Responsabilité civile'],
+    category: 'habitation'
+  }
+];
+
+export const investmentProducts: InvestmentProduct[] = [
+  {
+    id: '1',
+    name: 'Fonds Immobilier Éthique',
+    description: 'Investissement dans des projets immobiliers halal',
+    expectedReturn: 8.5,
+    riskLevel: 'modere',
+    minInvestment: 1000,
+    duration: '5-10 ans',
+    category: 'immobilier'
+  },
+  {
+    id: '2',
+    name: 'Agriculture Durable',
+    description: 'Soutien aux projets agricoles éthiques',
+    expectedReturn: 6.2,
+    riskLevel: 'faible',
+    minInvestment: 500,
+    duration: '3-5 ans',
+    category: 'agriculture'
+  },
+  {
+    id: '3',
+    name: 'Tech Verte',
+    description: 'Investissement dans les technologies vertes',
+    expectedReturn: 12.0,
+    riskLevel: 'eleve',
+    minInvestment: 2000,
+    duration: '7-12 ans',
+    category: 'technologie'
+  }
+];
+
+export const zakatCategories = [
+  { name: 'Or et argent', rate: 2.5, description: '2.5% de la valeur totale' },
+  { name: 'Épargnes bancaires', rate: 2.5, description: '2.5% du solde' },
+  { name: 'Actions et investissements', rate: 2.5, description: '2.5% de la valeur' },
+  { name: 'Revenus locatifs', rate: 2.5, description: '2.5% des revenus' },
+  { name: 'Commerce', rate: 2.5, description: '2.5% de la valeur des stocks' }
+]; 
