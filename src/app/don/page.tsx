@@ -143,7 +143,7 @@ export default function DonPage() {
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
               Faire un <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-800 to-green-600">Don</span>
             </h1>
-            <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-gray-700 mb-12 max-w-3xl mx-auto leading-relaxed">
               Soutenez des causes importantes et faites une différence dans la vie des autres. 
               Chaque don compte pour construire un monde meilleur.
             </p>
@@ -195,12 +195,12 @@ export default function DonPage() {
                   >
                     <div className="text-center">
                       <h2 className="text-3xl font-bold text-gray-900 mb-4">Choisissez le montant</h2>
-                      <p className="text-gray-600">Sélectionnez le montant que vous souhaitez donner</p>
+                      <p className="text-gray-700">Sélectionnez le montant que vous souhaitez donner</p>
                     </div>
 
                     <div className="space-y-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                        <label className="block text-sm font-medium text-gray-800 mb-3">
                           Montant en XOF
                         </label>
                         <div className="relative">
@@ -209,17 +209,17 @@ export default function DonPage() {
                             value={donationAmount}
                             onChange={(e) => setDonationAmount(e.target.value)}
                             placeholder="0"
-                            className="w-full px-6 py-4 text-2xl font-bold border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
+                            className="w-full px-6 py-4 text-2xl font-bold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
                             title="Montant du don"
                           />
-                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium">
+                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
                             XOF
                           </div>
                         </div>
                       </div>
 
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-3">Montants rapides</p>
+                        <p className="text-sm font-medium text-gray-800 mb-3">Montants rapides</p>
                         <div className="grid grid-cols-3 gap-3">
                           {quickAmounts.map((amount) => (
                             <motion.button
@@ -230,7 +230,7 @@ export default function DonPage() {
                               className={`p-4 rounded-xl border-2 font-semibold transition-all duration-200 ${
                                 donationAmount === amount.toString()
                                   ? 'border-green-500 bg-green-50 text-green-600'
-                                  : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
+                                  : 'border-gray-300 hover:border-green-300 hover:bg-green-50 text-gray-700'
                               }`}
                             >
                               {formatAmount(amount)}
@@ -253,7 +253,7 @@ export default function DonPage() {
                   >
                     <div className="text-center">
                       <h2 className="text-3xl font-bold text-gray-900 mb-4">Choisissez une campagne</h2>
-                      <p className="text-gray-600">Sélectionnez la cause que vous souhaitez soutenir</p>
+                      <p className="text-gray-700">Sélectionnez la cause que vous souhaitez soutenir</p>
                     </div>
 
                     <div className="space-y-4">
@@ -278,11 +278,11 @@ export default function DonPage() {
                               className="w-16 h-16 object-cover rounded-xl"
                             />
                             <div className="flex-1">
-                              <h3 className="font-bold text-gray-900 mb-1">{campaign.title}</h3>
-                              <p className="text-sm text-gray-600 mb-2">{campaign.description}</p>
+                                                      <h3 className="font-bold text-gray-900 mb-1">{campaign.title}</h3>
+                        <p className="text-sm text-gray-700 mb-2">{campaign.description}</p>
                               <div className="space-y-2">
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-600">Progression</span>
+                                  <span className="text-gray-700">Progression</span>
                                   <span className="font-semibold">{campaign.progress}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -293,7 +293,7 @@ export default function DonPage() {
                                     className="h-2 rounded-full bg-gradient-to-r from-green-800 to-green-600"
                                   />
                                 </div>
-                                <div className="flex justify-between text-xs text-gray-500">
+                                <div className="flex justify-between text-xs text-gray-600">
                                   <span>{formatAmount(campaign.current)} collecté</span>
                                   <span>Objectif: {formatAmount(campaign.target)}</span>
                                 </div>
@@ -317,7 +317,7 @@ export default function DonPage() {
                   >
                     <div className="text-center">
                       <h2 className="text-3xl font-bold text-gray-900 mb-4">Vos informations</h2>
-                      <p className="text-gray-600">Remplissez vos informations personnelles</p>
+                      <p className="text-gray-700">Remplissez vos informations personnelles</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">
@@ -403,7 +403,7 @@ export default function DonPage() {
                   >
                     <div className="text-center">
                       <h2 className="text-3xl font-bold text-gray-900 mb-4">Méthode de paiement</h2>
-                      <p className="text-gray-600">Choisissez votre méthode de paiement sécurisée</p>
+                      <p className="text-gray-700">Choisissez votre méthode de paiement sécurisée</p>
                     </div>
 
                     <div className="space-y-4">
@@ -422,8 +422,8 @@ export default function DonPage() {
                             <CreditCard size={24} className="text-green-600" />
                           </div>
                           <div className="flex-1 text-left">
-                            <h3 className="font-semibold text-gray-900">Carte bancaire</h3>
-                            <p className="text-sm text-gray-600">Paiement sécurisé par carte</p>
+                                                    <h3 className="font-semibold text-gray-900">Carte bancaire</h3>
+                        <p className="text-sm text-gray-700">Paiement sécurisé par carte</p>
                           </div>
                         </div>
                       </motion.button>
@@ -443,8 +443,8 @@ export default function DonPage() {
                             <Zap size={24} className="text-green-600" />
                           </div>
                           <div className="flex-1 text-left">
-                            <h3 className="font-semibold text-gray-900">Paiement mobile</h3>
-                            <p className="text-sm text-gray-600">Orange Money, MTN Mobile Money</p>
+                                                    <h3 className="font-semibold text-gray-900">Paiement mobile</h3>
+                        <p className="text-sm text-gray-700">Orange Money, MTN Mobile Money</p>
                           </div>
                         </div>
                       </motion.button>
@@ -531,7 +531,7 @@ export default function DonPage() {
 
                     <div>
                       <h2 className="text-3xl font-bold text-gray-900 mb-4">Don confirmé !</h2>
-                      <p className="text-gray-600 mb-6">
+                      <p className="text-gray-700 mb-6">
                         Merci pour votre générosité. Votre don de {formatAmount(parseInt(donationAmount) || 0)} 
                         a été traité avec succès.
                       </p>
@@ -597,13 +597,13 @@ export default function DonPage() {
               <h3 className="text-xl font-bold text-gray-900 mb-4">Résumé du don</h3>
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Montant:</span>
+                                          <span className="text-gray-700">Montant:</span>
                   <span className="font-bold text-gray-900">
                     {donationAmount ? formatAmount(parseInt(donationAmount)) : '0 XOF'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Frais:</span>
+                                          <span className="text-gray-700">Frais:</span>
                   <span className="font-bold text-gray-900">0 XOF</span>
                 </div>
                 <div className="border-t pt-4">
@@ -623,7 +623,7 @@ export default function DonPage() {
                 <Shield size={24} className="text-green-600" />
                 <h3 className="font-semibold text-gray-900">Paiement sécurisé</h3>
               </div>
-              <div className="space-y-3 text-sm text-gray-600">
+                                      <div className="space-y-3 text-sm text-gray-700">
                 <div className="flex items-center space-x-2">
                   <Lock size={16} className="text-green-500" />
                   <span>Chiffrement SSL 256-bit</span>
@@ -647,15 +647,15 @@ export default function DonPage() {
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
                     <Users size={24} className="text-green-600" />
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">25K+</p>
-                  <p className="text-sm text-gray-600">Bénéficiaires aidés</p>
+                                          <p className="text-2xl font-bold text-gray-900">25K+</p>
+                        <p className="text-sm text-gray-700">Bénéficiaires aidés</p>
                 </div>
                 <div className="text-center">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
                     <Globe size={24} className="text-green-600" />
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">15+</p>
-                  <p className="text-sm text-gray-600">Pays touchés</p>
+                                          <p className="text-2xl font-bold text-gray-900">15+</p>
+                        <p className="text-sm text-gray-700">Pays touchés</p>
                 </div>
               </div>
             </div>

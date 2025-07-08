@@ -113,6 +113,7 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
                   <button
                     onClick={() => setShowVideo(true)}
                     className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full p-3 hover:bg-white transition-colors"
+                    title="Lire la vidéo"
                   >
                     <Play size={24} className="text-gray-700" />
                   </button>
@@ -147,10 +148,16 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
                   {campaign.category.charAt(0).toUpperCase() + campaign.category.slice(1)}
                 </span>
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+                  <button 
+                    className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                    title="Partager la campagne"
+                  >
                     <Share2 size={20} className="text-gray-600" />
                   </button>
-                  <button className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+                  <button 
+                    className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                    title="Télécharger les informations"
+                  >
                     <Download size={20} className="text-gray-600" />
                   </button>
                 </div>
@@ -160,39 +167,39 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
                 À propos de cette campagne
               </h2>
               
-              <p className="text-gray-600 leading-relaxed mb-6">
+              <p className="text-gray-700 leading-relaxed mb-6">
                 {campaign.description}
               </p>
 
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div className="flex items-center space-x-3">
-                  <MapPin size={20} className="text-gray-400" />
+                  <MapPin size={20} className="text-gray-500" />
                   <div>
-                    <p className="text-sm text-gray-500">Localisation</p>
+                    <p className="text-sm text-gray-600">Localisation</p>
                     <p className="font-medium text-gray-900">{campaign.location}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <Calendar size={20} className="text-gray-400" />
+                  <Calendar size={20} className="text-gray-500" />
                   <div>
-                    <p className="text-sm text-gray-500">Date de fin</p>
+                    <p className="text-sm text-gray-600">Date de fin</p>
                     <p className="font-medium text-gray-900">{formatDate(campaign.endDate)}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <Users size={20} className="text-gray-400" />
+                  <Users size={20} className="text-gray-500" />
                   <div>
-                    <p className="text-sm text-gray-500">Bénéficiaires</p>
+                    <p className="text-sm text-gray-600">Bénéficiaires</p>
                     <p className="font-medium text-gray-900">{campaign.beneficiaries.toLocaleString()}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <Target size={20} className="text-gray-400" />
+                  <Target size={20} className="text-gray-500" />
                   <div>
-                    <p className="text-sm text-gray-500">Impact</p>
+                    <p className="text-sm text-gray-600">Impact</p>
                     <p className="font-medium text-gray-900">{campaign.impact}</p>
                   </div>
                 </div>
@@ -213,7 +220,7 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
               
               {/* Progress */}
               <div className="mb-6">
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                <div className="flex justify-between text-sm text-gray-700 mb-2">
                   <span>Progression</span>
                   <span>{progress.toFixed(1)}%</span>
                 </div>
@@ -223,7 +230,7 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
                     style={{ width: `${Math.min(progress, 100)}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-sm text-gray-600 mt-2">
+                <div className="flex justify-between text-sm text-gray-700 mt-2">
                   <span>{formatAmount(campaign.currentAmount)}</span>
                   <span>{formatAmount(campaign.targetAmount)}</span>
                 </div>
@@ -231,7 +238,7 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
 
               {/* Amount Input */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-800 mb-2">
                   Montant du don (XOF)
                 </label>
                 <input
@@ -239,7 +246,7 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
                   value={donationAmount}
                   onChange={(e) => setDonationAmount(e.target.value)}
                   placeholder="Entrez le montant"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -249,7 +256,7 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
                   <button
                     key={amount}
                     onClick={() => setDonationAmount(amount.toString())}
-                    className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+                    className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors text-gray-700"
                   >
                     {formatAmount(amount)}
                   </button>
@@ -269,19 +276,19 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Jours restants</span>
+                  <span className="text-gray-700">Jours restants</span>
                   <span className="font-medium text-gray-900">
                     {Math.max(0, Math.ceil((new Date(campaign.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}
                   </span>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Donateurs</span>
+                  <span className="text-gray-700">Donateurs</span>
                   <span className="font-medium text-gray-900">1,247</span>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Partages</span>
+                  <span className="text-gray-700">Partages</span>
                   <span className="font-medium text-gray-900">892</span>
                 </div>
               </div>

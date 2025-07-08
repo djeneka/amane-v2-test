@@ -209,9 +209,9 @@ export default function TakafulPage() {
           transition={{ duration: 0.6 }}
           className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-6 mb-8"
         >
-          <div className="flex flex-col lg:flex-row gap-6">
+          <div className="space-y-6">
             {/* Search */}
-            <div className="flex-1">
+            <div className="w-full">
               <div className="relative">
                 <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
@@ -219,78 +219,81 @@ export default function TakafulPage() {
                   placeholder="Rechercher un produit de protection..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
+                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-400 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
                   title="Rechercher un produit de protection"
                 />
               </div>
             </div>
 
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <motion.button
-                  key={category.id}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                    selectedCategory === category.id
-                      ? 'bg-gradient-to-r from-green-800 to-green-600 text-white shadow-lg'
-                      : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  <category.icon size={16} />
-                  <span>{category.name}</span>
-                </motion.button>
-              ))}
-            </div>
-
-            {/* Sort & View */}
-            <div className="flex items-center space-x-4">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
-                title="Trier les produits"
-                aria-label="Trier les produits"
-              >
-                {sortOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
+            {/* Filters and Controls Row */}
+            <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center">
+              {/* Category Filter */}
+              <div className="flex flex-wrap gap-2 flex-1">
+                {categories.map((category) => (
+                  <motion.button
+                    key={category.id}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                      selectedCategory === category.id
+                        ? 'bg-gradient-to-r from-green-800 to-green-600 text-white shadow-lg'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                    }`}
+                  >
+                    <category.icon size={16} />
+                    <span>{category.name}</span>
+                  </motion.button>
                 ))}
-              </select>
+              </div>
 
-              <div className="flex bg-gray-100 rounded-xl p-1">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
-                    viewMode === 'grid' ? 'bg-white shadow-md' : 'text-gray-600'
-                  }`}
+              {/* Sort & View */}
+              <div className="flex items-center space-x-4 flex-shrink-0">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-4 py-3 border-2 border-gray-400 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-gray-900"
+                  title="Trier les produits"
+                  aria-label="Trier les produits"
                 >
-                  <div className="grid grid-cols-2 gap-1 w-5 h-5">
-                    <div className="bg-current rounded-sm"></div>
-                    <div className="bg-current rounded-sm"></div>
-                    <div className="bg-current rounded-sm"></div>
-                    <div className="bg-current rounded-sm"></div>
-                  </div>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
-                    viewMode === 'list' ? 'bg-white shadow-md' : 'text-gray-600'
-                  }`}
-                >
-                  <div className="space-y-1 w-5 h-5">
-                    <div className="bg-current rounded-sm h-1"></div>
-                    <div className="bg-current rounded-sm h-1"></div>
-                    <div className="bg-current rounded-sm h-1"></div>
-                  </div>
-                </motion.button>
+                  {sortOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex bg-gray-100 rounded-xl p-1">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded-lg transition-all duration-200 ${
+                      viewMode === 'grid' ? 'bg-white shadow-md' : 'text-gray-600'
+                    }`}
+                  >
+                    <div className="grid grid-cols-2 gap-1 w-5 h-5">
+                      <div className="bg-current rounded-sm"></div>
+                      <div className="bg-current rounded-sm"></div>
+                      <div className="bg-current rounded-sm"></div>
+                      <div className="bg-current rounded-sm"></div>
+                    </div>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded-lg transition-all duration-200 ${
+                      viewMode === 'list' ? 'bg-white shadow-md' : 'text-gray-600'
+                    }`}
+                  >
+                    <div className="space-y-1 w-5 h-5">
+                      <div className="bg-current rounded-sm h-1"></div>
+                      <div className="bg-current rounded-sm h-1"></div>
+                      <div className="bg-current rounded-sm h-1"></div>
+                    </div>
+                  </motion.button>
+                </div>
               </div>
             </div>
           </div>

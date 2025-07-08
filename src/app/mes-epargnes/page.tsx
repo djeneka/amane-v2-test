@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { PiggyBank, Plus, ArrowLeft } from 'lucide-react';
+import { Wallet, Plus, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function MesEpargnesPage() {
@@ -43,7 +43,7 @@ export default function MesEpargnesPage() {
               className="inline-block mb-8"
             >
               <div className="w-24 h-24 bg-gradient-to-br from-green-800 to-green-600 rounded-full flex items-center justify-center shadow-2xl">
-                <PiggyBank size={40} className="text-white" />
+                <Wallet size={40} className="text-white" />
               </div>
             </motion.div>
             
@@ -66,7 +66,7 @@ export default function MesEpargnesPage() {
           className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-12 text-center"
         >
           <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-8">
-            <PiggyBank size={64} className="text-gray-400" />
+            <Wallet size={64} className="text-gray-400" />
           </div>
           
           <h2 className="text-3xl font-bold text-gray-900 mb-4">

@@ -187,88 +187,89 @@ export default function CampagnesPage() {
           transition={{ duration: 0.6 }}
           className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-6 mb-8"
         >
-          <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex flex-col gap-6">
             {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Rechercher une campagne..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
-                  title="Rechercher une campagne"
-                />
-              </div>
+            <div className="relative">
+              <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Rechercher une campagne..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
+                title="Rechercher une campagne"
+              />
             </div>
 
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <motion.button
-                  key={category.id}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                    selectedCategory === category.id
-                      ? 'bg-gradient-to-r from-green-800 to-green-600 text-white shadow-lg'
-                      : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-                  }`}
-                >
-                  <category.icon size={16} />
-                  <span>{category.name}</span>
-                </motion.button>
-              ))}
-            </div>
-
-            {/* Sort & View */}
-            <div className="flex items-center space-x-4">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                                  className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
-                title="Trier les campagnes"
-                aria-label="Trier les campagnes"
-              >
-                {sortOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
+            {/* Category Filter & Controls */}
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Category Filter */}
+              <div className="flex flex-wrap gap-2 flex-1">
+                {categories.map((category) => (
+                  <motion.button
+                    key={category.id}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                      selectedCategory === category.id
+                        ? 'bg-gradient-to-r from-green-800 to-green-600 text-white shadow-lg'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    <category.icon size={16} />
+                    <span>{category.name}</span>
+                  </motion.button>
                 ))}
-              </select>
+              </div>
 
-              <div className="flex bg-gray-100 rounded-xl p-1">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
-                    viewMode === 'grid' ? 'bg-white shadow-md' : 'text-gray-600'
-                  }`}
+              {/* Sort & View */}
+              <div className="flex items-center space-x-4">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-gray-900"
+                  title="Trier les campagnes"
+                  aria-label="Trier les campagnes"
                 >
-                  <div className="grid grid-cols-2 gap-1 w-5 h-5">
-                    <div className="bg-current rounded-sm"></div>
-                    <div className="bg-current rounded-sm"></div>
-                    <div className="bg-current rounded-sm"></div>
-                    <div className="bg-current rounded-sm"></div>
-                  </div>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
-                    viewMode === 'list' ? 'bg-white shadow-md' : 'text-gray-600'
-                  }`}
-                >
-                  <div className="space-y-1 w-5 h-5">
-                    <div className="bg-current rounded-sm h-1"></div>
-                    <div className="bg-current rounded-sm h-1"></div>
-                    <div className="bg-current rounded-sm h-1"></div>
-                  </div>
-                </motion.button>
+                  {sortOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex bg-gray-100 rounded-xl p-1">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded-lg transition-all duration-200 ${
+                      viewMode === 'grid' ? 'bg-white shadow-md' : 'text-gray-600'
+                    }`}
+                  >
+                    <div className="grid grid-cols-2 gap-1 w-5 h-5">
+                      <div className="bg-current rounded-sm"></div>
+                      <div className="bg-current rounded-sm"></div>
+                      <div className="bg-current rounded-sm"></div>
+                      <div className="bg-current rounded-sm"></div>
+                    </div>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded-lg transition-all duration-200 ${
+                      viewMode === 'list' ? 'bg-white shadow-md' : 'text-gray-600'
+                    }`}
+                  >
+                    <div className="space-y-1 w-5 h-5">
+                      <div className="bg-current rounded-sm h-1"></div>
+                      <div className="bg-current rounded-sm h-1"></div>
+                      <div className="bg-current rounded-sm h-1"></div>
+                    </div>
+                  </motion.button>
+                </div>
               </div>
             </div>
           </div>
@@ -328,7 +329,7 @@ export default function CampagnesPage() {
                         <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
                           {campaign.title}
                         </h3>
-                        <p className="text-gray-600 mb-4 line-clamp-2">
+                        <p className="text-gray-700 mb-4 line-clamp-2">
                           {campaign.description}
                         </p>
 
@@ -355,11 +356,11 @@ export default function CampagnesPage() {
                           </div>
 
                           <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center space-x-2 text-gray-600">
+                            <div className="flex items-center space-x-2 text-gray-700">
                               <MapPin size={14} />
                               <span>{campaign.location}</span>
                             </div>
-                            <div className="flex items-center space-x-2 text-gray-600">
+                            <div className="flex items-center space-x-2 text-gray-700">
                               <Users size={14} />
                               <span>{campaign.beneficiaries.toLocaleString()}</span>
                             </div>
@@ -370,7 +371,7 @@ export default function CampagnesPage() {
                               <p className="text-lg font-bold text-gray-900">
                                 {formatAmount(campaign.currentAmount)}
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-600">
                                 sur {formatAmount(campaign.targetAmount)}
                               </p>
                             </div>
@@ -433,11 +434,11 @@ export default function CampagnesPage() {
                           <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
                             {campaign.title}
                           </h3>
-                          <p className="text-gray-600 mb-4">
+                          <p className="text-gray-700 mb-4">
                             {campaign.description}
                           </p>
 
-                          <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
+                          <div className="flex items-center space-x-6 text-sm text-gray-700 mb-4">
                             <div className="flex items-center space-x-1">
                               <MapPin size={16} />
                               <span>{campaign.location}</span>
@@ -479,7 +480,7 @@ export default function CampagnesPage() {
                                 <p className="text-2xl font-bold text-gray-900">
                                   {formatAmount(campaign.currentAmount)}
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-600">
                                   collecté sur {formatAmount(campaign.targetAmount)}
                                 </p>
                               </div>
@@ -516,7 +517,7 @@ export default function CampagnesPage() {
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               Aucune campagne trouvée
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-700">
               Essayez de modifier vos critères de recherche
             </p>
           </motion.div>
