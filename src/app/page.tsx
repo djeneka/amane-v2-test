@@ -458,7 +458,7 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Campagnes en vedette
+              Campagnes populaires
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Découvrez nos campagnes les plus populaires et soutenez des causes importantes
