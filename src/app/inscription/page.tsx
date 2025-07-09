@@ -4,8 +4,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, User, Phone, Calendar, ArrowRight, Shield, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function InscriptionPage() {
+  const router = useRouter();
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -81,15 +86,30 @@ export default function InscriptionPage() {
 
     setIsLoading(true);
     
-    // Simuler une inscription
-    setTimeout(() => {
+    try {
+      const success = await register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+      });
+      
+      if (success) {
+        router.push('/');
+      } else {
+        setErrors({ general: 'Une erreur est survenue lors de l\'inscription' });
+      }
+    } catch (error) {
+      setErrors({ general: 'Une erreur est survenue. Veuillez réessayer.' });
+    } finally {
       setIsLoading(false);
-      // Ici vous ajouteriez votre logique d'inscription réelle
-    }, 2000);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <AuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <motion.div
@@ -135,7 +155,7 @@ export default function InscriptionPage() {
                       type="text"
                       value={formData.firstName}
                       onChange={(e) => handleInputChange("firstName", e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-green-800 focus:border-green-800 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                         errors.firstName ? "border-red-500" : "border-gray-400"
                       }`}
                       placeholder="Votre prénom"
@@ -160,7 +180,7 @@ export default function InscriptionPage() {
                       type="text"
                       value={formData.lastName}
                       onChange={(e) => handleInputChange("lastName", e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-green-800 focus:border-green-800 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                         errors.lastName ? "border-red-500" : "border-gray-400"
                       }`}
                       placeholder="Votre nom"
@@ -186,7 +206,7 @@ export default function InscriptionPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-green-800 focus:border-green-800 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.email ? "border-red-500" : "border-gray-400"
                     }`}
                     placeholder="votre@email.com"
@@ -212,9 +232,9 @@ export default function InscriptionPage() {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
-                        errors.phone ? "border-red-500" : "border-gray-400"
-                      }`}
+                                          className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-green-800 focus:border-green-800 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
+                      errors.phone ? "border-red-500" : "border-gray-400"
+                    }`}
                       placeholder="+33 6 12 34 56 78"
                     />
                   </div>
@@ -237,9 +257,9 @@ export default function InscriptionPage() {
                       type="date"
                       value={formData.birthDate}
                       onChange={(e) => handleInputChange("birthDate", e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
-                        errors.birthDate ? "border-red-500" : "border-gray-400"
-                      }`}
+                                          className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-green-800 focus:border-green-800 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
+                      errors.birthDate ? "border-red-500" : "border-gray-400"
+                    }`}
                     />
                   </div>
                   {errors.birthDate && (
@@ -262,7 +282,7 @@ export default function InscriptionPage() {
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
-                    className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
+                    className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-green-800 focus:border-green-800 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.password ? "border-red-500" : "border-gray-400"
                     }`}
                     placeholder="Minimum 8 caractères"
@@ -295,7 +315,7 @@ export default function InscriptionPage() {
                     type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                    className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
+                    className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-green-800 focus:border-green-800 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.confirmPassword ? "border-red-500" : "border-gray-400"
                     }`}
                     placeholder="Confirmez votre mot de passe"
@@ -325,15 +345,15 @@ export default function InscriptionPage() {
                     type="checkbox"
                     checked={acceptTerms}
                     onChange={(e) => setAcceptTerms(e.target.checked)}
-                    className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mt-1"
+                    className="w-4 h-4 text-green-800 border-gray-300 rounded focus:ring-green-500 mt-1"
                   />
                   <span className="ml-3 text-sm text-gray-600">
                     J'accepte les{" "}
-                    <Link href="/conditions" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                    <Link href="/conditions" className="text-green-800 hover:text-green-900 font-medium">
                       conditions d'utilisation
                     </Link>{" "}
                     et la{" "}
-                    <Link href="/politique-confidentialite" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                    <Link href="/politique-confidentialite" className="text-green-800 hover:text-green-900 font-medium">
                       politique de confidentialité
                     </Link>{" "}
                     d'Amane+
@@ -345,7 +365,7 @@ export default function InscriptionPage() {
 
                 <div className="bg-emerald-50 rounded-xl p-4">
                   <div className="flex items-start space-x-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-green-800 mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-gray-700">
                       <p className="font-medium mb-1">Vos données sont protégées</p>
                       <p>Nous respectons les principes islamiques et les réglementations RGPD. Vos informations personnelles sont sécurisées et ne seront jamais partagées sans votre consentement.</p>
@@ -360,7 +380,7 @@ export default function InscriptionPage() {
                 transition={{ delay: 1.1 }}
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 px-6 rounded-xl font-medium hover:from-emerald-600 hover:to-teal-600 focus:ring-4 focus:ring-emerald-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full bg-green-800 text-white py-3 px-6 rounded-xl font-medium hover:bg-green-900 focus:ring-4 focus:ring-green-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {isLoading ? (
                   <motion.div
@@ -385,17 +405,18 @@ export default function InscriptionPage() {
             >
               <p className="text-gray-600">
                 Déjà un compte ?{" "}
-                <Link
-                  href="/connexion"
-                  className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
-                >
-                  Se connecter
-                </Link>
+                                  <Link
+                    href="/connexion"
+                    className="text-green-800 hover:text-green-900 font-medium transition-colors"
+                  >
+                    Se connecter
+                  </Link>
               </p>
             </motion.div>
           </motion.div>
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 } 

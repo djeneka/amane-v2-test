@@ -5,15 +5,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, User, Heart, Calculator, Shield, TrendingUp, Home, Users, Gift, Wallet, Settings, ChevronDown, LogOut, PiggyBank, LogIn } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { currentUser } from '@/data/mockData';
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const pathname = usePathname();
-  
-  // Simuler un état de connexion (à remplacer par votre logique d'authentification)
-  const isAuthenticated = true; // Changez à true pour tester l'état connecté
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navigationItems = [
     { name: 'Accueil', href: '/', icon: Home },
@@ -29,7 +28,7 @@ export default function Navigation() {
     { name: 'Profil', href: '/profil', icon: User },
     { name: 'Points', href: '/points', icon: Users },
     { name: 'Portefeuille', href: '/portefeuille', icon: Wallet },
-    { name: 'Mes Épargnes', href: '/mes-epargnes', icon: PiggyBank },
+    { name: 'Mes Épargnes', href: '/mes-epargnes', icon: Wallet },
     { name: 'Mes Takafuls', href: '/mes-takafuls', icon: Shield },
     { name: 'Déconnexion', href: '/logout', icon: LogOut, isLogout: true },
   ];
@@ -135,8 +134,8 @@ export default function Navigation() {
                               onClick={() => {
                                 setIsProfileDropdownOpen(false);
                                 if (item.isLogout) {
-                                  // Handle logout logic here
-                                  console.log('Logout clicked');
+                                  logout();
+                                  window.location.href = '/';
                                 }
                               }}
                               className={`flex items-center space-x-3 px-4 py-3 transition-colors duration-200 ${
@@ -177,7 +176,7 @@ export default function Navigation() {
                 >
                   <Link
                     href="/inscription"
-                    className="bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2 rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200"
+                    className="bg-green-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-900 transition-all duration-200"
                   >
                     S'inscrire
                   </Link>
@@ -267,8 +266,8 @@ export default function Navigation() {
                           onClick={() => {
                             setIsOpen(false);
                             if (item.isLogout) {
-                              // Handle logout logic here
-                              console.log('Logout clicked');
+                              logout();
+                              window.location.href = '/';
                             }
                           }}
                           className={`flex items-center space-x-3 p-3 rounded-lg transition-colors duration-200 ${
@@ -304,7 +303,7 @@ export default function Navigation() {
                   <Link
                     href="/inscription"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-green-600 to-green-700 text-white transition-all duration-200"
+                    className="flex items-center space-x-3 p-3 rounded-lg bg-green-800 text-white transition-all duration-200"
                   >
                     <User size={20} />
                     <span className="font-medium">S'inscrire</span>

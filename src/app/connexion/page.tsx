@@ -4,27 +4,42 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Heart } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function ConnexionPage() {
+  const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
     
-    // Simuler une connexion
-    setTimeout(() => {
+    try {
+      const success = await login(email, password);
+      if (success) {
+        router.push('/');
+      } else {
+        setError('Email ou mot de passe incorrect');
+      }
+    } catch (error) {
+      setError('Une erreur est survenue. Veuillez réessayer.');
+    } finally {
       setIsLoading(false);
-      // Ici vous ajouteriez votre logique de connexion réelle
-    }, 2000);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <AuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-4rem)]">
@@ -72,7 +87,7 @@ export default function ConnexionPage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-400 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-400 rounded-xl focus:ring-2 focus:ring-green-800 focus:border-green-800 transition-all duration-200 text-gray-900 placeholder-gray-500"
                       placeholder="votre@email.com"
                       required
                     />
@@ -93,7 +108,7 @@ export default function ConnexionPage() {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-12 py-3 border border-gray-400 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
+                      className="w-full pl-10 pr-12 py-3 border border-gray-400 rounded-xl focus:ring-2 focus:ring-green-800 focus:border-green-800 transition-all duration-200 text-gray-900 placeholder-gray-500"
                       placeholder="Votre mot de passe"
                       required
                     />
@@ -119,13 +134,13 @@ export default function ConnexionPage() {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                      className="w-4 h-4 text-green-800 border-gray-300 rounded focus:ring-green-500"
                     />
                     <span className="ml-2 text-sm text-gray-600">Se souvenir de moi</span>
                   </label>
                   <Link
                     href="/mot-de-passe-oublie"
-                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                    className="text-sm text-green-800 hover:text-green-900 font-medium transition-colors"
                   >
                     Mot de passe oublié ?
                   </Link>
@@ -137,7 +152,7 @@ export default function ConnexionPage() {
                   transition={{ delay: 0.6 }}
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 px-6 rounded-xl font-medium hover:from-emerald-600 hover:to-teal-600 focus:ring-4 focus:ring-emerald-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-full bg-green-800 text-white py-3 px-6 rounded-xl font-medium hover:bg-green-900 focus:ring-4 focus:ring-green-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {isLoading ? (
                     <motion.div
@@ -164,7 +179,7 @@ export default function ConnexionPage() {
                   Pas encore de compte ?{" "}
                   <Link
                     href="/inscription"
-                    className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                    className="text-green-800 hover:text-green-900 font-medium transition-colors"
                   >
                     Créer un compte
                   </Link>
@@ -183,7 +198,7 @@ export default function ConnexionPage() {
                 <div>
                   <h2 className="text-4xl font-bold text-gray-900 mb-4">
                     Finance Islamique{" "}
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-800 to-green-900">
                       Éthique
                     </span>
                   </h2>
@@ -200,8 +215,8 @@ export default function ConnexionPage() {
                     transition={{ delay: 0.4 }}
                     className="flex items-start space-x-4"
                   >
-                    <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Heart className="w-6 h-6 text-emerald-600" />
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Heart className="w-6 h-6 text-green-800" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -220,8 +235,8 @@ export default function ConnexionPage() {
                     transition={{ delay: 0.5 }}
                     className="flex items-start space-x-4"
                   >
-                    <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-6 h-6 text-teal-600" />
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Shield className="w-6 h-6 text-green-800" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -240,8 +255,8 @@ export default function ConnexionPage() {
                     transition={{ delay: 0.6 }}
                     className="flex items-start space-x-4"
                   >
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Users className="w-6 h-6 text-blue-600" />
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Users className="w-6 h-6 text-green-800" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -259,12 +274,12 @@ export default function ConnexionPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 }}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl p-6 text-white"
+                  className="bg-gradient-to-r from-green-800 to-green-900 rounded-2xl p-6 text-white"
                 >
                   <h3 className="text-xl font-semibold mb-2">
                     Rejoignez notre communauté
                   </h3>
-                  <p className="text-emerald-100">
+                  <p className="text-green-100">
                     Plus de 10,000 membres font confiance à Amane+ pour leurs 
                     besoins financiers éthiques.
                   </p>
@@ -275,5 +290,6 @@ export default function ConnexionPage() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 } 

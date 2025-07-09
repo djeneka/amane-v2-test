@@ -18,7 +18,6 @@ export default function Home() {
   const backgroundImages = [
     'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&h=600&fit=crop',
     'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=600&fit=crop',
-    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop',
     'https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=800&h=600&fit=crop'
   ];
 

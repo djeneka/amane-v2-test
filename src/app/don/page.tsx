@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Heart, CreditCard, Shield, Users, Target, ArrowRight, CheckCircle,
   Star, Gift, Zap, Globe, TrendingUp, Award, Calendar, MapPin,
-  ChevronDown, ChevronUp, Minus, Plus, Lock, Eye, EyeOff
+  ChevronDown, ChevronUp, Minus, Plus, Lock, Eye, EyeOff, Wallet
 } from 'lucide-react';
 
 export default function DonPage() {
@@ -23,6 +23,8 @@ export default function DonPage() {
     expiryDate: '',
     cvv: '',
     anonymous: false,
+    amaneEmail: '',
+    amanePassword: '',
   });
 
   const steps = [
@@ -428,14 +430,14 @@ export default function DonPage() {
                         </div>
                       </motion.button>
 
-                      <motion.button
+                                            <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setPaymentMethod('mobile')}
                         className={`w-full p-6 rounded-2xl border-2 transition-all duration-200 ${
-                                                  paymentMethod === 'mobile'
-                          ? 'border-green-500 bg-green-50'
-                          : 'border-gray-200 hover:border-green-300'
+                          paymentMethod === 'mobile'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-green-300'
                         }`}
                       >
                         <div className="flex items-center space-x-4">
@@ -443,8 +445,29 @@ export default function DonPage() {
                             <Zap size={24} className="text-green-600" />
                           </div>
                           <div className="flex-1 text-left">
-                                                    <h3 className="font-semibold text-gray-900">Paiement mobile</h3>
-                        <p className="text-sm text-gray-700">Orange Money, MTN Mobile Money</p>
+                            <h3 className="font-semibold text-gray-900">Paiement mobile</h3>
+                            <p className="text-sm text-gray-700">Orange Money, MTN Mobile Money</p>
+                          </div>
+                        </div>
+                      </motion.button>
+
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setPaymentMethod('amane')}
+                        className={`w-full p-6 rounded-2xl border-2 transition-all duration-200 ${
+                          paymentMethod === 'amane'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-green-300'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <Wallet size={24} className="text-green-600" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <h3 className="font-semibold text-gray-900">Compte Amane</h3>
+                            <p className="text-sm text-gray-700">Paiement depuis votre compte Amane</p>
                           </div>
                         </div>
                       </motion.button>
@@ -505,6 +528,50 @@ export default function DonPage() {
                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                               </button>
                             </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {paymentMethod === 'amane' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-4"
+                      >
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Email Amane
+                          </label>
+                          <input
+                            type="email"
+                            value={formData.amaneEmail}
+                            onChange={(e) => setFormData({ ...formData, amaneEmail: e.target.value })}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
+                            placeholder="votre@email.com"
+                            title="Email de votre compte Amane"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Mot de passe Amane
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPassword ? "text" : "password"}
+                              value={formData.amanePassword}
+                              onChange={(e) => setFormData({ ...formData, amanePassword: e.target.value })}
+                              className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
+                              placeholder="Votre mot de passe"
+                              title="Mot de passe de votre compte Amane"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
                           </div>
                         </div>
                       </motion.div>
