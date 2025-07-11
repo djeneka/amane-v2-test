@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Users, Star, Calendar, MapPin, 
   CheckCircle, TrendingUp, Shield, Globe,
-  Eye, Share2, Bookmark, ChevronRight, CreditCard, Lock, EyeOff, X, Wallet
+  Eye, Share2, Bookmark, ChevronRight, CreditCard, Lock, EyeOff, X, Wallet, PiggyBank
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
