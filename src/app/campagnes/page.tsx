@@ -414,7 +414,7 @@ export default function CampagnesPage() {
                             <motion.button
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-200"
+                              className="px-4 py-2 bg-green-800 text-white rounded-xl font-semibold hover:bg-green-900 transition-all duration-200"
                             >
                               Soutenir
                             </motion.button>
@@ -523,7 +523,7 @@ export default function CampagnesPage() {
                               <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-200 flex items-center space-x-2"
+                                className="px-6 py-3 bg-green-800 text-white rounded-xl font-semibold hover:bg-green-900 transition-all duration-200 flex items-center space-x-2"
                               >
                                 <span>Soutenir</span>
                                 <ArrowRight size={16} />
