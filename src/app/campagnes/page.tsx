@@ -67,7 +67,7 @@ export default function CampagnesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800">
       {/* Floating Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -118,26 +118,44 @@ export default function CampagnesPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: 5 }}
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Target size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">{campaigns.length}</p>
                   <p className="text-sm text-gray-600">Campagnes actives</p>
                 </div>
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: -5 }}
+                animate={{ rotate: [0, -5, 5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, -360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Users size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">
                     {campaigns.reduce((sum, c) => sum + c.beneficiaries, 0).toLocaleString()}
                   </p>
@@ -146,13 +164,22 @@ export default function CampagnesPage() {
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: 5 }}
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Heart size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">
                     {formatAmount(campaigns.reduce((sum, c) => sum + c.currentAmount, 0))}
                   </p>
@@ -161,13 +188,22 @@ export default function CampagnesPage() {
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: -5 }}
+                animate={{ rotate: [0, -5, 5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, -360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Globe size={24} className="text-orange-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">
                     {new Set(campaigns.map(c => c.location)).size}
                   </p>
@@ -185,7 +221,7 @@ export default function CampagnesPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-6 mb-8"
+          className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-8"
         >
           <div className="flex flex-col gap-6">
             {/* Search */}
@@ -296,7 +332,7 @@ export default function CampagnesPage() {
                   className="group"
                 >
                   <Link href={`/campagnes/${campaign.id}`}>
-                    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl transition-all duration-300">
                       <div className="relative">
                         <img
                           src={campaign.image}
@@ -318,7 +354,7 @@ export default function CampagnesPage() {
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            className="w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors"
+                            className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors"
                           >
                             <Heart size={16} />
                           </motion.button>
@@ -409,7 +445,7 @@ export default function CampagnesPage() {
                   className="group"
                 >
                   <Link href={`/campagnes/${campaign.id}`}>
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300">
                       <div className="flex items-center space-x-6">
                         <div className="relative">
                           <img

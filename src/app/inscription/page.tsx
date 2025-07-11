@@ -109,7 +109,7 @@ export default function InscriptionPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <motion.div

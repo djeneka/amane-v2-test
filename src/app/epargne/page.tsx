@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, Wallet, Users, Target, Calendar, MapPin, 
-  TrendingUp, Star, Eye, Share2, Bookmark, Globe, Zap,
+  TrendingUp, Star, Eye, Share2, Globe, Zap,
   ChevronDown, ChevronUp, ArrowRight, Play, Pause, Shield, Calculator, Heart,
   CreditCard, CheckCircle, Lock, EyeOff, X
 } from 'lucide-react';
@@ -20,6 +20,7 @@ export default function EpargnePage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [showPassword, setShowPassword] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -143,22 +144,57 @@ export default function EpargnePage() {
     },
   ];
 
-  const categories = [
-    { id: 'all', name: 'Toutes', icon: Globe, color: 'bg-gray-500' },
-    { id: 'classique', name: 'Classique', icon: Wallet, color: 'bg-green-500' },
-    { id: 'hajj', name: 'Hajj', icon: Bookmark, color: 'bg-blue-500' },
-    { id: 'mariage', name: 'Mariage', icon: Heart, color: 'bg-pink-500' },
-    { id: 'education', name: 'Études', icon: Bookmark, color: 'bg-purple-500' },
-    { id: 'retraite', name: 'Retraite', icon: Shield, color: 'bg-orange-500' },
-    { id: 'business', name: 'Business', icon: TrendingUp, color: 'bg-indigo-500' },
-  ];
+  // Images pour chaque catégorie
+  const categoryImages = {
+    classique: [
+      'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=300&fit=crop'
+    ],
+    hajj: [
+      'https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=400&h=300&fit=crop'
+    ],
+    mariage: [
+      'https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=300&fit=crop'
+    ],
+    education: [
+      'https://images.unsplash.com/photo-1523050854058-8df90110c9a1?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1523050854058-8df90110c9a1?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1523050854058-8df90110c9a1?w=400&h=300&fit=crop'
+    ],
+    retraite: [
+      'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop'
+    ],
+    business: [
+      'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=300&fit=crop'
+    ]
+  };
 
-  const sortOptions = [
-    { id: 'popular', name: 'Plus populaires' },
-    { id: 'recent', name: 'Plus récentes' },
-    { id: 'amount', name: 'Montant élevé' },
-    { id: 'duration', name: 'Durée courte' },
-  ];
+  // Fonction pour changer d'image
+  const nextImage = (productId: string, category: string) => {
+    const images = categoryImages[category as keyof typeof categoryImages] || [];
+    const currentIndex = currentImageIndex[productId] || 0;
+    const nextIndex = (currentIndex + 1) % images.length;
+    setCurrentImageIndex(prev => ({
+      ...prev,
+      [productId]: nextIndex
+    }));
+  };
+
+  // Fonction pour obtenir l'image actuelle
+  const getCurrentImage = (productId: string, category: string) => {
+    const images = categoryImages[category as keyof typeof categoryImages] || [];
+    const currentIndex = currentImageIndex[productId] || 0;
+    return images[currentIndex] || 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+  };
 
   const filteredProducts = savingsProducts
     .filter(product => {
@@ -179,6 +215,42 @@ export default function EpargnePage() {
           return 0;
       }
     });
+
+  // Effet pour le défilement automatique du carrousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      filteredProducts.forEach((product) => {
+        const images = categoryImages[product.category as keyof typeof categoryImages] || [];
+        if (images.length > 1) {
+          const currentIndex = currentImageIndex[product.id.toString()] || 0;
+          const nextIndex = (currentIndex + 1) % images.length;
+          setCurrentImageIndex(prev => ({
+            ...prev,
+            [product.id.toString()]: nextIndex
+          }));
+        }
+      });
+    }, 3000); // Change d'image toutes les 3 secondes
+
+    return () => clearInterval(interval);
+  }, [filteredProducts, currentImageIndex, categoryImages]);
+
+  const categories = [
+    { id: 'all', name: 'Toutes', icon: Globe, color: 'bg-gray-500' },
+    { id: 'classique', name: 'Classique', icon: Wallet, color: 'bg-green-500' },
+    { id: 'hajj', name: 'Hajj', icon: Shield, color: 'bg-blue-500' },
+    { id: 'mariage', name: 'Mariage', icon: Heart, color: 'bg-pink-500' },
+    { id: 'education', name: 'Études', icon: Target, color: 'bg-purple-500' },
+    { id: 'retraite', name: 'Retraite', icon: Shield, color: 'bg-orange-500' },
+    { id: 'business', name: 'Business', icon: TrendingUp, color: 'bg-indigo-500' },
+  ];
+
+  const sortOptions = [
+    { id: 'popular', name: 'Plus populaires' },
+    { id: 'recent', name: 'Plus récentes' },
+    { id: 'amount', name: 'Montant élevé' },
+    { id: 'duration', name: 'Durée courte' },
+  ];
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -283,7 +355,7 @@ export default function EpargnePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-50 to-green-50 relative z-10">
+    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800 relative z-10">
       {/* Floating Elements - DISABLED FOR TESTING */}
       {/* <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div
@@ -334,26 +406,44 @@ export default function EpargnePage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: 5 }}
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Target size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">{savingsProducts.length}</p>
                   <p className="text-sm text-gray-600">Produits disponibles</p>
                 </div>
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: -5 }}
+                animate={{ rotate: [0, -5, 5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, -360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Users size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">
                     {mounted ? savingsProducts.reduce((sum, p) => sum + p.beneficiaries, 0).toLocaleString() : '0'}
                   </p>
@@ -362,13 +452,22 @@ export default function EpargnePage() {
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: 5 }}
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Wallet size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">
                     {formatCompactAmount(savingsProducts.reduce((sum, p) => sum + p.currentAmount, 0))}
                   </p>
@@ -377,13 +476,22 @@ export default function EpargnePage() {
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: -5 }}
+                animate={{ rotate: [0, -5, 5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, -360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Globe size={24} className="text-orange-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">0%</p>
                   <p className="text-sm text-gray-600">Taux moyen</p>
                 </div>
@@ -399,7 +507,7 @@ export default function EpargnePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-6 mb-8"
+          className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-8"
         >
           <div className="space-y-6">
             {/* Search */}
@@ -511,10 +619,53 @@ export default function EpargnePage() {
                   whileHover={{ y: -5 }}
                   className="group"
                 >
-                  <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                  <div className="bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl transition-all duration-300">
                     <div className="relative">
-                      <div className="w-full h-48 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
-                        <Wallet size={64} className="text-green-600" />
+                      <div className="w-full h-48 relative overflow-hidden">
+                        <AnimatePresence mode="wait">
+                          <motion.img
+                            key={`${product.id}-${currentImageIndex[product.id.toString()] || 0}`}
+                            src={getCurrentImage(product.id.toString(), product.category)}
+                            alt={`${product.name} - Image ${(currentImageIndex[product.id.toString()] || 0) + 1}`}
+                            className="w-full h-full object-cover absolute inset-0"
+                            initial={{ x: 100, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: -100, opacity: 0 }}
+                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                            onError={(e) => {
+                              // Fallback vers une image par défaut si l'image ne charge pas
+                              const target = e.target as HTMLImageElement;
+                              target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                            }}
+                          />
+                        </AnimatePresence>
+                        <div className="absolute inset-0 bg-black/20"></div>
+                        
+                        {/* Indicateurs d'images */}
+                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                          {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
+                            <div
+                              key={index}
+                              className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                                (currentImageIndex[product.id.toString()] || 0) === index
+                                  ? 'bg-white'
+                                  : 'bg-white/50'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        
+                        {/* Bouton pour voir les détails */}
+                        <Link href={`/epargne/${product.id}`}>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
+                            title="Voir les détails du produit"
+                          >
+                            <Eye size={16} />
+                          </motion.button>
+                        </Link>
                       </div>
                       <div className="absolute top-4 left-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
@@ -529,15 +680,7 @@ export default function EpargnePage() {
                           {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                         </span>
                       </div>
-                      <div className="absolute top-4 right-4">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors"
-                        >
-                          <Bookmark size={16} />
-                        </motion.button>
-                      </div>
+
                     </div>
 
                     <div className="p-6">
@@ -647,11 +790,54 @@ export default function EpargnePage() {
                   whileHover={{ x: 5 }}
                   className="group"
                 >
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
+                  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300">
                     <div className="flex items-center space-x-6">
                       <div className="relative">
-                        <div className="w-32 h-32 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
-                          <Wallet size={48} className="text-green-600" />
+                        <div className="w-32 h-32 rounded-xl overflow-hidden relative">
+                          <AnimatePresence mode="wait">
+                            <motion.img
+                              key={`${product.id}-list-${currentImageIndex[product.id.toString()] || 0}`}
+                              src={getCurrentImage(product.id.toString(), product.category)}
+                              alt={`${product.name} - Image ${(currentImageIndex[product.id.toString()] || 0) + 1}`}
+                              className="w-full h-full object-cover absolute inset-0"
+                              initial={{ x: 100, opacity: 0 }}
+                              animate={{ x: 0, opacity: 1 }}
+                              exit={{ x: -100, opacity: 0 }}
+                              transition={{ duration: 0.5, ease: "easeInOut" }}
+                              onError={(e) => {
+                                // Fallback vers une image par défaut si l'image ne charge pas
+                                const target = e.target as HTMLImageElement;
+                                target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                              }}
+                            />
+                          </AnimatePresence>
+                          <div className="absolute inset-0 bg-black/20"></div>
+                          
+                          {/* Indicateurs d'images */}
+                          <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                            {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
+                              <div
+                                key={index}
+                                className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
+                                  (currentImageIndex[product.id.toString()] || 0) === index
+                                    ? 'bg-white'
+                                    : 'bg-white/50'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          
+                          {/* Bouton pour voir les détails */}
+                          <Link href={`/epargne/${product.id}`}>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              className="absolute top-1 right-1 w-6 h-6 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
+                              title="Voir les détails du produit"
+                            >
+                              <Eye size={12} />
+                            </motion.button>
+                          </Link>
                         </div>
                         <div className="absolute top-2 left-2">
                           <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${

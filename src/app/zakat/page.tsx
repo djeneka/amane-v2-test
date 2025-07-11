@@ -328,7 +328,7 @@ export default function ZakatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800">
       {/* Floating Particles */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -421,7 +421,7 @@ export default function ZakatPage() {
             transition={{ duration: 0.6 }}
             className="lg:col-span-2"
           >
-            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-8">
               {/* Step Navigation */}
               <div className="flex items-center justify-between mb-8">
                 <motion.button
@@ -527,7 +527,7 @@ export default function ZakatPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 cursor-pointer"
+                  className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 cursor-pointer"
                   onClick={() => setExpandedInfo(expandedInfo === card.id ? null : card.id)}
                 >
                   <div className="flex items-center justify-between">

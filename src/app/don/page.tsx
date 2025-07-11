@@ -92,7 +92,7 @@ export default function DonPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800">
       {/* Floating Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -184,7 +184,7 @@ export default function DonPage() {
             transition={{ duration: 0.6 }}
             className="lg:col-span-2"
           >
-            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-8">
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (
                   <motion.div
@@ -660,7 +660,7 @@ export default function DonPage() {
             className="space-y-6"
           >
             {/* Donation Summary */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Résumé du don</h3>
               <div className="space-y-4">
                 <div className="flex justify-between">
@@ -685,7 +685,7 @@ export default function DonPage() {
             </div>
 
             {/* Security Info */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
               <div className="flex items-center space-x-3 mb-4">
                 <Shield size={24} className="text-green-600" />
                 <h3 className="font-semibold text-gray-900">Paiement sécurisé</h3>
@@ -707,7 +707,7 @@ export default function DonPage() {
             </div>
 
             {/* Impact Stats */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Votre impact</h3>
               <div className="space-y-4">
                 <div className="text-center">

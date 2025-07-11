@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, TrendingUp, Users, Target, Calendar, MapPin, 
@@ -21,6 +21,7 @@ export default function InvestirPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [showPassword, setShowPassword] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -59,6 +60,48 @@ export default function InvestirPage() {
     eleve: 'bg-red-500',
   };
 
+  // Images pour chaque catégorie
+  const categoryImages = {
+    immobilier: [
+      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&h=300&fit=crop'
+    ],
+    agriculture: [
+      'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1574943320219-553eb213f72f?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?w=400&h=300&fit=crop'
+    ],
+    technologie: [
+      'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop'
+    ],
+    energie: [
+      'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop'
+    ]
+  };
+
+  // Fonction pour changer d'image
+  const nextImage = (productId: string, category: string) => {
+    const images = categoryImages[category as keyof typeof categoryImages] || [];
+    const currentIndex = currentImageIndex[productId] || 0;
+    const nextIndex = (currentIndex + 1) % images.length;
+    setCurrentImageIndex(prev => ({
+      ...prev,
+      [productId]: nextIndex
+    }));
+  };
+
+  // Fonction pour obtenir l'image actuelle
+  const getCurrentImage = (productId: string, category: string) => {
+    const images = categoryImages[category as keyof typeof categoryImages] || [];
+    const currentIndex = currentImageIndex[productId] || 0;
+    return images[currentIndex] || 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+  };
+
   const categories = [
     { id: 'all', name: 'Toutes', icon: Globe, color: 'bg-gray-500' },
     { id: 'immobilier', name: 'Immobilier', icon: Building, color: 'bg-green-500' },
@@ -93,6 +136,25 @@ export default function InvestirPage() {
           return 0;
       }
     });
+
+  // Effet pour le défilement automatique du carrousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      filteredProducts.forEach((product) => {
+        const images = categoryImages[product.category as keyof typeof categoryImages] || [];
+        if (images.length > 1) {
+          const currentIndex = currentImageIndex[product.id] || 0;
+          const nextIndex = (currentIndex + 1) % images.length;
+          setCurrentImageIndex(prev => ({
+            ...prev,
+            [product.id]: nextIndex
+          }));
+        }
+      });
+    }, 3000); // Change d'image toutes les 3 secondes
+
+    return () => clearInterval(interval);
+  }, [filteredProducts, currentImageIndex, categoryImages]);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -144,7 +206,7 @@ export default function InvestirPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800">
       {/* Floating Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -195,52 +257,88 @@ export default function InvestirPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: 5 }}
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Target size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">{investmentProducts.length}</p>
                   <p className="text-sm text-gray-600">Produits disponibles</p>
                 </div>
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: -5 }}
+                animate={{ rotate: [0, -5, 5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, -360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Users size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">10K+</p>
                   <p className="text-sm text-gray-600">Investisseurs</p>
                 </div>
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: 5 }}
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <TrendingUp size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">8.5%</p>
                   <p className="text-sm text-gray-600">Rendement moyen</p>
                 </div>
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: -5 }}
+                animate={{ rotate: [0, -5, 5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, -360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Star size={24} className="text-orange-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">15+</p>
                   <p className="text-sm text-gray-600">Années d'expérience</p>
                 </div>
@@ -256,7 +354,7 @@ export default function InvestirPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-6 mb-8"
+          className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-8"
         >
           <div className="space-y-6">
             {/* Search */}
@@ -371,10 +469,53 @@ export default function InvestirPage() {
                     whileHover={{ y: -5 }}
                     className="group"
                   >
-                    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl transition-all duration-300">
                       <div className="relative">
-                        <div className="w-full h-48 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
-                          <IconComponent size={64} className="text-green-600" />
+                        <div className="w-full h-48 relative overflow-hidden">
+                          <AnimatePresence mode="wait">
+                            <motion.img
+                              key={`${product.id}-${currentImageIndex[product.id] || 0}`}
+                              src={getCurrentImage(product.id, product.category)}
+                              alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
+                              className="w-full h-full object-cover absolute inset-0"
+                              initial={{ x: 300, opacity: 0 }}
+                              animate={{ x: 0, opacity: 1 }}
+                              exit={{ x: -300, opacity: 0 }}
+                              transition={{ duration: 0.5, ease: "easeInOut" }}
+                              onError={(e) => {
+                                // Fallback vers une image par défaut si l'image ne charge pas
+                                const target = e.target as HTMLImageElement;
+                                target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                              }}
+                            />
+                          </AnimatePresence>
+                          <div className="absolute inset-0 bg-black/20"></div>
+                          
+                          {/* Indicateurs d'images */}
+                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                            {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
+                              <div
+                                key={index}
+                                className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                                  (currentImageIndex[product.id] || 0) === index
+                                    ? 'bg-white'
+                                    : 'bg-white/50'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          
+                          {/* Bouton pour voir les détails */}
+                          <Link href={`/investir/${product.id}`}>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              className="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
+                              title="Voir les détails du produit"
+                            >
+                              <Eye size={16} />
+                            </motion.button>
+                          </Link>
                         </div>
                         <div className="absolute top-4 left-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
@@ -383,7 +524,7 @@ export default function InvestirPage() {
                             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                           </span>
                         </div>
-                        <div className="absolute top-4 right-4">
+                        <div className="absolute top-4 right-12">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
                             riskColors[product.riskLevel]
                           }`}>
@@ -486,11 +627,54 @@ export default function InvestirPage() {
                     whileHover={{ x: 5 }}
                     className="group"
                   >
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300">
                       <div className="flex items-center space-x-6">
                         <div className="relative">
-                          <div className="w-32 h-32 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
-                            <IconComponent size={48} className="text-green-600" />
+                          <div className="w-32 h-32 rounded-xl overflow-hidden relative">
+                            <AnimatePresence mode="wait">
+                              <motion.img
+                                key={`${product.id}-list-${currentImageIndex[product.id] || 0}`}
+                                src={getCurrentImage(product.id, product.category)}
+                                alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
+                                className="w-full h-full object-cover absolute inset-0"
+                                initial={{ x: 100, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                exit={{ x: -100, opacity: 0 }}
+                                transition={{ duration: 0.5, ease: "easeInOut" }}
+                                onError={(e) => {
+                                  // Fallback vers une image par défaut si l'image ne charge pas
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                                }}
+                              />
+                            </AnimatePresence>
+                            <div className="absolute inset-0 bg-black/20"></div>
+                            
+                            {/* Indicateurs d'images */}
+                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                              {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
+                                <div
+                                  key={index}
+                                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
+                                    (currentImageIndex[product.id] || 0) === index
+                                      ? 'bg-white'
+                                      : 'bg-white/50'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            
+                            {/* Bouton pour voir les détails */}
+                            <Link href={`/investir/${product.id}`}>
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="absolute top-1 right-1 w-6 h-6 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
+                                title="Voir les détails du produit"
+                              >
+                                <Eye size={12} />
+                              </motion.button>
+                            </Link>
                           </div>
                           <div className="absolute top-2 left-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${

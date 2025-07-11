@@ -61,6 +61,20 @@ export interface InvestmentProduct {
   category: 'immobilier' | 'agriculture' | 'technologie' | 'energie';
 }
 
+export interface SavingsProduct {
+  id: string;
+  name: string;
+  description: string;
+  interestRate: number;
+  minAmount: number;
+  targetAmount: number;
+  currentAmount: number;
+  duration: string;
+  category: 'traditionnel' | 'islamique' | 'objectif' | 'flexible';
+  location: string;
+  beneficiaries: number;
+}
+
 // Données fictives
 export const campaigns: Campaign[] = [
   {
@@ -231,6 +245,48 @@ export const investmentProducts: InvestmentProduct[] = [
     minInvestment: 2000,
     duration: '7-12 ans',
     category: 'technologie'
+  }
+];
+
+export const savingsProducts: SavingsProduct[] = [
+  {
+    id: '1',
+    name: 'Épargne Traditionnelle',
+    description: 'Épargne pour l\'éducation et l\'investissement',
+    interestRate: 3.5,
+    minAmount: 100,
+    targetAmount: 10000,
+    currentAmount: 5000,
+    duration: '5 ans',
+    category: 'traditionnel',
+    location: 'France',
+    beneficiaries: 100,
+  },
+  {
+    id: '2',
+    name: 'Takaful Épargne',
+    description: 'Épargne islamique avec couverture',
+    interestRate: 4.0,
+    minAmount: 50,
+    targetAmount: 5000,
+    currentAmount: 2000,
+    duration: '3 ans',
+    category: 'islamique',
+    location: 'Maroc',
+    beneficiaries: 50,
+  },
+  {
+    id: '3',
+    name: 'Épargne Objectif',
+    description: 'Épargne pour un projet spécifique',
+    interestRate: 5.0,
+    minAmount: 1000,
+    targetAmount: 100000,
+    currentAmount: 20000,
+    duration: '10 ans',
+    category: 'objectif',
+    location: 'Tunisie',
+    beneficiaries: 10,
   }
 ];
 

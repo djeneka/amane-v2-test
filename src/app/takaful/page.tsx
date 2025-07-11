@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, Shield, Users, Target, Calendar, MapPin, 
-  Star, Eye, Share2, Bookmark, Globe, Zap,
+  Star, Eye, Share2, Globe, Zap,
   ChevronDown, ChevronUp, ArrowRight, Play, Pause, Calculator,
   Heart, Car, Home, User, CheckCircle, CreditCard, Lock, EyeOff, X, Wallet
 } from 'lucide-react';
@@ -21,6 +21,7 @@ export default function TakafulPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [showPassword, setShowPassword] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -51,6 +52,48 @@ export default function TakafulPage() {
     automobile: 'bg-blue-500',
     habitation: 'bg-purple-500',
     vie: 'bg-orange-500',
+  };
+
+  // Images pour chaque catégorie
+  const categoryImages = {
+    sante: [
+      'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=300&fit=crop'
+    ],
+    automobile: [
+      'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop'
+    ],
+    habitation: [
+      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&h=300&fit=crop'
+    ],
+    vie: [
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=300&fit=crop'
+    ]
+  };
+
+  // Fonction pour changer d'image
+  const nextImage = (productId: string, category: string) => {
+    const images = categoryImages[category as keyof typeof categoryImages] || [];
+    const currentIndex = currentImageIndex[productId] || 0;
+    const nextIndex = (currentIndex + 1) % images.length;
+    setCurrentImageIndex(prev => ({
+      ...prev,
+      [productId]: nextIndex
+    }));
+  };
+
+  // Fonction pour obtenir l'image actuelle
+  const getCurrentImage = (productId: string, category: string) => {
+    const images = categoryImages[category as keyof typeof categoryImages] || [];
+    const currentIndex = currentImageIndex[productId] || 0;
+    return images[currentIndex] || 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
   };
 
   const categories = [
@@ -87,6 +130,25 @@ export default function TakafulPage() {
           return 0;
       }
     });
+
+  // Effet pour le défilement automatique du carrousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      filteredProducts.forEach((product) => {
+        const images = categoryImages[product.category as keyof typeof categoryImages] || [];
+        if (images.length > 1) {
+          const currentIndex = currentImageIndex[product.id] || 0;
+          const nextIndex = (currentIndex + 1) % images.length;
+          setCurrentImageIndex(prev => ({
+            ...prev,
+            [product.id]: nextIndex
+          }));
+        }
+      });
+    }, 3000); // Change d'image toutes les 3 secondes
+
+    return () => clearInterval(interval);
+  }, [filteredProducts, currentImageIndex, categoryImages]);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -138,7 +200,7 @@ export default function TakafulPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800">
       {/* Floating Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -189,52 +251,88 @@ export default function TakafulPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: 5 }}
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Target size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">{takafulProducts.length}</p>
                   <p className="text-sm text-gray-600">Produits disponibles</p>
                 </div>
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: -5 }}
+                animate={{ rotate: [0, -5, 5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, -360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Users size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">50K+</p>
                   <p className="text-sm text-gray-600">Clients protégés</p>
                 </div>
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: 5 }}
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Star size={24} className="text-green-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">98%</p>
                   <p className="text-sm text-gray-600">Satisfaction</p>
                 </div>
               </motion.div>
 
               <motion.div
-                whileHover={{ y: -5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+                whileHover={{ y: -5, rotate: -5 }}
+                animate={{ rotate: [0, -5, 5, 0] }}
+                transition={{ 
+                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  y: { duration: 0.2 }
+                }}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
               >
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <motion.div 
+                    className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3"
+                    animate={{ rotate: [0, -360] }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  >
                     <Globe size={24} className="text-orange-600" />
-                  </div>
+                  </motion.div>
                   <p className="text-2xl font-bold text-gray-900">15+</p>
                   <p className="text-sm text-gray-600">Pays couverts</p>
                 </div>
@@ -250,7 +348,7 @@ export default function TakafulPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-6 mb-8"
+          className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-8"
         >
           <div className="space-y-6">
             {/* Search */}
@@ -365,10 +463,53 @@ export default function TakafulPage() {
                     whileHover={{ y: -5 }}
                     className="group"
                   >
-                    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl transition-all duration-300">
                       <div className="relative">
-                        <div className="w-full h-48 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
-                          <IconComponent size={64} className="text-green-600" />
+                        <div className="w-full h-48 relative overflow-hidden">
+                          <AnimatePresence mode="wait">
+                            <motion.img
+                              key={`${product.id}-${currentImageIndex[product.id] || 0}`}
+                              src={getCurrentImage(product.id, product.category)}
+                              alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
+                              className="w-full h-full object-cover absolute inset-0"
+                              initial={{ x: 300, opacity: 0 }}
+                              animate={{ x: 0, opacity: 1 }}
+                              exit={{ x: -300, opacity: 0 }}
+                              transition={{ duration: 0.5, ease: "easeInOut" }}
+                              onError={(e) => {
+                                // Fallback vers une image par défaut si l'image ne charge pas
+                                const target = e.target as HTMLImageElement;
+                                target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                              }}
+                            />
+                          </AnimatePresence>
+                          <div className="absolute inset-0 bg-black/20"></div>
+                          
+                          {/* Indicateurs d'images */}
+                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                            {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
+                              <div
+                                key={index}
+                                className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                                  (currentImageIndex[product.id] || 0) === index
+                                    ? 'bg-white'
+                                    : 'bg-white/50'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          
+                          {/* Bouton pour voir les détails */}
+                          <Link href={`/takaful/${product.id}`}>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              className="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
+                              title="Voir les détails du produit"
+                            >
+                              <Eye size={16} />
+                            </motion.button>
+                          </Link>
                         </div>
                         <div className="absolute top-4 left-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
@@ -377,15 +518,7 @@ export default function TakafulPage() {
                             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                           </span>
                         </div>
-                        <div className="absolute top-4 right-4">
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className="w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors"
-                          >
-                            <Bookmark size={16} />
-                          </motion.button>
-                        </div>
+
                       </div>
 
                       <div className="p-6">
@@ -470,11 +603,54 @@ export default function TakafulPage() {
                     whileHover={{ x: 5 }}
                     className="group"
                   >
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300">
                       <div className="flex items-center space-x-6">
                         <div className="relative">
-                          <div className="w-32 h-32 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
-                            <IconComponent size={48} className="text-green-600" />
+                          <div className="w-32 h-32 rounded-xl overflow-hidden relative">
+                            <AnimatePresence mode="wait">
+                              <motion.img
+                                key={`${product.id}-list-${currentImageIndex[product.id] || 0}`}
+                                src={getCurrentImage(product.id, product.category)}
+                                alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
+                                className="w-full h-full object-cover absolute inset-0"
+                                initial={{ x: 100, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                exit={{ x: -100, opacity: 0 }}
+                                transition={{ duration: 0.5, ease: "easeInOut" }}
+                                onError={(e) => {
+                                  // Fallback vers une image par défaut si l'image ne charge pas
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                                }}
+                              />
+                            </AnimatePresence>
+                            <div className="absolute inset-0 bg-black/20"></div>
+                            
+                            {/* Indicateurs d'images */}
+                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                              {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
+                                <div
+                                  key={index}
+                                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
+                                    (currentImageIndex[product.id] || 0) === index
+                                      ? 'bg-white'
+                                      : 'bg-white/50'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            
+                            {/* Bouton pour voir les détails */}
+                            <Link href={`/takaful/${product.id}`}>
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="absolute top-1 right-1 w-6 h-6 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
+                                title="Voir les détails du produit"
+                              >
+                                <Eye size={12} />
+                              </motion.button>
+                            </Link>
                           </div>
                           <div className="absolute top-2 left-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${
