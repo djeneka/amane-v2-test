@@ -8,6 +8,7 @@ import {
   ChevronRight, Star, Zap, Target, Users, Coins, Activity
 } from 'lucide-react';
 import { currentUser, transactions } from '@/data/mockData';
+import { PieChart as MinimalPieChart } from 'react-minimal-pie-chart';
 
 export default function ProfilPage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -46,6 +47,7 @@ export default function ProfilPage() {
     { id: 'profile', label: 'Profil', icon: User },
     { id: 'activity', label: 'Activité', icon: Activity },
     { id: 'rewards', label: 'Récompenses', icon: Award },
+    { id: 'impact', label: 'Impact', icon: Target }, // Ajout de l'onglet Impact
     { id: 'settings', label: 'Paramètres', icon: Settings },
   ];
 
@@ -446,6 +448,201 @@ export default function ProfilPage() {
                   ))}
                 </div>
               </motion.div>
+            </motion.div>
+          )}
+
+          {activeTab === 'impact' && (
+            <motion.div
+              key="impact"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden"
+            >
+              {(() => {
+                // Récupérer les campagnes et transactions
+                // @ts-ignore
+                const { campaigns } = require('@/data/mockData');
+                // @ts-ignore
+                const userDonations = transactions.filter((t: any) => t.type === 'donation');
+                // Campagnes auxquelles l'utilisateur a donné
+                const donatedCampaigns = campaigns.filter((c: any) => userDonations.some((t: any) => t.campaignId === c.id));
+                // Nombre total de bénéficiaires
+                const totalBeneficiaries = donatedCampaigns.reduce((sum: number, c: any) => sum + (c.beneficiaries || 0), 0);
+                // Pays touchés (distincts)
+                const countries = Array.from(new Set(donatedCampaigns.flatMap((c: any) => c.location.split(',').map((l: string) => l.trim()))));
+                // Total des dons
+                const totalDon = userDonations.reduce((sum: number, t: any) => sum + t.amount, 0);
+                
+                // Calculer les pourcentages pour les cercles
+                const total = totalBeneficiaries + countries.length * 100 + totalDon;
+                const beneficiariesPercent = total > 0 ? (totalBeneficiaries / total) * 100 : 33;
+                const countriesPercent = total > 0 ? ((countries.length * 100) / total) * 100 : 33;
+                const donationsPercent = total > 0 ? (totalDon / total) * 100 : 34;
+
+                return (
+                  <div className="relative w-full max-w-2xl">
+                    {/* Particules flottantes */}
+                    <motion.div
+                      animate={{ 
+                        rotate: [0, 360],
+                        scale: [1, 1.1, 1]
+                      }}
+                      transition={{ 
+                        rotate: { duration: 20, repeat: Infinity, ease: "linear" },
+                        scale: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+                      }}
+                      className="absolute inset-0 pointer-events-none"
+                    >
+                      {[...Array(8)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{
+                            x: [0, Math.sin(i * 45) * 100],
+                            y: [0, Math.cos(i * 45) * 100],
+                            opacity: [0.3, 0.8, 0.3]
+                          }}
+                          transition={{
+                            duration: 4 + i * 0.5,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                          className="absolute w-2 h-2 bg-green-400 rounded-full"
+                          style={{
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)'
+                          }}
+                        />
+                      ))}
+                    </motion.div>
+
+                    {/* Cercle principal avec animation */}
+                    <div className="relative flex items-center justify-center">
+                      {/* Cercle extérieur - Bénéficiaires */}
+                      <motion.div
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ duration: 1, delay: 0.2 }}
+                        className="absolute w-80 h-80 rounded-full border-8 border-green-500/30"
+                        style={{
+                          background: `conic-gradient(from 0deg, #22c55e ${beneficiariesPercent * 3.6}deg, transparent ${beneficiariesPercent * 3.6}deg)`
+                        }}
+                      />
+                      
+                      {/* Cercle moyen - Pays */}
+                      <motion.div
+                        initial={{ scale: 0, rotate: 180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ duration: 1, delay: 0.4 }}
+                        className="absolute w-64 h-64 rounded-full border-8 border-blue-500/30"
+                        style={{
+                          background: `conic-gradient(from 0deg, #3b82f6 ${countriesPercent * 3.6}deg, transparent ${countriesPercent * 3.6}deg)`
+                        }}
+                      />
+                      
+                      {/* Cercle intérieur - Dons */}
+                      <motion.div
+                        initial={{ scale: 0, rotate: -90 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ duration: 1, delay: 0.6 }}
+                        className="absolute w-48 h-48 rounded-full border-8 border-pink-500/30"
+                        style={{
+                          background: `conic-gradient(from 0deg, #ec4899 ${donationsPercent * 3.6}deg, transparent ${donationsPercent * 3.6}deg)`
+                        }}
+                      />
+
+                      {/* Centre avec icône et valeur principale */}
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ duration: 0.8, delay: 0.8 }}
+                        className="relative w-32 h-32 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-2xl border-4 border-white"
+                      >
+                        <motion.div
+                          animate={{ rotate: [0, 360] }}
+                          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                          className="absolute inset-0 rounded-full border-2 border-white/20"
+                        />
+                        <div className="text-center z-10">
+                          <Users size={32} className="text-white mb-1" />
+                          <p className="text-lg font-bold text-white">{totalBeneficiaries}</p>
+                        </div>
+                      </motion.div>
+                    </div>
+
+                    {/* Indicateurs latéraux animés */}
+                    <div className="grid grid-cols-3 gap-6 mt-12">
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 1 }}
+                        className="text-center group"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"
+                        >
+                          <Users size={24} className="text-white" />
+                        </motion.div>
+                        <p className="text-2xl font-bold text-green-600 mb-1">{totalBeneficiaries}</p>
+                        <p className="text-sm text-gray-600">Bénéficiaires</p>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${beneficiariesPercent}%` }}
+                          transition={{ duration: 1, delay: 1.2 }}
+                          className="h-1 bg-green-500 rounded-full mt-2"
+                        />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 1.2 }}
+                        className="text-center group"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1, rotate: -5 }}
+                          className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"
+                        >
+                          <Globe size={24} className="text-white" />
+                        </motion.div>
+                        <p className="text-2xl font-bold text-blue-600 mb-1">{countries.length}</p>
+                        <p className="text-sm text-gray-600">Pays touchés</p>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${countriesPercent}%` }}
+                          transition={{ duration: 1, delay: 1.4 }}
+                          className="h-1 bg-blue-500 rounded-full mt-2"
+                        />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 1.4 }}
+                        className="text-center group"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          className="w-16 h-16 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg"
+                        >
+                          <Heart size={24} className="text-white" />
+                        </motion.div>
+                        <p className="text-2xl font-bold text-pink-600 mb-1">{formatAmount(totalDon)}</p>
+                        <p className="text-sm text-gray-600">Total dons</p>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${donationsPercent}%` }}
+                          transition={{ duration: 1, delay: 1.6 }}
+                          className="h-1 bg-pink-500 rounded-full mt-2"
+                        />
+                      </motion.div>
+                    </div>
+                  </div>
+                );
+              })()}
             </motion.div>
           )}
 

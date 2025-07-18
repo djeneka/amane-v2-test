@@ -20,8 +20,8 @@ export default function Navigation() {
     { name: 'Campagnes', href: '/campagnes', icon: Heart },
     { name: 'Faire un Don', href: '/don', icon: Gift },
     { name: 'Takaful', href: '/takaful', icon: Shield },
-    { name: 'Investir', href: '/investir', icon: TrendingUp },
-    { name: 'Épargne', href: '/epargne', icon: Wallet },
+    { name: 'Investir', href: '/investir', icon: TrendingUp }
+    // { name: 'Épargne', href: '/epargne', icon: Wallet },
   ];
 
   const profileDropdownItems = [
