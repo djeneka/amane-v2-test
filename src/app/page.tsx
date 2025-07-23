@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { 
@@ -143,6 +143,56 @@ export default function Home() {
       avatar: 'MS'
     }
   ];
+
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+
+  const videoSlides = [
+    {
+      id: 'dQw4w9WgXcQ', // Example YouTube video ID
+      type: 'youtube'
+    },
+    {
+      src: '/videos/video1.mp4', // Example local video
+      type: 'video'
+    },
+    {
+      src: '/videos/video2.mp4', // Example local video
+      type: 'video'
+    }
+  ];
+
+  const videoRefs = [
+    useRef<HTMLVideoElement | null>(null),
+    useRef<HTMLVideoElement | null>(null),
+    useRef<HTMLVideoElement | null>(null),
+    useRef<HTMLVideoElement | null>(null)
+  ];
+  const videoSources = [
+    '/videos/vid1.mp4',
+    '/videos/vid2.mp4',
+    '/videos/vid3.mp4',
+    '/videos/vid4.mp4',
+  ];
+  // État pour savoir quelle vidéo est en cours de lecture
+  const [playingIndex, setPlayingIndex] = useState(0);
+  // Effet pour lancer la première vidéo au chargement
+  useEffect(() => {
+    const video = videoRefs[playingIndex].current;
+    if (video) {
+      video.play();
+    }
+  }, [playingIndex]);
+  // Handler pour passer à la vidéo suivante
+  const handleVideoEnd = (idx: number) => {
+    const nextIdx = (idx + 1) % videoSources.length;
+    setPlayingIndex(nextIdx);
+  };
+
+  // Ajout d'un état pour le slider mobile
+  const [mobileIndex, setMobileIndex] = useState(0);
+  // Gestion du changement de slide mobile
+  const handleMobilePrev = () => setMobileIndex((prev) => (prev === 0 ? videoSources.length - 1 : prev - 1));
+  const handleMobileNext = () => setMobileIndex((prev) => (prev === videoSources.length - 1 ? 0 : prev + 1));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-50 to-green-50">
@@ -293,6 +343,139 @@ export default function Home() {
                 </div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Video Grid Section */}
+      <section className="w-full bg-green-50/80 backdrop-blur-sm py-12 flex items-center justify-center">
+        <div className="w-full max-w-7xl mx-auto">
+          <h2 className="text-3xl lg:text-4xl font-bold text-green-900 mb-4 text-center w-full">Actualités en Vidéo</h2>
+          <p className="text-lg text-green-800 mb-10 text-center max-w-2xl mx-auto">
+            Découvrez les dernières initiatives, événements et moments forts d’Amane+ à travers notre sélection de vidéos. Plongez au cœur de nos actions et suivez l’impact de notre communauté en images.
+          </p>
+          {/* Mobile slider */}
+          <div className="block md:hidden w-full relative">
+            <div className="flex items-center justify-center">
+              <button
+                onClick={handleMobilePrev}
+                className="bg-white/80 hover:bg-white text-green-800 rounded-full p-2 shadow-lg mx-2"
+                aria-label="Vidéo précédente"
+              >
+                <ArrowRight size={24} className="rotate-180" />
+              </button>
+              <div className="w-full max-w-xs mx-auto">
+                <AnimatePresence initial={false} mode="wait">
+                  <motion.div
+                    key={mobileIndex}
+                    initial={{ opacity: 0, x: 100 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    className="relative h-64"
+                  >
+                    <video
+                      ref={videoRefs[mobileIndex]}
+                      src={videoSources[mobileIndex]}
+                      controls
+                      autoPlay={playingIndex === mobileIndex}
+                      muted
+                      onEnded={() => handleVideoEnd(mobileIndex)}
+                      className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === mobileIndex ? 'border-white' : 'border-green-600'}`}
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+              <button
+                onClick={handleMobileNext}
+                className="bg-white/80 hover:bg-white text-green-800 rounded-full p-2 shadow-lg mx-2"
+                aria-label="Vidéo suivante"
+              >
+                <ArrowRight size={24} />
+              </button>
+            </div>
+            {/* Indicateurs */}
+            <div className="flex justify-center mt-4 space-x-2">
+              {videoSources.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setMobileIndex(idx)}
+                  className={`w-3 h-3 rounded-full ${idx === mobileIndex ? 'bg-green-500 scale-125' : 'bg-white/40 hover:bg-white/70'} transition-all duration-300`}
+                  aria-label={`Aller à la vidéo ${idx + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+          {/* Desktop grid */}
+          <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-8 relative">
+            {/* Première vidéo, plus haute */}
+            <motion.div
+              className="relative md:row-span-2 md:h-[520px] h-80"
+              animate={playingIndex === 0 ? { scale: 1.12, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' } : { scale: 1, boxShadow: '0 4px 16px 0 rgba(22,101,52,0.18)' }}
+              whileHover={{ scale: 1.12, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+            >
+              <video
+                ref={videoRefs[0]}
+                src={videoSources[0]}
+                controls
+                autoPlay={playingIndex === 0}
+                muted
+                onEnded={() => handleVideoEnd(0)}
+                className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === 0 ? 'border-white' : 'border-green-600'}`}
+              />
+            </motion.div>
+            {/* Deuxième vidéo, décalée vers le bas */}
+            <motion.div
+              className="relative md:mt-24 h-80"
+              animate={playingIndex === 1 ? { scale: 1.12, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' } : { scale: 1, boxShadow: '0 4px 16px 0 rgba(22,101,52,0.18)' }}
+              whileHover={{ scale: 1.12, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+            >
+              <video
+                ref={videoRefs[1]}
+                src={videoSources[1]}
+                controls
+                autoPlay={playingIndex === 1}
+                muted
+                onEnded={() => handleVideoEnd(1)}
+                className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === 1 ? 'border-white' : 'border-green-600'}`}
+              />
+            </motion.div>
+            {/* Troisième vidéo, alignée en haut */}
+            <motion.div
+              className="relative h-80"
+              animate={playingIndex === 2 ? { scale: 1.12, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' } : { scale: 1, boxShadow: '0 4px 16px 0 rgba(22,101,52,0.18)' }}
+              whileHover={{ scale: 1.12, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+            >
+              <video
+                ref={videoRefs[2]}
+                src={videoSources[2]}
+                controls
+                autoPlay={playingIndex === 2}
+                muted
+                onEnded={() => handleVideoEnd(2)}
+                className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === 2 ? 'border-white' : 'border-green-600'}`}
+              />
+            </motion.div>
+            {/* Quatrième vidéo, décalée vers le bas */}
+            <motion.div
+              className="relative md:mt-8 md:h-[450px] h-80"
+              animate={playingIndex === 3 ? { scale: 1.12, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' } : { scale: 1, boxShadow: '0 4px 16px 0 rgba(22,101,52,0.18)' }}
+              whileHover={{ scale: 1.12, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+            >
+              <video
+                ref={videoRefs[3]}
+                src={videoSources[3]}
+                controls
+                autoPlay={playingIndex === 3}
+                muted
+                onEnded={() => handleVideoEnd(3)}
+                className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === 3 ? 'border-white' : 'border-green-600'}`}
+              />
+            </motion.div>
           </div>
         </div>
       </section>
