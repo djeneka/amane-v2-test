@@ -52,8 +52,12 @@ export default function Footer() {
             className="lg:col-span-2"
           >
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">A</span>
+              <div className="w-16 h-16 rounded-lg flex items-center justify-center">
+                <img 
+                  src="/amane-logo.png" 
+                  alt="Amane+ Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <span className="text-2xl font-bold">Amane+</span>
             </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { 
@@ -25,26 +25,26 @@ export default function Home() {
   const carouselSlides = [
     {
       id: 0,
-      title: "Votre Super App de Finance Islamique",
-      subtitle: "De la solidarité à la microfinance éthique",
-      description: "Amane+ évolue vers une microfinance islamique complète. Dons, zakat, investissements halal, protection takaful, épargne personnalisée et boutique halal - tous vos services financiers éthiques en un seul endroit.",
+      title: "Votre Super App Financière Islamique",
+      subtitle: "Tous vos services financiers éthiques en un seul endroit",
+      description: "Dons, zakat, investissements halal, protection takaful et épargne islamique. Une plateforme complète qui respecte vos valeurs et vos principes religieux.",
       buttonText: "Découvrir nos services",
       buttonLink: "/don",
       buttonIcon: Heart,
       image: "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&h=600&fit=crop",
       gradient: "from-green-500/40 to-emerald-500/40",
       stats: "50K+ utilisateurs",
-      badge: "Évolution"
+      badge: "Nouveau"
     },
     {
       id: 1,
       title: "Zakat Simplifiée et Automatisée",
       subtitle: "Respectez vos obligations religieuses en toute simplicité",
-      description: "Notre calculateur intelligent détermine précisément votre zakat annuelle selon les principes islamiques. Paiement sécurisé et traçabilité complète pour une microfinance transparente.",
+      description: "Notre calculateur intelligent détermine précisément votre zakat annuelle selon les principes islamiques. Paiement sécurisé et traçabilité complète.",
       buttonText: "Calculer ma Zakat",
       buttonLink: "/zakat",
       buttonIcon: Calculator,
-      image: "https://plus.unsplash.com/premium_photo-1667896627122-37a6567fd5b3?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=600&fit=crop",
       gradient: "from-green-500/40 to-emerald-500/40",
       stats: "15K utilisateurs",
       badge: "Populaire"
@@ -53,11 +53,11 @@ export default function Home() {
       id: 2,
       title: "Protection Takaful Complète",
       subtitle: "Assurance islamique pour vous et votre famille",
-      description: "Protégez-vous avec nos solutions d'assurance conformes aux principes islamiques. Santé, automobile, habitation et vie - tout en respectant vos valeurs dans notre approche microfinancière.",
+      description: "Protégez-vous avec nos solutions d'assurance conformes aux principes islamiques. Santé, automobile, habitation et vie - tout en respectant vos valeurs.",
       buttonText: "Souscrire un Takaful",
       buttonLink: "/takaful",
       buttonIcon: Shield,
-      image: "https://images.unsplash.com/photo-1642420290986-c7a55bab708f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      image: "https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=800&h=600&fit=crop",
       gradient: "from-blue-500/40 to-cyan-500/40",
       stats: "50K+ clients protégés",
       badge: "Recommandé"
@@ -66,11 +66,11 @@ export default function Home() {
       id: 3,
       title: "Investissements Halal et Éthiques",
       subtitle: "Faites fructifier votre argent selon vos valeurs",
-      description: "Placez votre argent dans des projets éthiques et durables qui respectent les principes de la finance islamique. Notre plateforme microfinancière offre des rendements conformes à vos convictions.",
+      description: "Placez votre argent dans des projets éthiques et durables qui respectent les principes de la finance islamique. Rendements conformes à vos convictions.",
       buttonText: "Investir Halal",
       buttonLink: "/investir",
       buttonIcon: TrendingUp,
-      image: "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop",
       gradient: "from-purple-500/40 to-violet-500/40",
       stats: "8.5% rendement moyen",
       badge: "Exclusif"
@@ -92,7 +92,7 @@ export default function Home() {
     {
       icon: Heart,
       title: 'Dons & Solidarité',
-      description: 'Faites des dons sécurisés pour soutenir des causes importantes et respecter vos valeurs de solidarité. Notre plateforme microfinancière assure la transparence totale.',
+      description: 'Faites des dons sécurisés pour soutenir des causes importantes et respecter vos valeurs de solidarité',
       href: '/don',
       color: 'from-red-500 to-pink-500',
       bgColor: 'bg-red-50',
@@ -103,18 +103,18 @@ export default function Home() {
     {
       icon: Calculator,
       title: 'Zakat Automatisée',
-      description: 'Calculez et payez votre zakat en respectant tous les principes islamiques. Notre calculateur intelligent simplifie vos obligations religieuses.',
+      description: 'Calculez et payez votre zakat annuelle en toute simplicité selon les principes islamiques',
       href: '/zakat',
       color: 'from-green-500 to-emerald-500',
       bgColor: 'bg-green-50',
       iconColor: 'text-green-600',
       stats: '15K utilisateurs',
-      features: ['Calculateur intelligent', 'Conformité islamique', 'Paiement simplifié']
+      features: ['Calculateur intelligent', 'Paiement automatisé', 'Rapports détaillés']
     },
     {
       icon: Shield,
       title: 'Protection Takaful',
-      description: 'Assurance islamique pour vous protéger, vous et votre famille. Solutions conformes aux principes islamiques avec une approche microfinancière.',
+      description: 'Assurance islamique complète pour protéger votre famille et vos biens',
       href: '/takaful',
       color: 'from-blue-500 to-cyan-500',
       bgColor: 'bg-blue-50',
@@ -125,74 +125,116 @@ export default function Home() {
     {
       icon: TrendingUp,
       title: 'Investissements Halal',
-      description: 'Placez votre argent dans des projets éthiques et durables. Notre plateforme microfinancière respecte vos valeurs islamiques.',
+      description: 'Placez votre argent de manière éthique et rentable selon vos convictions',
       href: '/investir',
       color: 'from-purple-500 to-violet-500',
       bgColor: 'bg-purple-50',
       iconColor: 'text-purple-600',
       stats: '8.5% rendement moyen',
-      features: ['Investissements éthiques', 'Rendements conformes', 'Transparence totale']
+      features: ['Projets éthiques', 'Rendements stables', 'Diversification']
     },
     {
       icon: Wallet,
-      title: 'Épargne Personnalisée',
-      description: 'Épargnez selon vos objectifs avec des produits conformes aux principes islamiques. Notre approche microfinancière s\'adapte à vos besoins.',
+      title: 'Épargne Islamique',
+      description: 'Épargnez selon les principes islamiques avec des solutions éthiques',
       href: '/epargne',
-      color: 'from-orange-500 to-red-500',
+      color: 'from-orange-500 to-amber-500',
       bgColor: 'bg-orange-50',
       iconColor: 'text-orange-600',
-      stats: '25K+ épargnants',
-      features: ['Zéro intérêt', 'Produits conformes', 'Flexibilité totale']
+      stats: '2.6Mds F CFA épargnés',
+      features: ['Zéro intérêt', 'Objectifs personnalisés', 'Flexibilité totale']
     },
     {
       icon: Bookmark,
-      title: 'Boutique Halal',
-      description: 'Découvrez notre marketplace de produits halal et éthiques. Une approche microfinancière pour soutenir l\'économie locale.',
-      href: '/marketplace',
-      color: 'from-indigo-500 to-purple-500',
+      title: 'Campagnes & Impact',
+      description: 'Découvrez et soutenez des projets qui créent un impact positif',
+      href: '/campagnes',
+      color: 'from-indigo-500 to-blue-500',
       bgColor: 'bg-indigo-50',
       iconColor: 'text-indigo-600',
-      stats: '200+ produits',
-      features: ['Produits vérifiés', 'Économie locale', 'Impact communautaire']
+      stats: '50+ campagnes actives',
+      features: ['Impact vérifié', 'Transparence totale', 'Suivi en temps réel']
+    }
+  ];
+
+  const stats = [
+    { number: '2.5M', label: 'XOF collectés', icon: Target, color: 'text-green-600', trend: '+15%' },
+    { number: '15K', label: 'Donateurs', icon: Users, color: 'text-blue-600', trend: '+8%' },
+    { number: '50+', label: 'Campagnes', icon: Heart, color: 'text-red-600', trend: '+12%' },
+    { number: '25K', label: 'Bénéficiaires', icon: Award, color: 'text-purple-600', trend: '+20%' },
+  ];
+
+  const features = [
+    {
+      icon: Globe,
+      title: 'Impact Mondial',
+      description: 'Nos campagnes touchent des communautés dans le monde entier',
+      color: 'from-green-500 to-emerald-500'
+    },
+    {
+      icon: Shield,
+      title: 'Sécurité Totale',
+      description: 'Vos dons sont protégés et utilisés de manière transparente',
+      color: 'from-blue-500 to-cyan-500'
+    },
+    {
+      icon: Sparkles,
+      title: 'Innovation Éthique',
+      description: 'Technologies modernes au service de la finance islamique',
+      color: 'from-purple-500 to-violet-500'
     }
   ];
 
   const testimonials = [
     {
-      name: 'Amina K.',
+      name: 'Fatima D.',
       role: 'Utilisatrice Amane+',
-      location: 'Abidjan, Côte d\'Ivoire',
-      content: 'Amane+ évolue vers une microfinance islamique complète. Tout est réuni : dons, zakat, investissements. La transparence et le respect de mes valeurs me donnent confiance.',
+      content: 'Amane+ est ma super app financière préférée. Tout est réuni : dons, zakat, investissements. La transparence et le respect de mes valeurs me donnent confiance.',
+      avatar: 'FD',
       rating: 5,
-      avatar: 'A'
+      location: 'Abidjan'
     },
     {
-      name: 'Omar D.',
+      name: 'Ahmed K.',
       role: 'Investisseur Halal',
-      location: 'Dakar, Sénégal',
-      content: 'Grâce à Amane+, je peux investir en toute sérénité. La plateforme respecte mes principes islamiques tout en offrant de bons rendements et une approche microfinancière inclusive.',
+      content: 'Grâce à Amane+, je peux investir en toute sérénité. La plateforme respecte mes principes islamiques tout en offrant de bons rendements.',
+      avatar: 'AK',
       rating: 5,
-      avatar: 'O'
+      location: 'Dakar'
     },
     {
-      name: 'Fatima M.',
+      name: 'Mariam S.',
       role: 'Cliente Takaful',
-      location: 'Bamako, Mali',
-      content: 'La protection Takaful d\'Amane+ me donne une vraie tranquillité d\'esprit. Une super app qui évolue vers une microfinance éthique et comprend mes besoins.',
+      content: 'La protection Takaful d\'Amane+ me donne une vraie tranquillité d\'esprit. Une super app qui comprend mes besoins.',
+      avatar: 'MS',
       rating: 5,
-      avatar: 'F'
+      location: 'Bamako'
     }
   ];
 
+  const videoRefs = [
+    useRef<HTMLVideoElement | null>(null),
+    useRef<HTMLVideoElement | null>(null),
+    useRef<HTMLVideoElement | null>(null),
+    useRef<HTMLVideoElement | null>(null)
+  ];
+  
   const videoSources = [
     '/videos/vid1.mp4',
     '/videos/vid2.mp4',
     '/videos/vid3.mp4',
-    '/videos/vid4.mp4'
+    '/videos/vid4.mp4',
   ];
 
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  // Effet pour lancer la première vidéo au chargement
+  useEffect(() => {
+    const video = videoRefs[playingIndex].current;
+    if (video) {
+      video.play();
+    }
+  }, [playingIndex]);
 
+  // Handler pour passer à la vidéo suivante
   const handleVideoEnd = (idx: number) => {
     const nextIdx = (idx + 1) % videoSources.length;
     setPlayingIndex(nextIdx);
@@ -207,7 +249,6 @@ export default function Home() {
     { icon: Calculator, title: 'Calculer Zakat', href: '/zakat', color: 'from-green-500 to-emerald-500' },
     { icon: Shield, title: 'Protection', href: '/takaful', color: 'from-blue-500 to-cyan-500' },
     { icon: TrendingUp, title: 'Investir', href: '/investir', color: 'from-purple-500 to-violet-500' },
-    { icon: Bookmark, title: 'Boutique Halal', href: '/marketplace', color: 'from-indigo-500 to-purple-500' },
   ];
 
   return (
@@ -307,12 +348,16 @@ export default function Home() {
                   <h1 className="text-4xl lg:text-6xl font-bold mb-4 leading-tight">
                     {carouselSlides[currentImageIndex].title}
                   </h1>
-                  <p className="text-xl lg:text-2xl text-green-100 mb-6 max-w-3xl mx-auto">
+                  <p className="text-xl lg:text-2xl mb-4 text-green-100 font-medium">
                     {carouselSlides[currentImageIndex].subtitle}
                   </p>
-                  <p className="text-lg text-green-100 mb-8 max-w-2xl mx-auto">
+                  <p className="text-lg mb-6 text-green-100/90 leading-relaxed max-w-3xl mx-auto">
                     {carouselSlides[currentImageIndex].description}
                   </p>
+                  <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
+                    <Target size={16} />
+                    <span className="text-sm font-medium">{carouselSlides[currentImageIndex].stats}</span>
+                  </div>
                 </motion.div>
               </AnimatePresence>
 
@@ -320,48 +365,53 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center mb-8"
+                className="flex flex-col items-center space-y-6"
               >
-                <Link href={carouselSlides[currentImageIndex].buttonLink}>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-white text-green-800 px-8 py-4 rounded-xl font-semibold hover:bg-green-50 transition-all duration-200 flex items-center space-x-2 shadow-lg"
-                  >
-                    {React.createElement(carouselSlides[currentImageIndex].buttonIcon, { size: 20 })}
-                    <span>{carouselSlides[currentImageIndex].buttonText}</span>
-                    <ArrowRight size={20} />
-                  </motion.button>
-                </Link>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 1, delay: 0.6 }}
-                className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3"
-              >
-                <Users size={16} />
-                <span className="text-sm font-medium">{carouselSlides[currentImageIndex].stats}</span>
+                {(() => {
+                  const currentSlide = carouselSlides[currentImageIndex];
+                  const IconComponent = currentSlide.buttonIcon;
+                  
+                  return (
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Link
+                        href={currentSlide.buttonLink}
+                        className="bg-white text-green-800 px-8 py-4 rounded-xl font-semibold hover:bg-green-50 transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
+                      >
+                        <IconComponent size={20} />
+                        <span>{currentSlide.buttonText}</span>
+                        <ArrowRight size={20} />
+                      </Link>
+                    </motion.div>
+                  );
+                })()}
+                
+                {/* Carousel Indicators */}
+                <div className="flex space-x-2">
+                  {carouselSlides.map((slide, index) => (
+                    <motion.button
+                      key={slide.id}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                        index === currentImageIndex 
+                          ? 'bg-white scale-125' 
+                          : 'bg-white/50 hover:bg-white/75'
+                      }`}
+                      whileHover={{ scale: 1.2 }}
+                      whileTap={{ scale: 0.9 }}
+                    />
+                  ))}
+                </div>
               </motion.div>
             </motion.div>
           </div>
         </div>
       </section>
 
-
-
       {/* Découverte Interactive - Section 3D */}
-      <section className="py-20 bg-gradient-to-br from-white via-green-50 to-white relative overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-          style={{
-            backgroundImage: `url('https://plus.unsplash.com/premium_photo-1667896627122-37a6567fd5b3?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`
-          }}
-        />
-        {/* Content Overlay */}
-        <div className="relative z-10">
+      <section className="py-20 bg-gradient-to-br from-white via-green-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -506,8 +556,7 @@ export default function Home() {
                 <ArrowRight size={24} />
               </motion.button>
             </Link>
-          </motion.div>
-        </div>
+          </div>
         </div>
       </section>
 
@@ -656,7 +705,7 @@ export default function Home() {
               </div>
             </motion.div>
 
-            {/* Boutique Halal */}
+            {/* Marketplace */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -688,7 +737,7 @@ export default function Home() {
                 >
                   <span className="text-4xl font-bold">200+</span>
                 </motion.div>
-                <p className="text-green-100 text-sm font-medium">Produits halal</p>
+                <p className="text-green-100 text-sm font-medium">Produits disponibles</p>
                 
                 <motion.div
                   animate={{ y: [0, -5, 0] }}
@@ -712,10 +761,10 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-4xl lg:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-800 to-emerald-300 mb-4">
-              De la Super App à la Microfinance Islamique
+              Tous vos services financiers en une seule app
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Une plateforme complète qui évolue vers une microfinance éthique, respectant vos valeurs islamiques et vous accompagnant dans tous vos besoins financiers
+              Une plateforme complète qui respecte vos valeurs islamiques et vous accompagne dans tous vos besoins financiers
             </p>
           </motion.div>
 
@@ -764,17 +813,8 @@ export default function Home() {
       </section>
 
       {/* Propositions de Valeur Amane */}
-      <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-50 relative overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-          style={{
-            backgroundImage: `url('https://plus.unsplash.com/premium_photo-1667896627122-37a6567fd5b3?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`
-          }}
-        />
-        {/* Content Overlay */}
-        <div className="relative z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -786,7 +826,7 @@ export default function Home() {
               Pourquoi choisir <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600">Amane+</span> ?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              La première super app de finance islamique qui évolue vers une microfinance éthique. Nous combinons innovation technologique, respect des principes religieux et impact communautaire pour tous vos besoins financiers.
+              La première super app financière islamique qui combine innovation technologique et respect des principes religieux pour tous vos besoins financiers.
             </p>
           </motion.div>
 
@@ -862,7 +902,7 @@ export default function Home() {
               className="bg-white rounded-2xl p-8 shadow-lg border border-green-100 hover:shadow-xl transition-all duration-300"
             >
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                <Zap size={32} className="text-green-600" />
+                <Sparkles size={32} className="text-green-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Innovation Technologique</h3>
               <p className="text-gray-600 leading-relaxed mb-6">
@@ -924,29 +964,7 @@ export default function Home() {
                 <p className="text-sm text-gray-600">Créer un impact positif</p>
               </div>
             </div>
-            
-            {/* Vision Microfinancière */}
-            <div className="mt-12 pt-8 border-t border-green-100">
-              <h4 className="text-2xl font-bold text-gray-900 mb-6 text-center">Notre Vision Microfinancière</h4>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Building size={32} className="text-white" />
-                  </div>
-                  <h5 className="font-semibold text-gray-900 mb-2">Développement Local</h5>
-                  <p className="text-sm text-gray-600">Soutenir l'économie locale et les entrepreneurs</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Leaf size={32} className="text-white" />
-                  </div>
-                  <h5 className="font-semibold text-gray-900 mb-2">Finance Inclusive</h5>
-                  <p className="text-sm text-gray-600">Rendre la finance accessible à tous</p>
-                </div>
-              </div>
-            </div>
           </motion.div>
-        </div>
         </div>
       </section>
 
@@ -994,7 +1012,7 @@ export default function Home() {
                     className="relative h-64"
                   >
                     <video
-                      ref={(el) => { if (videoRefs.current) videoRefs.current[mobileIndex] = el; }}
+                      ref={videoRefs[mobileIndex]}
                       src={videoSources[mobileIndex]}
                       controls
                       autoPlay={playingIndex === mobileIndex}
@@ -1034,7 +1052,7 @@ export default function Home() {
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             >
               <video
-                ref={(el) => { if (videoRefs.current) videoRefs.current[0] = el; }}
+                ref={videoRefs[0]}
                 src={videoSources[0]}
                 controls
                 autoPlay={playingIndex === 0}
@@ -1050,7 +1068,7 @@ export default function Home() {
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             >
               <video
-                ref={(el) => { if (videoRefs.current) videoRefs.current[1] = el; }}
+                ref={videoRefs[1]}
                 src={videoSources[1]}
                 controls
                 autoPlay={playingIndex === 1}
@@ -1066,7 +1084,7 @@ export default function Home() {
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             >
               <video
-                ref={(el) => { if (videoRefs.current) videoRefs.current[2] = el; }}
+                ref={videoRefs[2]}
                 src={videoSources[2]}
                 controls
                 autoPlay={playingIndex === 2}
@@ -1082,7 +1100,7 @@ export default function Home() {
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             >
               <video
-                ref={(el) => { if (videoRefs.current) videoRefs.current[3] = el; }}
+                ref={videoRefs[3]}
                 src={videoSources[3]}
                 controls
                 autoPlay={playingIndex === 3}
@@ -1096,7 +1114,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-gray-50/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1159,7 +1177,7 @@ export default function Home() {
       </section>
 
       {/* Featured Campaigns */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1172,7 +1190,7 @@ export default function Home() {
               Campagnes populaires
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Découvrez nos campagnes les plus populaires et soutenez des causes importantes. Notre approche microfinancière assure la transparence et l'impact mesurable.
+              Découvrez nos campagnes les plus populaires et soutenez des causes importantes
             </p>
           </motion.div>
 
@@ -1222,11 +1240,11 @@ export default function Home() {
             viewport={{ once: true }}
           >
             <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Prêt à rejoindre notre communauté microfinancière ?
+              Prêt à commencer votre voyage ?
             </h2>
             <p className="text-xl text-green-100 mb-8 max-w-2xl mx-auto">
-              Rejoignez des milliers d'utilisateurs qui ont choisi la finance islamique éthique et inclusive. 
-              Ensemble, construisons un avenir financier plus juste et accessible.
+              Rejoignez des milliers d'utilisateurs qui ont choisi la finance islamique éthique. 
+              Commencez dès aujourd'hui.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <motion.button
@@ -1238,17 +1256,15 @@ export default function Home() {
                 <span>Faire un don</span>
                 <ArrowRight size={20} />
               </motion.button>
-              <Link href="/marketplace">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-green-800 transition-all duration-200 flex items-center justify-center space-x-2"
-                >
-                  <Bookmark size={20} />
-                  <span>Boutique Halal</span>
-                  <ArrowRight size={20} />
-                </motion.button>
-              </Link>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-green-800 transition-all duration-200 flex items-center justify-center space-x-2"
+              >
+                <Shield size={20} />
+                <span>Découvrir nos services</span>
+                <ArrowRight size={20} />
+              </motion.button>
             </div>
           </motion.div>
         </div>
