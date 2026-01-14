@@ -67,7 +67,7 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+    <nav className="bg-[#080909] shadow-sm border-b border-[#00644D] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -77,16 +77,15 @@ export default function Navigation() {
             transition={{ duration: 0.5 }}
           >
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-20 h-20 rounded-lg flex items-center justify-center">
+              <div className="w-36 h-36 rounded-lg flex items-center justify-center">
                 <Image 
-                  src="/amane-logo.png" 
+                  src="/logo/Background(1).png" 
                   alt="Amane Logo" 
                   width={48} 
                   height={48}
                   className="w-full h-full object-contain"
                 />
               </div>
-              <span className="text-xl font-semibold text-gray-900">Amane+</span>
             </Link>
           </motion.div>
 
@@ -103,14 +102,13 @@ export default function Navigation() {
                 >
                   <Link
                     href={item.href}
-                    className={`font-medium transition-colors duration-200 flex items-center space-x-1 ${
+                    className={`font-medium transition-colors duration-200 ${
                       active 
-                        ? 'text-green-800 border-b-2 border-green-800 pb-1' 
-                        : 'text-gray-700 hover:text-green-800'
+                        ? 'text-white border-b-2 border-[#00644D] pb-1' 
+                        : 'text-white/80 hover:text-white'
                     }`}
                   >
-                    <item.icon size={16} />
-                    <span>{item.name}</span>
+                    {item.name}
                   </Link>
                 </motion.div>
               );
@@ -124,11 +122,10 @@ export default function Navigation() {
                 onClick={() => setIsDonDropdownOpen(!isDonDropdownOpen)}
                 className={`font-medium transition-colors duration-200 flex items-center space-x-1 ${
                   isDonActive()
-                    ? 'text-green-800 border-b-2 border-green-800 pb-1' 
-                    : 'text-gray-700 hover:text-green-800'
+                    ? 'text-white border-b-2 border-[#00644D] pb-1' 
+                    : 'text-white/80 hover:text-white'
                 }`}
               >
-                <Gift size={16} />
                 <span>Don</span>
                 <ChevronDown 
                   size={14} 
@@ -316,9 +313,8 @@ export default function Navigation() {
                 >
                   <Link
                     href="/connexion"
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-green-800 transition-colors duration-200"
+                    className="px-4 py-2 text-white hover:text-white/80 transition-colors duration-200 border-b-2 border-[#00644D]"
                   >
-                    <LogIn size={16} />
                     <span className="font-medium">Se connecter</span>
                   </Link>
                 </motion.div>
@@ -328,7 +324,8 @@ export default function Navigation() {
                 >
                   <Link
                     href="/inscription"
-                    className="bg-green-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-900 transition-all duration-200"
+                    className="text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                    style={{ background: 'linear-gradient(to right, #8ECAAB, #38B7B1)' }}
                   >
                     S'inscrire
                   </Link>
@@ -341,7 +338,7 @@ export default function Navigation() {
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
+            className="md:hidden p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors duration-200 text-white"
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </motion.button>
@@ -356,7 +353,7 @@ export default function Navigation() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden bg-white border-t border-gray-100"
+            className="md:hidden bg-[#00644D] border-t border-white/20"
           >
             <div className="px-4 py-6 space-y-4">
               {/* Accueil */}
@@ -372,13 +369,12 @@ export default function Navigation() {
                     <Link
                       href={item.href}
                       onClick={() => setIsOpen(false)}
-                      className={`flex items-center space-x-3 p-3 rounded-lg transition-colors duration-200 ${
+                      className={`p-3 rounded-lg transition-colors duration-200 ${
                         active 
-                          ? 'bg-green-50 text-green-800' 
-                          : 'text-gray-900 hover:bg-gray-50'
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/80 hover:bg-white/10'
                       }`}
                     >
-                      <item.icon size={20} className={active ? 'text-green-800' : 'text-gray-600'} />
                       <span className="font-medium">{item.name}</span>
                     </Link>
                   </motion.div>
@@ -392,9 +388,8 @@ export default function Navigation() {
                 transition={{ duration: 0.3, delay: 0.1 }}
               >
                 <div className="p-3">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center space-x-2">
-                    <Gift size={16} className="text-green-600" />
-                    <span>Don</span>
+                  <h3 className="text-sm font-medium text-white mb-2">
+                    Don
                   </h3>
                   <div className="space-y-1 ml-6">
                     {donDropdownItems.map((item, index) => {
@@ -404,13 +399,12 @@ export default function Navigation() {
                           key={item.name}
                           href={item.href}
                           onClick={() => setIsOpen(false)}
-                          className={`flex items-center space-x-3 p-2 rounded-lg transition-colors duration-200 ${
+                          className={`p-2 rounded-lg transition-colors duration-200 ${
                             active 
-                              ? 'bg-green-50 text-green-800' 
-                              : 'text-gray-700 hover:bg-gray-50'
+                              ? 'bg-white/20 text-white' 
+                              : 'text-white/80 hover:bg-white/10'
                           }`}
                         >
-                          <item.icon size={16} className={active ? 'text-green-800' : 'text-gray-600'} />
                           <span className="text-sm">{item.name}</span>
                         </Link>
                       );
@@ -479,7 +473,7 @@ export default function Navigation() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 0.3 }}
-                  className="pt-4 border-t border-gray-100"
+                  className="pt-4 border-t border-white/20"
                 >
                   <div className="flex items-center space-x-3 p-3 mb-4">
                     <img
@@ -488,8 +482,8 @@ export default function Navigation() {
                       className="w-10 h-10 rounded-full"
                     />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{currentUser.name}</p>
-                      <p className="text-xs text-gray-500">{currentUser.email}</p>
+                      <p className="text-sm font-medium text-white">{currentUser.name}</p>
+                      <p className="text-xs text-white/70">{currentUser.email}</p>
                     </div>
                   </div>
                   
@@ -513,13 +507,13 @@ export default function Navigation() {
                           }}
                           className={`flex items-center space-x-3 p-3 rounded-lg transition-colors duration-200 ${
                             item.isLogout 
-                              ? 'text-red-600 hover:text-red-800 hover:bg-red-50' 
+                              ? 'text-red-400 hover:text-red-300 hover:bg-red-500/20' 
                               : active
-                                ? 'bg-green-50 text-green-800'
-                                : 'text-gray-900 hover:bg-gray-50'
+                                ? 'bg-white/20 text-white'
+                                : 'text-white/80 hover:bg-white/10'
                           }`}
                         >
-                          <item.icon size={20} className={item.isLogout ? 'text-red-600' : active ? 'text-green-800' : 'text-gray-600'} />
+                          <item.icon size={20} className={item.isLogout ? 'text-red-400' : 'text-white'} />
                           <span className="font-medium">{item.name}</span>
                         </Link>
                       </motion.div>
@@ -531,22 +525,21 @@ export default function Navigation() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 0.3 }}
-                  className="pt-4 border-t border-gray-100 space-y-3"
+                  className="pt-4 border-t border-white/20 space-y-3"
                 >
                   <Link
                     href="/connexion"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center space-x-3 p-3 rounded-lg text-gray-900 hover:bg-gray-50 transition-colors duration-200"
+                    className="p-3 rounded-lg text-white hover:bg-white/10 transition-colors duration-200 border-b-2 border-[#00644D]"
                   >
-                    <LogIn size={20} className="text-gray-600" />
                     <span className="font-medium">Se connecter</span>
                   </Link>
                   <Link
                     href="/inscription"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center space-x-3 p-3 rounded-lg bg-green-800 text-white transition-all duration-200"
+                    className="p-3 rounded-lg text-white transition-all duration-200"
+                    style={{ background: 'linear-gradient(to right, #8ECAAB, #38B7B1)' }}
                   >
-                    <User size={20} />
                     <span className="font-medium">S'inscrire</span>
                   </Link>
                 </motion.div>

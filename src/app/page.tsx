@@ -1,518 +1,493 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { 
-  Heart, Calculator, Shield, TrendingUp, ArrowRight, Sparkles, 
-  Users, Target, Award, Globe, Wallet, Bookmark, CheckCircle,
-  BarChart3, Star, Zap, Building, Leaf, Car, Home as HomeIcon, User, Eye,
-  Play, Pause, ChevronLeft, ChevronRight, Clock, MapPin, DollarSign,
-  Smartphone, Tablet, Monitor, Lock, EyeOff, Gift, Calendar, TrendingDown
+  ArrowRight, Calculator, Shield, TrendingUp, Heart, Wallet, 
+  Users, Star, CheckCircle, Smartphone, Apple, Play, 
+  Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin,
+  Eye, Zap, Building, Leaf, Gift, Bookmark, ChevronDown
 } from 'lucide-react';
 import CampaignCard from '@/components/CampaignCard';
 import { campaigns } from '@/data/mockData';
 
 export default function Home() {
   const featuredCampaigns = campaigns.slice(0, 3);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const [playingIndex, setPlayingIndex] = useState(0);
-  const [mobileIndex, setMobileIndex] = useState(0);
-  const [showWalletAmount, setShowWalletAmount] = useState(false);
-
-  // Slides du carousel avec contenu spécifique
-  const carouselSlides = [
-    {
-      id: 0,
-      title: "Votre Super App de Finance Islamique",
-      subtitle: "De la solidarité à la microfinance éthique",
-      description: "Amane+ évolue vers une microfinance islamique complète. Dons, zakat, investissements halal, protection takaful, épargne personnalisée et boutique halal - tous vos services financiers éthiques en un seul endroit.",
-      buttonText: "Découvrir nos services",
-      buttonLink: "/don",
-      buttonIcon: Heart,
-      image: "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&h=600&fit=crop",
-      gradient: "from-green-500/40 to-emerald-500/40",
-      stats: "50K+ utilisateurs",
-      badge: "Évolution"
-    },
-    {
-      id: 1,
-      title: "Zakat Simplifiée et Automatisée",
-      subtitle: "Respectez vos obligations religieuses en toute simplicité",
-      description: "Notre calculateur intelligent détermine précisément votre zakat annuelle selon les principes islamiques. Paiement sécurisé et traçabilité complète pour une microfinance transparente.",
-      buttonText: "Calculer ma Zakat",
-      buttonLink: "/zakat",
-      buttonIcon: Calculator,
-      image: "https://plus.unsplash.com/premium_photo-1667896627122-37a6567fd5b3?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      gradient: "from-green-500/40 to-emerald-500/40",
-      stats: "15K utilisateurs",
-      badge: "Populaire"
-    },
-    {
-      id: 2,
-      title: "Protection Takaful Complète",
-      subtitle: "Assurance islamique pour vous et votre famille",
-      description: "Protégez-vous avec nos solutions d'assurance conformes aux principes islamiques. Santé, automobile, habitation et vie - tout en respectant vos valeurs dans notre approche microfinancière.",
-      buttonText: "Souscrire un Takaful",
-      buttonLink: "/takaful",
-      buttonIcon: Shield,
-      image: "https://images.unsplash.com/photo-1642420290986-c7a55bab708f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      gradient: "from-blue-500/40 to-cyan-500/40",
-      stats: "50K+ clients protégés",
-      badge: "Recommandé"
-    },
-    {
-      id: 3,
-      title: "Investissements Halal et Éthiques",
-      subtitle: "Faites fructifier votre argent selon vos valeurs",
-      description: "Placez votre argent dans des projets éthiques et durables qui respectent les principes de la finance islamique. Notre plateforme microfinancière offre des rendements conformes à vos convictions.",
-      buttonText: "Investir Halal",
-      buttonLink: "/investir",
-      buttonIcon: TrendingUp,
-      image: "https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      gradient: "from-purple-500/40 to-violet-500/40",
-      stats: "8.5% rendement moyen",
-      badge: "Exclusif"
-    }
-  ];
-
-  // Auto-play carousel effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prevIndex) => 
-        prevIndex === carouselSlides.length - 1 ? 0 : prevIndex + 1
-      );
-    }, 6000); // Change slide every 6 seconds
-
-    return () => clearInterval(interval);
-  }, [carouselSlides.length]);
-
-  const services = [
-    {
-      icon: Heart,
-      title: 'Dons & Solidarité',
-      description: 'Faites des dons sécurisés pour soutenir des causes importantes et respecter vos valeurs de solidarité. Notre plateforme microfinancière assure la transparence totale.',
-      href: '/don',
-      color: 'from-red-500 to-pink-500',
-      bgColor: 'bg-red-50',
-      iconColor: 'text-red-600',
-      stats: '2.5M XOF collectés',
-      features: ['Paiement sécurisé', 'Traçabilité complète', 'Impact mesurable']
-    },
-    {
-      icon: Calculator,
-      title: 'Zakat Automatisée',
-      description: 'Calculez et payez votre zakat en respectant tous les principes islamiques. Notre calculateur intelligent simplifie vos obligations religieuses.',
-      href: '/zakat',
-      color: 'from-green-500 to-emerald-500',
-      bgColor: 'bg-green-50',
-      iconColor: 'text-green-600',
-      stats: '15K utilisateurs',
-      features: ['Calculateur intelligent', 'Conformité islamique', 'Paiement simplifié']
-    },
-    {
-      icon: Shield,
-      title: 'Protection Takaful',
-      description: 'Assurance islamique pour vous protéger, vous et votre famille. Solutions conformes aux principes islamiques avec une approche microfinancière.',
-      href: '/takaful',
-      color: 'from-blue-500 to-cyan-500',
-      bgColor: 'bg-blue-50',
-      iconColor: 'text-blue-600',
-      stats: '50K+ clients protégés',
-      features: ['Conformité islamique', 'Couverture complète', 'Tarifs compétitifs']
-    },
-    {
-      icon: TrendingUp,
-      title: 'Investissements Halal',
-      description: 'Placez votre argent dans des projets éthiques et durables. Notre plateforme microfinancière respecte vos valeurs islamiques.',
-      href: '/investir',
-      color: 'from-purple-500 to-violet-500',
-      bgColor: 'bg-purple-50',
-      iconColor: 'text-purple-600',
-      stats: '8.5% rendement moyen',
-      features: ['Investissements éthiques', 'Rendements conformes', 'Transparence totale']
-    },
-    {
-      icon: Wallet,
-      title: 'Épargne Personnalisée',
-      description: 'Épargnez selon vos objectifs avec des produits conformes aux principes islamiques. Notre approche microfinancière s\'adapte à vos besoins.',
-      href: '/epargne',
-      color: 'from-orange-500 to-red-500',
-      bgColor: 'bg-orange-50',
-      iconColor: 'text-orange-600',
-      stats: '25K+ épargnants',
-      features: ['Zéro intérêt', 'Produits conformes', 'Flexibilité totale']
-    },
-    {
-      icon: Bookmark,
-      title: 'Boutique Halal',
-      description: 'Découvrez notre marketplace de produits halal et éthiques. Une approche microfinancière pour soutenir l\'économie locale.',
-      href: '/marketplace',
-      color: 'from-indigo-500 to-purple-500',
-      bgColor: 'bg-indigo-50',
-      iconColor: 'text-indigo-600',
-      stats: '200+ produits',
-      features: ['Produits vérifiés', 'Économie locale', 'Impact communautaire']
-    }
-  ];
 
   const testimonials = [
     {
       name: 'Amina K.',
       role: 'Utilisatrice Amane+',
       location: 'Abidjan, Côte d\'Ivoire',
-      content: 'Amane+ évolue vers une microfinance islamique complète. Tout est réuni : dons, zakat, investissements. La transparence et le respect de mes valeurs me donnent confiance.',
+      content: 'Amane+ a transformé ma façon de gérer mes obligations religieuses. La simplicité et la transparence sont remarquables.',
       rating: 5,
-      avatar: 'A'
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face'
     },
     {
       name: 'Omar D.',
       role: 'Investisseur Halal',
       location: 'Dakar, Sénégal',
-      content: 'Grâce à Amane+, je peux investir en toute sérénité. La plateforme respecte mes principes islamiques tout en offrant de bons rendements et une approche microfinancière inclusive.',
+      content: 'Grâce à Amane+, je peux investir en toute sérénité. La plateforme respecte mes principes islamiques tout en offrant de bons rendements.',
       rating: 5,
-      avatar: 'O'
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
     },
     {
       name: 'Fatima M.',
       role: 'Cliente Takaful',
       location: 'Bamako, Mali',
-      content: 'La protection Takaful d\'Amane+ me donne une vraie tranquillité d\'esprit. Une super app qui évolue vers une microfinance éthique et comprend mes besoins.',
+      content: 'La protection Takaful d\'Amane+ me donne une vraie tranquillité d\'esprit. Une super app qui comprend mes besoins.',
       rating: 5,
-      avatar: 'F'
+      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face'
     }
   ];
 
-  const videoSources = [
-    '/videos/vid1.mp4',
-    '/videos/vid2.mp4',
-    '/videos/vid3.mp4',
-    '/videos/vid4.mp4'
-  ];
-
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
-
-  const handleVideoEnd = (idx: number) => {
-    const nextIdx = (idx + 1) % videoSources.length;
-    setPlayingIndex(nextIdx);
-  };
-
-  // Gestion du changement de slide mobile
-  const handleMobilePrev = () => setMobileIndex((prev) => (prev === 0 ? videoSources.length - 1 : prev - 1));
-  const handleMobileNext = () => setMobileIndex((prev) => (prev === videoSources.length - 1 ? 0 : prev + 1));
-
-  const quickActions = [
-    { icon: Heart, title: 'Faire un don', href: '/don', color: 'from-red-500 to-pink-500' },
-    { icon: Calculator, title: 'Calculer Zakat', href: '/zakat', color: 'from-green-500 to-emerald-500' },
-    { icon: Shield, title: 'Protection', href: '/takaful', color: 'from-blue-500 to-cyan-500' },
-    { icon: TrendingUp, title: 'Investir', href: '/investir', color: 'from-purple-500 to-violet-500' },
-    { icon: Bookmark, title: 'Boutique Halal', href: '/marketplace', color: 'from-indigo-500 to-purple-500' },
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
-      {/* Floating Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{ 
-            x: [0, 100, 0],
-            y: [0, -50, 0],
-            rotate: [0, 180, 360]
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-20 left-20 w-32 h-32 bg-green-200/20 rounded-full blur-xl"
-        />
-        <motion.div
-          animate={{ 
-            x: [0, -80, 0],
-            y: [0, 100, 0],
-            rotate: [360, 180, 0]
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute top-40 right-32 w-24 h-24 bg-indigo-200/20 rounded-full blur-xl"
-        />
-        <motion.div
-          animate={{ 
-            x: [0, 60, 0],
-            y: [0, -30, 0],
-            rotate: [0, -180, -360]
-          }}
-          transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-20 left-1/3 w-20 h-20 bg-purple-200/20 rounded-full blur-lg"
-        />
-      </div>
-
+    <div className="min-h-screen bg-[#0B302F]">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-green-800 via-green-700 to-green-600 text-white overflow-hidden min-h-screen flex items-center">
-        <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-green-900/20 to-transparent" />
-        
-        {/* Background Images Carousel */}
-        <div className="absolute inset-0 overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentImageIndex}
-              initial={{ opacity: 0, scale: 1.1 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 1.5, ease: "easeInOut" }}
-              className="absolute inset-0"
-            >
-              <img
-                src={carouselSlides[currentImageIndex].image}
-                alt="Background"
-                className="w-full h-full object-cover"
-              />
-              <div className={`absolute inset-0 bg-gradient-to-br ${carouselSlides[currentImageIndex].gradient}`} />
-            </motion.div>
-          </AnimatePresence>
-          
-          {/* Additional decorative elements */}
-          <div className="absolute top-10 left-10 w-64 h-64 bg-green-200/10 rounded-full blur-3xl" />
-          <div className="absolute top-20 right-20 w-48 h-48 bg-green-200/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 left-1/4 w-32 h-32 bg-green-200/10 rounded-full blur-2xl" />
-          <div className="absolute bottom-10 right-1/3 w-40 h-40 bg-green-200/10 rounded-full blur-3xl" />
-        </div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-          <div className="text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6"
-              >
-                <Sparkles size={16} />
-                <span className="text-sm font-medium">Super App Financière Islamique</span>
-                <span className="bg-white/20 px-2 py-1 rounded-full text-xs font-bold">
-                  {carouselSlides[currentImageIndex].badge}
-                </span>
-              </motion.div>
-              
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentImageIndex}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5 }}
-                  className="mb-8"
-                >
-                  <h1 className="text-4xl lg:text-6xl font-bold mb-4 leading-tight">
-                    {carouselSlides[currentImageIndex].title}
-                  </h1>
-                  <p className="text-xl lg:text-2xl text-green-100 mb-6 max-w-3xl mx-auto">
-                    {carouselSlides[currentImageIndex].subtitle}
-                  </p>
-                  <p className="text-lg text-green-100 mb-8 max-w-2xl mx-auto">
-                    {carouselSlides[currentImageIndex].description}
-                  </p>
-                </motion.div>
-              </AnimatePresence>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center mb-8"
-              >
-                <Link href={carouselSlides[currentImageIndex].buttonLink}>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-white text-green-800 px-8 py-4 rounded-xl font-semibold hover:bg-green-50 transition-all duration-200 flex items-center space-x-2 shadow-lg"
-                  >
-                    {React.createElement(carouselSlides[currentImageIndex].buttonIcon, { size: 20 })}
-                    <span>{carouselSlides[currentImageIndex].buttonText}</span>
-                    <ArrowRight size={20} />
-                  </motion.button>
-                </Link>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 1, delay: 0.6 }}
-                className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3"
-              >
-                <Users size={16} />
-                <span className="text-sm font-medium">{carouselSlides[currentImageIndex].stats}</span>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-
-
-      {/* Découverte Interactive - Section 3D */}
-      <section className="py-20 bg-gradient-to-br from-white via-green-50 to-white relative overflow-hidden">
+      <section className="relative bg-gradient-to-br from-green-800 via-green-700 to-green-600 text-white overflow-hidden min-h-[600px] flex items-center">
         {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-          style={{
-            backgroundImage: `url('https://plus.unsplash.com/premium_photo-1667896627122-37a6567fd5b3?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`
-          }}
-        />
-        {/* Content Overlay */}
-        <div className="relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="absolute inset-0">
+          <img
+            src="/images/Background.png"
+            alt="Hero"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent" />
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="max-w-4xl"
+          >
+            <h1 className="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
+              <span className="block">Transformez Votre <span className="text-[#5AB678]">Générosité</span></span>
+              <span className="block">En Impact Réel Avec <span className="text-[#5AB678]">Amane+</span></span>
+            </h1>
+            <p className="text-xl lg:text-2xl mb-8 text-white text-center">
+              La plateforme islamique tout-en-un pour vos dons, zakat, takaful et investissements halal.
+            </p>
+            <div className="flex justify-center">
+              <Link href="/don">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-white/20 text-white px-8 py-4 rounded-4xl font-semibold hover:bg-white/30 transition-all duration-200 flex items-center space-x-2 shadow-lg border-1 border-white/20"
+                >
+                  <span>Découvrir Amane+</span>
+                  <div className="bg-[#38B7B1] rounded-full p-2">
+                    <ArrowRight size={20} />
+                  </div>
+                </motion.button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Section "Vivez la spiritualité à l'ère du digital" */}
+      <section className="py-20 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #8ECAAB, #38B7B1)' }}>
+        {/* Image à gauche - masquée sur mobile */}
+        <div className="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 opacity-30">
+          <img src="/icons/Vector(1).png" alt="Decoration" className="h-64 w-auto" />
+        </div>
+        
+        {/* Image au centre - masquée sur mobile */}
+        <div className="hidden md:block absolute left-24 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-30">
+          <img src="/icons/Vector(2).png" alt="Decoration" className="h-18 w-auto" />
+        </div>
+
+        {/* Image à droite (centre) - masquée sur mobile */}
+        <div className="hidden md:block absolute right-6 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-30">
+          <img src="/icons/Vector(2).png" alt="Decoration" className="h-18 w-auto" />
+        </div>
+        
+        {/* Image à droite - masquée sur mobile */}
+        <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 opacity-30">
+          <img src="/icons/Vector(3).png" alt="Decoration" className="h-64 w-auto" />
+        </div>
+        
+        {/* Image unique pour mobile - centrée */}
+        <div className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-30">
+          <img src="/icons/Vector(2).png" alt="Decoration" className="h-32 w-auto" />
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center max-w-4xl mx-auto"
           >
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Découvrez <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600">l'Univers Amane+</span>
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+              Vivez la spiritualité à l'ère du digital
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Plongez dans notre écosystème financier islamique et explorez chaque service avec une expérience immersive
+            <p className="text-sm text-white/80 leading-relaxed">
+              Amane+ est une solution technologique innovante qui vous permet de vivre pleinement vos valeurs religieuses dans le monde moderne. 
+              Notre plateforme combine la tradition islamique avec les dernières innovations technologiques pour vous offrir une expérience financière 
+              éthique, transparente et accessible. Que vous souhaitiez faire un don, calculer votre zakat, investir de manière halal ou vous protéger 
+              avec le Takaful, Amane+ vous accompagne à chaque étape de votre parcours financier spirituel.
             </p>
           </motion.div>
+        </div>
+      </section>
 
+      {/* Section "Un portefeuille éthique" */}
+      <section className="py-20 bg-[#101919] text-white relative overflow-hidden">
+        {/* Overlay avec couleur #43b48F et opacité réduite */}
+        <div className="absolute inset-0 bg-[#43b48F] opacity-10 z-0"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Carte 3D Zakat */}
-            <motion.div
-              initial={{ opacity: 0, x: -50, rotateY: -15 }}
-              whileInView={{ opacity: 1, x: 0, rotateY: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="group perspective-1000"
-            >
-              <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl p-8 text-white shadow-2xl hover:shadow-3xl transition-all duration-500 group-hover:scale-105 transform-gpu">
-                <div className="absolute top-6 right-6">
-                  <motion.div
-                    animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"
-                  >
-                    <Calculator size={32} />
-                  </motion.div>
-                </div>
-                
-                <div className="mb-6">
-                  <h3 className="text-3xl font-bold mb-4">Zakat Automatisée</h3>
-                  <p className="text-green-100 text-lg leading-relaxed">
-                    Calculez et payez votre zakat en quelques clics. Notre algorithme intelligent respecte tous les principes islamiques.
-                  </p>
-                </div>
-
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-green-300 rounded-full animate-pulse"></div>
-                    <span className="text-green-100">Calculateur intelligent</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-green-300 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-                    <span className="text-green-100">Paiement sécurisé</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-green-300 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-                    <span className="text-green-100">Traçabilité complète</span>
-                  </div>
-                </div>
-
-                <Link href="/zakat">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-white text-green-700 px-6 py-3 rounded-xl font-semibold hover:bg-green-50 transition-all duration-200 flex items-center space-x-2"
-                  >
-                    <span>Calculer ma Zakat</span>
-                    <ArrowRight size={20} />
-                  </motion.button>
-                </Link>
-              </div>
-            </motion.div>
-
-            {/* Carte 3D Takaful */}
-            <motion.div
-              initial={{ opacity: 0, x: 50, rotateY: 15 }}
-              whileInView={{ opacity: 1, x: 0, rotateY: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              viewport={{ once: true }}
-              className="group perspective-1000"
-            >
-              <div className="bg-gradient-to-br from-blue-600 to-cyan-700 rounded-3xl p-8 text-white shadow-2xl hover:shadow-3xl transition-all duration-500 group-hover:scale-105 transform-gpu">
-                <div className="absolute top-6 right-6">
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"
-                  >
-                    <Shield size={32} />
-                  </motion.div>
-                </div>
-                
-                <div className="mb-6">
-                  <h3 className="text-3xl font-bold mb-4">Protection Takaful</h3>
-                  <p className="text-blue-100 text-lg leading-relaxed">
-                    Protégez votre famille avec nos solutions d'assurance islamique. Conformité totale et tranquillité d'esprit.
-                  </p>
-                </div>
-
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-blue-300 rounded-full animate-pulse"></div>
-                    <span className="text-blue-100">Conformité islamique</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-blue-300 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-                    <span className="text-blue-100">Couverture complète</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-blue-300 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-                    <span className="text-blue-100">Tarifs compétitifs</span>
-                  </div>
-                </div>
-
-                <Link href="/takaful">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-white text-blue-700 px-6 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 flex items-center space-x-2"
-                  >
-                    <span>Découvrir Takaful</span>
-                    <ArrowRight size={20} />
-                  </motion.button>
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Lien Voir plus */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            viewport={{ once: true }}
-            className="text-center mt-12"
-          >
-            <Link href="#services-section">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center space-x-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+            <div className="order-2 lg:order-1 relative">
+              <img
+                src="/images/blur-bg.png"
+                alt="Portefeuille éthique"
+                className="rounded-2xl shadow-2xl opacity-90"
+              />
+              <img
+                src="/images/wallet.png"
+                alt="Wallet"
+                className="absolute inset-0 w-full h-full object-contain rounded-2xl"
+              />
+            </div>
+            <div className="order-1 lg:order-2">
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                viewport={{ once: true }}
               >
-                <span>Voir plus de services</span>
-                <ArrowRight size={24} />
-              </motion.button>
-            </Link>
-          </motion.div>
-        </div>
+                <h2 className="text-3xl lg:text-4xl font-bold text-[#5AB678] mb-6">
+                  Un portefeuille éthique
+                </h2>
+                <p className="text-lg text-white/80 mb-6 leading-relaxed">
+                  Gérez tous vos services financiers éthiques depuis une seule plateforme. Dons, zakat, investissements halal, 
+                  épargne et protection Takaful - tout est accessible en quelques clics. Notre portefeuille éthique vous permet 
+                  de suivre toutes vos transactions, de visualiser votre impact et de respecter vos obligations religieuses en toute simplicité.
+                </p>
+                <Link href="/portefeuille" className="inline-flex items-center space-x-2 text-[#5AB678] hover:text-green-200 font-semibold">
+                  <span>En savoir plus</span>
+                  <ArrowRight size={20} />
+                </Link>
+              </motion.div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Écosystème Financier - Section Moderne */}
-      <section className="py-20 bg-gradient-to-br from-green-800 via-green-700 to-green-600 text-white overflow-hidden">
+      {/* Section "Dons & Solidarité" */}
+      <section className="py-32 bg-[#101919] text-white relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                viewport={{ once: true }}
+              >
+                {/* Étoile décorative */}
+                <div className="mb-4">
+                  <img src="/icons/Vector(2).png" alt="Star" className="h-6 w-6 text-[#5AB678]" />
+                </div>
+                <h2 className="text-3xl lg:text-4xl font-bold text-[#5AB678] mb-6">
+                  Dons & Solidarité
+                </h2>
+                <p className="text-lg text-white/80 mb-6 leading-relaxed">
+                  Faites un don ponctuel ou récurrent à des campagnes vérifiées : santé, éducation, eau potable, aide alimentaire, orphelins, etc.
+                </p>
+                <p className="text-lg text-[#5AB678] mb-6 leading-relaxed italic">
+                  Le Prophète ﷺ a dit : « La charité n'a jamais diminué une richesse. » (Mouslim)
+                </p>
+                <p className="text-lg text-white/80 mb-6 leading-relaxed">
+                  Chaque geste est tracé jusqu'à l'impact final.
+                </p>
+                <Link href="/don" className="inline-flex items-center space-x-2 text-[#5AB678] hover:text-[#5AB678]/80 font-semibold">
+                  <span>En savoir plus</span>
+                  <ArrowRight size={20} />
+                </Link>
+              </motion.div>
+            </div>
+            {/* Image pour mobile - visible uniquement sur mobile */}
+            <div className="lg:hidden mt-8 -mr-4 sm:-mr-6">
+              <div 
+                className="relative z-0 w-full"
+                style={{
+                  aspectRatio: '868/579',
+                  borderRadius: '289.5px 0 0 289.5px',
+                  border: '3px solid #5AB678',
+                  overflow: 'hidden',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                }}
+              >
+                <img
+                  src="/images/plants.png"
+                  alt="Dons & Solidarité"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Image alignée à droite pour desktop - cachée sur mobile */}
+        <div className="hidden lg:flex absolute left-[50%] -right-2 top-12 bottom-12 items-center justify-end pr-0">
+          <div 
+            className="relative z-0 w-full max-w-[688px]"
+            style={{
+              aspectRatio: '868/579',
+              borderRadius: '289.5px 0 0 289.5px',
+              border: '3px solid #5AB678',
+              overflow: 'hidden',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+            }}
+          >
+            <img
+              src="/images/plants.png"
+              alt="Dons & Solidarité"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Section "Zakat Automatisée" */}
+      <section className="py-32 text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #BFC99E, #20B6B3)' }}>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Image pour mobile - visible uniquement sur mobile */}
+            <div className="lg:hidden mt-8 -ml-4 sm:-ml-6 order-2 lg:order-1">
+              <div 
+                className="relative z-0 w-full"
+                style={{
+                  aspectRatio: '868/579',
+                  borderRadius: '0 289.5px 289.5px 0',
+                  border: '3px solid #fff',
+                  overflow: 'hidden',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                }}
+              >
+                <img
+                  src="/images/sadaq.png"
+                  alt="Zakat"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+            <div className="lg:col-start-2 order-1 lg:order-2">
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="text-3xl lg:text-4xl font-bold text-green-900 mb-6">
+                  Zakat Automatisée
+                </h2>
+                <p className="text-lg text-green-800 mb-6 leading-relaxed">
+                  Calculez et distribuez votre zakat en toute simplicité grâce à notre système automatisé. 
+                  Notre calculateur intelligent respecte tous les principes islamiques et vous guide étape par étape. 
+                  Vous pouvez ensuite distribuer votre zakat à des causes vérifiées et suivre l'impact de votre contribution.
+                </p>
+                <Link href="/zakat" className="inline-flex items-center space-x-2 text-green-800 hover:text-green-900 font-semibold">
+                  <span>En savoir plus</span>
+                  <ArrowRight size={20} />
+                </Link>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+        {/* Image alignée à gauche pour desktop - cachée sur mobile */}
+        <div className="hidden lg:flex absolute -left-16 right-[50%] top-20 bottom-20 items-center justify-start pl-3">
+          <div 
+            className="relative z-0 w-full max-w-[588px]"
+            style={{
+              aspectRatio: '868/579',
+              borderRadius: '0 289.5px 289.5px 0',
+              border: '3px solid #fff',
+              overflow: 'hidden',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+            }}
+          >
+            <img
+              src="/images/sadaq.png"
+              alt="Zakat"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Section "Takaful (Assurance Islamique)" */}
+      <section className="py-32 text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #0B302F, #229693)' }}>
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            src="/images/bg.png"
+            alt="Background"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[#0B302F]/40" />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                viewport={{ once: true }}
+              >
+                {/* Étoile décorative */}
+                <div className="mb-4">
+                  <img src="/icons/Vector(2).png" alt="Star" className="h-6 w-6 text-[#5AB678]" />
+                </div>
+                <h2 className="text-3xl lg:text-4xl font-bold text-[#5AB678] mb-6">
+                  Takaful (Assurance Islamique)
+                </h2>
+                <p className="text-lg text-white/80 mb-6 leading-relaxed">
+                Contribuez à un fonds d’entraide pour soutenir les membres en cas de coup dur — sans intérêt ni spéculation.
+                </p>
+                <p className="text-lg text-[#5AB678] mb-6 leading-relaxed italic">
+                Le Prophète ﷺ a dit : « Les croyants, dans leur amour, leur miséricorde et leur compassion mutuels, sont comme un seul corps. » (Boukhari et Mouslim)
+                </p>
+                <p className="text-lg text-white/80 mb-6 leading-relaxed">
+                Une communauté qui s’assure mutuellement, dans l’esprit du partage.
+                </p>
+                <Link href="/takaful" className="inline-flex items-center space-x-2 text-[#5AB678] hover:text-[#5AB678]/80 font-semibold">
+                  <span>En savoir plus</span>
+                  <ArrowRight size={20} />
+                </Link>
+              </motion.div>
+            </div>
+            {/* Image pour mobile - visible uniquement sur mobile */}
+            <div className="lg:hidden mt-8 -mr-4 sm:-mr-6">
+              <div 
+                className="relative z-0 w-full"
+                style={{
+                  aspectRatio: '868/579',
+                  borderRadius: '289.5px 0 0 289.5px',
+                  border: '3px solid #5AB678',
+                  overflow: 'hidden',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                }}
+              >
+                <img
+                  src="/images/voile.png"
+                  alt="Takaful"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Image alignée à droite pour desktop - cachée sur mobile */}
+        <div className="hidden lg:flex absolute left-[50%] -right-2 top-12 bottom-12 items-center justify-end pr-0">
+          <div 
+            className="relative z-0 w-full max-w-[688px]"
+            style={{
+              aspectRatio: '868/579',
+              borderRadius: '289.5px 0 0 289.5px',
+              border: '3px solid #5AB678',
+              overflow: 'hidden',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+            }}
+          >
+            <img
+              src="/images/voile.png"
+              alt="Takaful"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Section "Investissements Halal" */}
+      <section className="py-32 text-white relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #5AB678, #226C3A)' }}>
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            src="/images/bg(2).png"
+            alt="Background"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[#226C3A]/40" />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Image pour mobile - visible uniquement sur mobile */}
+            <div className="lg:hidden mt-8 -ml-4 sm:-ml-6 order-2 lg:order-1">
+              <div 
+                className="relative z-0 w-full"
+                style={{
+                  aspectRatio: '868/579',
+                  borderRadius: '0 289.5px 289.5px 0',
+                  border: '3px solid #fff',
+                  overflow: 'hidden',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                }}
+              >
+                <img
+                  src="/images/invest-w.png"
+                  alt="Investissements Halal"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+            <div className="lg:col-start-2 order-1 lg:order-2">
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+                  Investissements Halal
+                </h2>
+                <p className="text-lg text-white mb-6 leading-relaxed">
+                Placez votre argent dans des projets conformes à la finance islamique, et faites fructifier vos revenus de manière éthique
+                </p>
+                <p className="text-lg text-[#07352A] mb-6 leading-relaxed italic">
+                  Le Prophète ﷺ a dit : « Cherchez ce qui est licite, car Allah n’accepte que ce qui est licite. » (Tabarani)
+                </p>
+                <p className="text-lg text-white mb-6 leading-relaxed">
+                Investissez sans compromis, selon vos valeurs.
+                </p>
+                <Link href="/investir" className="inline-flex items-center space-x-2 text-white hover:text-white/80 font-semibold">
+                  <span>En savoir plus</span>
+                  <ArrowRight size={20} />
+                </Link>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+        {/* Image alignée à gauche pour desktop - cachée sur mobile */}
+        <div className="hidden lg:flex absolute -left-16 right-[50%] top-20 bottom-20 items-center justify-start pl-3">
+          <div 
+            className="relative z-0 w-full max-w-[588px]"
+            style={{
+              aspectRatio: '868/579',
+              borderRadius: '0 289.5px 289.5px 0',
+              border: '3px solid #fff',
+              overflow: 'hidden',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+            }}
+          >
+            <img
+              src="/images/invest-w.png"
+              alt="Zakat"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Section "L'impact d'Amane+ en chiffres" */}
+      <section className="py-20 text-white" style={{ background: 'linear-gradient(193deg, #00644D -74.99%, #101919 119.08%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -521,636 +496,301 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl lg:text-5xl font-bold mb-6">
-              Notre <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-emerald-200">Écosystème</span> Financier
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
+              <span className="text-white">L'impact d'</span>
+              <span className="text-[#5AB678]">Amane+</span>
+              <span className="text-white"> en chiffres</span>
             </h2>
-            <p className="text-xl text-green-100 max-w-3xl mx-auto">
-              Un réseau intégré de services qui se complètent pour offrir une expérience financière complète et éthique
+            <p className="text-lg text-white/90 max-w-3xl mx-auto mt-4">
+              Découvrez comment la foi, la solidarité et la transparence se traduisent en actions réelles.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {/* Donateurs Actifs */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-              className="text-center group"
-            >
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 relative overflow-hidden">
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 5, -5, 0]
-                  }}
-                  transition={{ 
-                    scale: { duration: 3, repeat: Infinity, ease: "easeInOut" },
-                    rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" }
-                  }}
-                  className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4"
-                >
-                  <Users size={32} className="text-white" />
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  transition={{ duration: 1, delay: 0.5 }}
-                  viewport={{ once: true }}
-                  className="mb-2"
-                >
-                  <span className="text-4xl font-bold">15,247</span>
-                </motion.div>
-                <p className="text-green-100 text-sm font-medium">Donateurs actifs</p>
-                
-                <motion.div
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-green-400 rounded-full"
-                />
-              </div>
-            </motion.div>
-
-            {/* Investissements */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              viewport={{ once: true }}
-              className="text-center group"
-            >
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 relative overflow-hidden">
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.1, 1],
-                    rotate: [0, -5, 5, 0]
-                  }}
-                  transition={{ 
-                    scale: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
-                    rotate: { duration: 3.5, repeat: Infinity, ease: "easeInOut" }
-                  }}
-                  className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-4"
-                >
-                  <TrendingUp size={32} className="text-white" />
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  transition={{ duration: 1, delay: 0.6 }}
-                  viewport={{ once: true }}
-                  className="mb-2"
-                >
-                  <span className="text-4xl font-bold">8.5%</span>
-                </motion.div>
-                <p className="text-green-100 text-sm font-medium">Rendement moyen</p>
-                
-                <motion.div
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                  className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-emerald-400 rounded-full"
-                />
-              </div>
-            </motion.div>
-
-            {/* Campagnes Actives */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-              className="text-center group"
-            >
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 relative overflow-hidden">
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.15, 1],
-                    rotate: [0, 10, -10, 0]
-                  }}
-                  transition={{ 
-                    scale: { duration: 3.5, repeat: Infinity, ease: "easeInOut" },
-                    rotate: { duration: 4.5, repeat: Infinity, ease: "easeInOut" }
-                  }}
-                  className="w-16 h-16 bg-gradient-to-br from-red-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4"
-                >
-                  <Heart size={32} className="text-white" />
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  transition={{ duration: 1, delay: 0.7 }}
-                  viewport={{ once: true }}
-                  className="mb-2"
-                >
-                  <span className="text-4xl font-bold">50+</span>
-                </motion.div>
-                <p className="text-green-100 text-sm font-medium">Campagnes actives</p>
-                
-                <motion.div
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                  className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-red-400 rounded-full"
-                />
-              </div>
-            </motion.div>
-
-            {/* Boutique Halal */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              viewport={{ once: true }}
-              className="text-center group"
-            >
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/20 transition-all duration-300 relative overflow-hidden">
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.2, 1],
-                    rotate: [0, -10, 10, 0]
-                  }}
-                  transition={{ 
-                    scale: { duration: 2.8, repeat: Infinity, ease: "easeInOut" },
-                    rotate: { duration: 3.8, repeat: Infinity, ease: "easeInOut" }
-                  }}
-                  className="w-16 h-16 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-4"
-                >
-                  <Bookmark size={32} className="text-white" />
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  transition={{ duration: 1, delay: 0.8 }}
-                  viewport={{ once: true }}
-                  className="mb-2"
-                >
-                  <span className="text-4xl font-bold">200+</span>
-                </motion.div>
-                <p className="text-green-100 text-sm font-medium">Produits halal</p>
-                
-                <motion.div
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-                  className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-purple-400 rounded-full"
-                />
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section id="services-section" className="py-20 bg-gray-50/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl lg:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-800 to-emerald-300 mb-4">
-              De la Super App à la Microfinance Islamique
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Une plateforme complète qui évolue vers une microfinance éthique, respectant vos valeurs islamiques et vous accompagnant dans tous vos besoins financiers
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service, index) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { 
+                value: '15,247', 
+                label: 'Donateurs actifs', 
+                icon: Users, 
+                iconBg: 'bg-[#5AB678]',
+                iconColor: 'text-[#5AB678]',
+                cardBg: 'bg-[#152A2A]'
+              },
+              { 
+                value: '8.5%', 
+                label: 'Rendement moyen', 
+                icon: TrendingUp, 
+                iconBg: 'bg-[#5AB678]',
+                iconColor: 'text-[#5AB678]',
+                cardBg: 'bg-[#152A2A]'
+              },
+              { 
+                value: '50+', 
+                label: 'Campagnes actives', 
+                icon: Heart, 
+                iconBg: 'bg-pink-500',
+                iconColor: 'text-pink-500',
+                cardBg: 'bg-[#152A2A]'
+              },
+              { 
+                value: '200+', 
+                label: 'Produits halal', 
+                icon: Bookmark, 
+                iconBg: 'bg-purple-500',
+                iconColor: 'text-purple-500',
+                cardBg: 'bg-[#152A2A]'
+              }
+            ].map((stat, index) => (
               <motion.div
-                key={service.title}
+                key={index}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                whileHover={{ y: -5 }}
-                className="group"
+                className={`${stat.cardBg} rounded-3xl p-6 text-center shadow-lg border border-white/10`}
               >
-                <Link href={service.href} className="block">
-                  <div className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 hover:shadow-2xl transition-all duration-300 group-hover:scale-105 relative overflow-hidden">
-                    <div className={`absolute inset-0 bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
-                    <div className="relative">
-                      <div className={`w-16 h-16 rounded-2xl ${service.bgColor} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                        <service.icon size={32} className={service.iconColor} />
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                        {service.title}
-                      </h3>
-                      <p className="text-gray-600 leading-relaxed mb-4">
-                        {service.description}
-                      </p>
-                      <div className="space-y-2 mb-4">
-                        {service.features.map((feature, idx) => (
-                          <div key={idx} className="flex items-center space-x-2 text-sm text-gray-600">
-                            <CheckCircle size={14} className="text-green-500" />
-                            <span>{feature}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="text-sm font-medium text-gray-500">
-                        {service.stats}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
+                <div className={`${stat.iconBg} rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center`}>
+                  <stat.icon size={32} className="text-white" />
+                </div>
+                <div className="text-3xl lg:text-4xl font-bold text-white mb-2">
+                  {stat.value}
+                </div>
+                <p className="text-white/80 text-sm font-medium">{stat.label}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Propositions de Valeur Amane */}
-      <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-50 relative overflow-hidden">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-          style={{
-            backgroundImage: `url('https://plus.unsplash.com/premium_photo-1667896627122-37a6567fd5b3?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')`
-          }}
-        />
-        {/* Content Overlay */}
-        <div className="relative z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Section "Actualités" */}
+      <section className="py-20 bg-[#101919] text-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
           >
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Pourquoi choisir <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600">Amane+</span> ?
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-[#5AB678]">
+              Actualités
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              La première super app de finance islamique qui évolue vers une microfinance éthique. Nous combinons innovation technologique, respect des principes religieux et impact communautaire pour tous vos besoins financiers.
+            <p className="text-lg text-white/80 mb-4 leading-relaxed">
+              Découvrez les dernières initiatives, événements et moments forts d'<span className="text-[#5AB678]">Amane+</span>.
             </p>
+            <p className="text-lg text-white/80 mb-8 leading-relaxed">
+              Plongez au cœur de nos actions et suivez l'impact de notre communauté en images.
+            </p>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              viewport={{ once: true }}
+              className="flex justify-center"
+            >
+              <ChevronDown size={32} className="text-[#5AB678]" />
+            </motion.div>
           </motion.div>
-
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Transparence Totale */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              viewport={{ once: true }}
-              className="bg-white rounded-2xl p-8 shadow-lg border border-green-100 hover:shadow-xl transition-all duration-300"
-            >
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                <Eye size={32} className="text-green-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Transparence Totale</h3>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                Chaque transaction, chaque don, chaque investissement est tracé et visible. Nous croyons en la transparence absolue pour bâtir la confiance dans notre super app.
-              </p>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-green-500" />
-                  <span>Rapports détaillés en temps réel</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-green-500" />
-                  <span>Traçabilité complète des fonds</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-green-500" />
-                  <span>Audit externe annuel</span>
-                </li>
-              </ul>
-            </motion.div>
-
-            {/* Conformité Islamique */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-              className="bg-white rounded-2xl p-8 shadow-lg border border-green-100 hover:shadow-xl transition-all duration-300"
-            >
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                <Shield size={32} className="text-green-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Conformité Islamique</h3>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                Tous nos produits et services respectent strictement les principes de la finance islamique, validés par des experts religieux. Une super app qui respecte vos convictions.
-              </p>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-green-500" />
-                  <span>Validation par des oulémas</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-green-500" />
-                  <span>Zéro intérêt (riba)</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-green-500" />
-                  <span>Investissements éthiques</span>
-                </li>
-              </ul>
-            </motion.div>
-
-            {/* Innovation Technologique */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              viewport={{ once: true }}
-              className="bg-white rounded-2xl p-8 shadow-lg border border-green-100 hover:shadow-xl transition-all duration-300"
-            >
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                <Zap size={32} className="text-green-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Innovation Technologique</h3>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                Nous utilisons les technologies les plus avancées pour offrir une expérience utilisateur exceptionnelle et sécurisée. Une super app moderne au service de vos valeurs.
-              </p>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-green-500" />
-                  <span>Blockchain pour la traçabilité</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-green-500" />
-                  <span>IA pour l'optimisation</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <CheckCircle size={16} className="text-green-500" />
-                  <span>Sécurité de niveau bancaire</span>
-                </li>
-              </ul>
-            </motion.div>
-          </div>
-
-          {/* Valeurs Fondamentales */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            viewport={{ once: true }}
-            className="mt-16 bg-white rounded-3xl p-8 shadow-lg border border-green-100"
-          >
-            <h3 className="text-3xl font-bold text-gray-900 mb-8 text-center">Nos Valeurs Fondamentales</h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Heart size={24} className="text-green-600" />
-                </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Bienveillance</h4>
-                <p className="text-sm text-gray-600">Agir avec compassion et empathie</p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield size={24} className="text-green-600" />
-                </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Intégrité</h4>
-                <p className="text-sm text-gray-600">Respecter nos engagements</p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users size={24} className="text-green-600" />
-                </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Communauté</h4>
-                <p className="text-sm text-gray-600">Servir l'intérêt collectif</p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Globe size={24} className="text-green-600" />
-                </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Impact</h4>
-                <p className="text-sm text-gray-600">Créer un impact positif</p>
-              </div>
-            </div>
-            
-            {/* Vision Microfinancière */}
-            <div className="mt-12 pt-8 border-t border-green-100">
-              <h4 className="text-2xl font-bold text-gray-900 mb-6 text-center">Notre Vision Microfinancière</h4>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Building size={32} className="text-white" />
-                  </div>
-                  <h5 className="font-semibold text-gray-900 mb-2">Développement Local</h5>
-                  <p className="text-sm text-gray-600">Soutenir l'économie locale et les entrepreneurs</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Leaf size={32} className="text-white" />
-                  </div>
-                  <h5 className="font-semibold text-gray-900 mb-2">Finance Inclusive</h5>
-                  <p className="text-sm text-gray-600">Rendre la finance accessible à tous</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
         </div>
       </section>
 
-      {/* Séparateur visuel */}
-      <div className="py-8 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="border-t border-gray-200"></div>
+      {/* Section "Distribution Alimentaire Pendant Le Ramadan" */}
+      <section className="relative text-white overflow-hidden min-h-[680px] flex items-center m-6">
+        <div className="absolute inset-0">
+          <img
+            src="/images/hope.png"
+            alt="Distribution Alimentaire"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/60" />
         </div>
-      </div>
-
-      {/* Video Grid Section - Actualités en Vidéo */}
-      <section className="w-full bg-white py-16 flex items-center justify-center">
-        <div className="w-full max-w-7xl mx-auto">
+        
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-20 w-full">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
           >
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Actualités en Vidéo</h2>
-            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Découvrez les dernières initiatives, événements et moments forts d'Amane+ à travers notre sélection de vidéos. Plongez au cœur de nos actions et suivez l'impact de notre communauté en images.
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-white">
+              <span className="block">Distribution Alimentaire Pendant</span>
+              <span className="block">Le Ramadan</span>
+            </h2>
+            <p className="text-lg text-white mb-8 leading-relaxed max-w-2xl mx-auto">
+              Grâce à la générosité des fidèles, des vivres essentiels ont été distribués aux familles les plus modestes durant le Ramadan, apportant espoir et bénédiction à leurs tables.
             </p>
-          </motion.div>
-          
-          {/* Mobile Video Slider */}
-          <div className="block md:hidden w-full relative">
-            <div className="flex items-center justify-center">
-              <button
-                onClick={handleMobilePrev}
-                className="bg-white/80 hover:bg-white text-green-800 rounded-full p-2 shadow-lg mx-2 z-10"
-                aria-label="Vidéo précédente"
+            <Link href="/don">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="text-white px-8 py-4 rounded-4xl font-semibold transition-all duration-200 shadow-lg"
+                style={{ background: 'linear-gradient(to right, #8FC99E, #20B6B3)' }}
               >
-                <ChevronLeft size={24} />
-              </button>
-              <div className="w-full max-w-xs mx-auto">
-                <AnimatePresence initial={false} mode="wait">
-                  <motion.div
-                    key={mobileIndex}
-                    initial={{ opacity: 0, x: 100 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -100 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                    className="relative h-64"
-                  >
-                    <video
-                      ref={(el) => { if (videoRefs.current) videoRefs.current[mobileIndex] = el; }}
-                      src={videoSources[mobileIndex]}
-                      controls
-                      autoPlay={playingIndex === mobileIndex}
-                      muted
-                      onEnded={() => handleVideoEnd(mobileIndex)}
-                      className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === mobileIndex ? 'border-green-500' : 'border-gray-300'}`}
-                    />
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-              <button
-                onClick={handleMobileNext}
-                className="bg-white/80 hover:bg-white text-green-800 rounded-full p-2 shadow-lg mx-2 z-10"
-                aria-label="Vidéo suivante"
-              >
-                <ChevronRight size={24} />
-              </button>
-            </div>
-            <div className="flex justify-center mt-4 space-x-2">
-              {videoSources.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setMobileIndex(idx)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${idx === mobileIndex ? 'bg-green-500 scale-125' : 'bg-gray-300 hover:bg-gray-400'}`}
-                  aria-label={`Aller à la vidéo ${idx + 1}`}
-                />
+                En savoir plus
+              </motion.button>
+            </Link>
+            <div className="flex justify-center mt-8 space-x-2">
+              <div className="w-2 h-2 bg-white rounded-full" />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="w-2 h-2 border border-white rounded-full" />
               ))}
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Section "Pourquoi choisir Amane+ ?" */}
+      <section className="py-20 bg-green-800 text-white relative overflow-hidden">
+        <div className="absolute left-0 top-0 w-96 h-96 bg-green-400/10 rounded-full blur-3xl" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
+              Pourquoi choisir <span className="text-green-300">Amane+</span> ?
+            </h2>
+            <p className="text-lg text-green-100 max-w-3xl mx-auto">
+              Une plateforme qui combine innovation technologique, conformité islamique et impact communautaire
+            </p>
+          </motion.div>
+
+          {/* Three Feature Cards */}
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            {[
+              {
+                icon: Eye,
+                title: 'Transparence Totale',
+                features: ['Rapports détaillés en temps réel', 'Traçabilité complète des fonds', 'Audit externe annuel']
+              },
+              {
+                icon: Shield,
+                title: 'Conformité à la Charia',
+                features: ['Validation par des oulémas', 'Zéro intérêt (riba)', 'Investissements éthiques']
+              },
+              {
+                icon: Zap,
+                title: 'Innovation Technologique',
+                features: ['Blockchain pour la traçabilité', 'IA pour l\'optimisation', 'Sécurité de niveau bancaire']
+              }
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-green-900/50 backdrop-blur-sm rounded-2xl p-8 border border-green-700"
+              >
+                <div className="w-16 h-16 bg-green-400 rounded-full flex items-center justify-center mb-6">
+                  <feature.icon size={32} className="text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-4">{feature.title}</h3>
+                <ul className="space-y-2">
+                  {feature.features.map((item, idx) => (
+                    <li key={idx} className="flex items-start space-x-2 text-green-100">
+                      <CheckCircle size={16} className="text-green-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            ))}
           </div>
 
-          {/* Desktop Video Grid */}
-          <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-8 relative">
-            <motion.div
-              className="relative md:row-span-2 md:h-[520px] h-80"
-              animate={playingIndex === 0 ? { scale: 1.05, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' } : { scale: 1, boxShadow: '0 4px 16px 0 rgba(22,101,52,0.18)' }}
-              whileHover={{ scale: 1.05, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            >
-              <video
-                ref={(el) => { if (videoRefs.current) videoRefs.current[0] = el; }}
-                src={videoSources[0]}
-                controls
-                autoPlay={playingIndex === 0}
-                muted
-                onEnded={() => handleVideoEnd(0)}
-                className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === 0 ? 'border-green-500' : 'border-gray-300'}`}
-              />
-            </motion.div>
-            <motion.div
-              className="relative md:mt-24 h-80"
-              animate={playingIndex === 1 ? { scale: 1.05, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' } : { scale: 1, boxShadow: '0 4px 16px 0 rgba(22,101,52,0.18)' }}
-              whileHover={{ scale: 1.05, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            >
-              <video
-                ref={(el) => { if (videoRefs.current) videoRefs.current[1] = el; }}
-                src={videoSources[1]}
-                controls
-                autoPlay={playingIndex === 1}
-                muted
-                onEnded={() => handleVideoEnd(1)}
-                className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === 1 ? 'border-green-500' : 'border-gray-300'}`}
-              />
-            </motion.div>
-            <motion.div
-              className="relative h-80"
-              animate={playingIndex === 2 ? { scale: 1.05, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' } : { scale: 1, boxShadow: '0 4px 16px 0 rgba(22,101,52,0.18)' }}
-              whileHover={{ scale: 1.05, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            >
-              <video
-                ref={(el) => { if (videoRefs.current) videoRefs.current[2] = el; }}
-                src={videoSources[2]}
-                controls
-                autoPlay={playingIndex === 2}
-                muted
-                onEnded={() => handleVideoEnd(2)}
-                className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === 2 ? 'border-green-500' : 'border-gray-300'}`}
-              />
-            </motion.div>
-            <motion.div
-              className="relative md:mt-8 md:h-[450px] h-80"
-              animate={playingIndex === 3 ? { scale: 1.05, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' } : { scale: 1, boxShadow: '0 4px 16px 0 rgba(22,101,52,0.18)' }}
-              whileHover={{ scale: 1.05, boxShadow: '0 8px 32px 0 rgba(22,101,52,0.45)' }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            >
-              <video
-                ref={(el) => { if (videoRefs.current) videoRefs.current[3] = el; }}
-                src={videoSources[3]}
-                controls
-                autoPlay={playingIndex === 3}
-                muted
-                onEnded={() => handleVideoEnd(3)}
-                className={`absolute top-0 left-0 w-full h-full object-cover rounded-2xl shadow-2xl border-4 ${playingIndex === 3 ? 'border-green-500' : 'border-gray-300'}`}
-              />
-            </motion.div>
+          {/* Trust Indicators */}
+          <div className="grid md:grid-cols-4 gap-6 mb-12">
+            {[
+              { label: 'Fiabilité', value: '99.99% Taux de Réussite', icon: Shield },
+              { label: 'Sécurité', value: 'Certification ISO 27001', icon: Shield },
+              { label: 'Réseau mondial', value: '15+ Pays', icon: Building },
+              { label: 'Partenariats', value: '50+ Organisations', icon: Users }
+            ].map((indicator, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-green-900/50 backdrop-blur-sm rounded-xl p-6 border border-green-700 text-center"
+              >
+                <indicator.icon size={24} className="text-green-400 mx-auto mb-3" />
+                <p className="text-sm text-green-300 mb-2">{indicator.label}</p>
+                <p className="text-lg font-bold">{indicator.value}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/don">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-green-400 text-white px-8 py-4 rounded-xl font-semibold hover:bg-green-300 transition-all duration-200 shadow-lg"
+              >
+                Découvrir nos solutions
+              </motion.button>
+            </Link>
+            <Link href="/marketplace">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-white text-green-800 px-8 py-4 rounded-xl font-semibold hover:bg-green-50 transition-all duration-200 border-2 border-white"
+              >
+                Voir nos partenariats
+              </motion.button>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 bg-white">
+      {/* Section "Ce que disent nos utilisateurs" */}
+      <section className="py-20 bg-green-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.8 }}
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
               Ce que disent nos utilisateurs
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Découvrez pourquoi des milliers d'utilisateurs font confiance à Amane+ pour tous leurs besoins financiers
+            <p className="text-lg text-green-100 max-w-3xl mx-auto">
+              Découvrez pourquoi des milliers d'utilisateurs font confiance à Amane+
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
               <motion.div
-                key={testimonial.name}
+                key={index}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                whileHover={{ y: -5 }}
-                className="group"
+                className="bg-green-900/50 backdrop-blur-sm rounded-2xl p-8 border border-green-700"
               >
-                <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                  <div className="flex items-center mb-6">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold mr-4">
-                      {testimonial.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
-                      <p className="text-sm text-gray-600">{testimonial.role}</p>
-                      <div className="flex items-center space-x-1 mt-1">
-                        <MapPin size={12} className="text-gray-400" />
-                        <span className="text-xs text-gray-500">{testimonial.location}</span>
-                      </div>
-                    </div>
+                <div className="flex items-center mb-6">
+                  <img
+                    src={testimonial.avatar}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full mr-4"
+                  />
+                  <div>
+                    <h4 className="font-semibold">{testimonial.name}</h4>
+                    <p className="text-sm text-green-300">{testimonial.role}</p>
                   </div>
-                  <p className="text-gray-600 leading-relaxed italic mb-4">
-                    "{testimonial.content}"
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} size={16} className="text-yellow-400 fill-current" />
-                      ))}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {testimonial.rating}/5
-                    </div>
-                  </div>
+                </div>
+                <p className="text-green-100 mb-4 italic">"{testimonial.content}"</p>
+                <div className="flex items-center">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} size={16} className="text-yellow-400 fill-current" />
+                  ))}
                 </div>
               </motion.div>
             ))}
@@ -1158,95 +798,185 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Campaigns */}
-      <section className="py-20 bg-gray-50">
+      {/* Section "Campagnes populaires" */}
+      <section className="py-20 bg-green-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.8 }}
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl lg:text-4xl font-bold text-green-900 mb-6">
               Campagnes populaires
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Découvrez nos campagnes les plus populaires et soutenez des causes importantes. Notre approche microfinancière assure la transparence et l'impact mesurable.
+            <p className="text-lg text-green-800 max-w-3xl mx-auto">
+              Découvrez nos campagnes les plus populaires et soutenez des causes importantes
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
             {featuredCampaigns.map((campaign, index) => (
               <motion.div
                 key={campaign.id}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                whileHover={{ y: -5 }}
               >
-                <CampaignCard campaign={campaign} />
+                <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
+                  <img
+                    src={campaign.image}
+                    alt={campaign.title}
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-green-900 mb-3">{campaign.title}</h3>
+                    <p className="text-green-800 mb-4 text-sm">{campaign.description}</p>
+                    <div className="mb-4">
+                      <div className="w-full bg-green-100 rounded-full h-2 mb-2">
+                        <div
+                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min((campaign.currentAmount / campaign.targetAmount) * 100, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-sm text-green-800">
+                        <span>{campaign.currentAmount.toLocaleString()} XOF</span>
+                        <span>{campaign.targetAmount.toLocaleString()} XOF</span>
+                      </div>
+                    </div>
+                    <Link href={`/campagnes/${campaign.id}`}>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-full bg-green-400 text-white py-3 rounded-xl font-semibold hover:bg-green-500 transition-all duration-200"
+                      >
+                        Faire un don
+                      </motion.button>
+                    </Link>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            viewport={{ once: true }}
-            className="text-center mt-12"
-          >
+          <div className="text-center">
             <Link href="/campagnes">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-200 flex items-center space-x-2 mx-auto shadow-lg hover:shadow-xl"
+                className="bg-green-400 text-white px-8 py-4 rounded-xl font-semibold hover:bg-green-500 transition-all duration-200 shadow-lg"
               >
-                <span>Voir toutes les campagnes</span>
-                <ArrowRight size={20} />
+                Voir plus
               </motion.button>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Section "Emportez Amane+ partout avec vous" */}
+      <section className="py-20 text-white" style={{ background: 'linear-gradient(to bottom, #BFC99E, #20B6B3)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <img
+                src="https://images.unsplash.com/photo-1555774698-0b77e0d5fac6?w=600&h=800&fit=crop"
+                alt="App Mobile"
+                className="rounded-2xl shadow-2xl"
+              />
+            </div>
+            <div>
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="text-3xl lg:text-4xl font-bold mb-6">
+                  Emportez Amane+ partout avec vous
+                </h2>
+                <p className="text-lg text-green-100 mb-8 leading-relaxed">
+                  Téléchargez notre application mobile et accédez à tous vos services financiers éthiques où que vous soyez. 
+                  Gérez vos dons, calculez votre zakat, suivez vos investissements et bien plus encore, directement depuis votre smartphone.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <Apple size={24} />
+                    <span>Disponible sur l'App Store</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <Play size={24} />
+                    <span>Télécharger sur Google Play</span>
+                  </motion.button>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section "Ils nous font confiance" */}
+      <section className="py-20 bg-green-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center"
+          >
+            <h2 className="text-3xl lg:text-4xl font-bold mb-12">
+              Ils nous font confiance
+            </h2>
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-8 opacity-60">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="bg-white/20 rounded-lg h-16 flex items-center justify-center">
+                  <span className="text-white/50 text-sm">Logo {i}</span>
+                </div>
+              ))}
+            </div>
           </motion.div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-green-800 to-green-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      {/* Section "Prêt à rejoindre notre communauté ou nous contacter ?" */}
+      <section className="py-20 bg-green-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Prêt à rejoindre notre communauté microfinancière ?
+            <h2 className="text-3xl lg:text-4xl font-bold text-green-900 mb-8">
+              Prêt à rejoindre notre communauté ou nous contacter ?
             </h2>
-            <p className="text-xl text-green-100 mb-8 max-w-2xl mx-auto">
-              Rejoignez des milliers d'utilisateurs qui ont choisi la finance islamique éthique et inclusive. 
-              Ensemble, construisons un avenir financier plus juste et accessible.
-            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-white text-green-800 px-8 py-4 rounded-xl font-semibold hover:bg-green-50 transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg"
-              >
-                <Heart size={20} />
-                <span>Faire un don</span>
-                <ArrowRight size={20} />
-              </motion.button>
-              <Link href="/marketplace">
+              <Link href="/inscription">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-green-800 transition-all duration-200 flex items-center justify-center space-x-2"
+                  className="bg-white text-green-800 px-8 py-4 rounded-xl font-semibold hover:bg-green-50 transition-all duration-200 border-2 border-green-800 shadow-lg"
                 >
-                  <Bookmark size={20} />
-                  <span>Boutique Halal</span>
-                  <ArrowRight size={20} />
+                  Rejoindre la communauté
+                </motion.button>
+              </Link>
+              <Link href="/connexion">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-green-800 text-white px-8 py-4 rounded-xl font-semibold hover:bg-green-900 transition-all duration-200 shadow-lg"
+                >
+                  Nous contacter
                 </motion.button>
               </Link>
             </div>
