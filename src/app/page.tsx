@@ -8,17 +8,30 @@ import {
   Users, Star, CheckCircle, Smartphone, Apple, Play, 
   Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin,
   Eye, EyeOff, Zap, Building, Leaf, Gift, Bookmark, ChevronDown, Globe, Calendar,
-  Camera, Megaphone, ArrowDown, Award
+  Camera, Megaphone, ArrowDown, Award, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight as ArrowRightIcon
 } from 'lucide-react';
 import CampaignCard from '@/components/CampaignCard';
 import Wallet from '@/components/Wallet';
-import { campaigns } from '@/data/mockData';
+import ServiceCards from '@/components/ServiceCards';
+import { campaigns, takafulProducts } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentTakafulSlide, setCurrentTakafulSlide] = useState(0);
   const featuredCampaigns = campaigns.slice(0, 3);
+
+  // Mapping des images pour les produits Takaful
+  const getTakafulImage = (category: string) => {
+    const imageMap: Record<string, string> = {
+      'sante': '/images/sadaq.png',
+      'automobile': '/images/invest.png',
+      'habitation': '/images/plants.png',
+      'vie': '/images/sadaq.png'
+    };
+    return imageMap[category] || '/images/sadaq.png';
+  };
 
   // Mock data for dashboard
   const walletBalance = 125000;
@@ -625,77 +638,7 @@ export default function Home() {
             </div>
 
             {/* Colonne du milieu - Actions (2x2 Grid) */}
-            <div className="lg:col-span-1">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Dons */}
-                <Link href="/don" className="w-full">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.1 }}
-                    viewport={{ once: true }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-[#8FC99E] rounded-2xl p-6 flex flex-col justify-between cursor-pointer hover:bg-[#7FB88E] transition-colors w-full"
-                    style={{ height: '279px' }}
-                  >
-                    <img src="/images/dons.png" alt="Dons" className="w-12 h-12 object-contain self-start" />
-                    <span className="text-white font-semibold">Dons</span>
-                  </motion.div>
-                </Link>
-
-                {/* Takaful */}
-                <Link href="/takaful" className="w-full">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.2 }}
-                    viewport={{ once: true }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-[#8FC99E] rounded-2xl p-6 flex flex-col justify-between cursor-pointer hover:bg-[#7FB88E] transition-colors w-full"
-                    style={{ height: '203px' }}
-                  >
-                    <img src="/images/ taka.png" alt="Takaful" className="w-12 h-12 object-contain self-start" />
-                    <span className="text-white font-semibold">Takaful</span>
-                  </motion.div>
-                </Link>
-
-                {/* Investissement */}
-                <Link href="/investir" className="w-full">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.3 }}
-                    viewport={{ once: true }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-[#8FC99E] rounded-2xl p-6 flex flex-col justify-between cursor-pointer hover:bg-[#7FB88E] transition-colors w-full"
-                    style={{ height: '217px' }}
-                  >
-                    <img src="/images/invest.png" alt="Investissement" className="w-12 h-12 object-contain self-start" />
-                    <span className="text-white font-semibold">Investissement</span>
-                  </motion.div>
-                </Link>
-
-                {/* Zakat */}
-                <Link href="/zakat" className="w-full">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.4 }}
-                    viewport={{ once: true }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-[#8FC99E] rounded-2xl p-6 flex flex-col justify-between cursor-pointer hover:bg-[#7FB88E] transition-colors w-full"
-                    style={{ height: '293px' }}
-                  >
-                    <img src="/images/zakatt.png" alt="Zakat" className="w-12 h-12 object-contain self-start" />
-                    <span className="text-white font-semibold">Zakat</span>
-                  </motion.div>
-                </Link>
-              </div>
-            </div>
+            <ServiceCards showHelpButton={true} />
 
             {/* Colonne de droite - Activités et Zakat */}
             <div className="lg:col-span-1 space-y-6">
@@ -705,7 +648,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
                 viewport={{ once: true }}
-                className="bg-[#101919] rounded-2xl p-6"
+                className="rounded-2xl p-6"
               >
                 <h3 className="text-white font-bold text-xl mb-2">Activités du mois</h3>
                 <p className="text-white/70 text-sm mb-4">Vos œuvres accomplies par activité ce mois-ci</p>
@@ -721,12 +664,12 @@ export default function Home() {
                     />
                   ))}
                 </div>
-                <p className="text-white/80 text-sm mb-4">{monthlyProgress}/{monthlyTotal}</p>
+                <p className="text-[#5AB678] font-bold text-sm mb-4">{monthlyProgress}/{monthlyTotal}</p>
                 
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-[#101919] border border-white/20 text-white px-4 py-2 rounded-xl font-medium text-sm"
+                  className="w-fit bg-[#10191975] border border-white/20 text-white px-4 py-2 rounded-xl font-medium text-sm"
                 >
                   En savoir plus
                 </motion.button>
@@ -738,9 +681,9 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
                 viewport={{ once: true }}
-                className="bg-[#101919] rounded-2xl p-6"
+                className="bg-[#10191963] rounded-2xl p-6"
               >
-                <p className="text-[#5AB678] font-bold text-lg mb-2">
+                <p className="text-white font-bold text-lg mb-2">
                   {zakatPaid}% de votre zakat déjà réglée !
                 </p>
                 <p className="text-white/80 text-sm mb-4 italic">
@@ -748,18 +691,20 @@ export default function Home() {
                 </p>
                 <div className="mb-4">
                   <p className="text-white/70 text-sm mb-1">Reste à payer</p>
-                  <p className="text-white font-bold text-xl">{zakatRemaining.toLocaleString('fr-FR')} F CFA</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[#5AB678] font-bold text-xl">{zakatRemaining.toLocaleString('fr-FR')} F CFA</p>
+                    <Link href="/zakat">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
+                      >
+                        <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
+                        <span>Payer ma zakat</span>
+                      </motion.button>
+                    </Link>
+                  </div>
                 </div>
-                <Link href="/zakat">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
-                  >
-                    <WalletIcon size={18} />
-                    <span>Payer ma zakat</span>
-                  </motion.button>
-                </Link>
               </motion.div>
 
               {/* Accomplissements */}
@@ -768,19 +713,19 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
                 viewport={{ once: true }}
-                className="bg-[#101919] rounded-2xl p-6"
+                className="rounded-2xl p-3"
               >
-                <h3 className="text-white font-bold text-lg mb-4">
+                <h3 className="text-white font-bold text-base mb-4">
                   Vous avez contribué aux accomplissements suivants
                 </h3>
-                <div className="bg-[#0B302F] rounded-xl p-4 flex items-start space-x-4">
-                  <div className="w-16 h-16 rounded-full bg-[#5AB678]/20 flex items-center justify-center flex-shrink-0">
-                    <img src="/images/sadaq.png" alt="Puits" className="w-12 h-12 rounded-full object-cover" />
+                <div className="bg-[#83CBB4] rounded-xl p-3 pt-0 pl-0 flex items-start space-x-4 overflow-hidden">
+                  <div className="w-20 h-20 bg-[#00644D] rounded-full flex items-start justify-start flex-shrink-0 -ml-3">
+                    <img src="/images/sadaq.png" alt="Puits" className="w-full h-full rounded-full object-cover" />
                   </div>
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2 mt-2">
                     <p className="text-white text-sm">Construction de puits dans 5 villages</p>
                     <p className="text-white text-sm">Forages d'eau potable</p>
-                    <p className="text-white text-sm">15 repas distribués</p>
+                    <p className="text-[#00644D] text-sm">15 repas distribués</p>
                   </div>
                 </div>
               </motion.div>
@@ -923,6 +868,122 @@ export default function Home() {
                 style={{ background: 'linear-gradient(to bottom, #00644D, #101919)' }}
               >
                 Voir toutes les campagnes
+              </motion.button>
+            </Link>
+          </div>
+        </div>
+      </section>
+      )}
+
+      {/* Section Nos produits Takafuls */}
+      {isAuthenticated && (
+      <section className="py-20 text-white relative overflow-hidden" style={{ background: 'linear-gradient(to left, #101919, #00644D)' }}>
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center mb-12">
+            {/* Left Side - Title and Description */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+              className="text-center lg:text-start max-w-2xl lg:ml-16"
+            >
+              <h2 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+                Découvrez nos <br />
+                Produits <span className="text-[#20B6B3]">Takaful</span>
+              </h2>
+              <p className="text-lg text-white/90 leading-relaxed mb-8">
+                Protégez-vous et vos proches grâce à des solutions d'assurance conformes aux principes islamiques. 
+                Le <span className="text-[#20B6B3] font-semibold">Takaful d'Amane+</span> repose sur la solidarité et le partage, 
+                pour un avenir plus sûr et équitable.
+              </p>
+            </motion.div>
+
+            {/* Right Side - Product Cards Slider */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+              className="relative"
+            >
+              <div className="relative overflow-hidden">
+                <div 
+                  className="flex transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateX(-${currentTakafulSlide * 100}%)` }}
+                >
+                  {takafulProducts.map((product) => (
+                    <div key={product.id} className="min-w-full px-2">
+                      <div className="bg-white rounded-3xl overflow-hidden relative" style={{ height: '600px' }}>
+                        <div className="absolute inset-0">
+                          <img 
+                            src={product.image} 
+                            alt={product.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
+                          <h3 className="text-white text-2xl font-bold mb-2">{product.name}</h3>
+                          <p className="text-white/90 text-sm mb-4 line-clamp-3">
+                            {product.description}
+                          </p>
+                          <Link href={`/takaful/${product.id}`}>
+                            <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
+                              En savoir plus
+                            </button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Navigation Buttons */}
+              <button
+                onClick={() => setCurrentTakafulSlide((prev) => Math.max(0, prev - 1))}
+                disabled={currentTakafulSlide === 0}
+                aria-label="Carte précédente"
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#00644D] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
+              >
+                <ArrowLeft size={28} className="text-white" />
+              </button>
+              <button
+                onClick={() => setCurrentTakafulSlide((prev) => Math.min(takafulProducts.length - 1, prev + 1))}
+                disabled={currentTakafulSlide === takafulProducts.length - 1}
+                aria-label="Carte suivante"
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
+              >
+                <ArrowRight size={28} className="text-white" />
+              </button>
+
+              {/* Pagination Dots */}
+              <div className="flex justify-center gap-2 mt-6">
+                {takafulProducts.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentTakafulSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      currentTakafulSlide === index 
+                        ? 'bg-white w-8' 
+                        : 'bg-white/30'
+                    }`}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Bouton Voir tous les produits - En dehors de la grid */}
+          <div className="text-center mt-12">
+            <Link href="/takaful">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="border-1 border-white text-white px-6 py-3 rounded-3xl font-semibold flex items-center gap-2 w-fit mx-auto hover:bg-white/10 transition-colors"
+              >
+                Voir tous les produits
+                <ArrowRight size={20} />
               </motion.button>
             </Link>
           </div>

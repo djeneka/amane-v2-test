@@ -32,12 +32,14 @@ export interface User {
 
 export interface Transaction {
   id: string;
-  type: 'donation' | 'zakat' | 'investment' | 'takaful';
+  type: 'donation' | 'zakat' | 'investment' | 'takaful' | 'deposit';
   amount: number;
   campaignId?: string;
   description: string;
   date: string;
-  status: 'completed' | 'pending' | 'failed';
+  status: 'completed' | 'pending' | 'failed' | 'in_progress';
+  fees: number;
+  reference: string;
 }
 
 export interface TakafulProduct {
@@ -48,6 +50,7 @@ export interface TakafulProduct {
   coverage: string;
   features: string[];
   category: 'sante' | 'automobile' | 'habitation' | 'vie';
+  image: string;
 }
 
 export interface InvestmentProduct {
@@ -73,6 +76,21 @@ export interface SavingsProduct {
   category: 'traditionnel' | 'islamique' | 'objectif' | 'flexible';
   location: string;
   beneficiaries: number;
+}
+
+export interface Donation {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  targetAmount: number;
+  currentAmount: number;
+  category: 'urgence' | 'education' | 'sante' | 'developpement' | 'refugies';
+  location: string;
+  endDate: string;
+  impact: string;
+  beneficiaries: number;
+  status: 'active' | 'completed' | 'upcoming';
 }
 
 // Données fictives
@@ -165,7 +183,9 @@ export const transactions: Transaction[] = [
     campaignId: '1',
     description: 'Don pour les réfugiés syriens',
     date: '2024-01-15',
-    status: 'completed'
+    status: 'completed',
+    fees: 10,
+    reference: '1234567890'
   },
   {
     id: '2',
@@ -173,7 +193,9 @@ export const transactions: Transaction[] = [
     amount: 250,
     description: 'Zakat annuelle',
     date: '2024-01-10',
-    status: 'completed'
+    status: 'completed',
+    fees: 25,
+    reference: '1234567890'
   },
   {
     id: '3',
@@ -181,7 +203,19 @@ export const transactions: Transaction[] = [
     amount: 500,
     description: 'Investissement immobilier halal',
     date: '2024-01-05',
-    status: 'completed'
+    status: 'in_progress',
+    fees: 50,
+    reference: '1234567890'
+  },
+  {
+    id: '4',
+    type: 'deposit',
+    amount: 500000,
+    description: 'Dépôt de 500000 XOF',
+    date: '2024-01-05',
+    status: 'completed',
+    fees: 50,
+    reference: '1234567891'
   }
 ];
 
@@ -193,7 +227,8 @@ export const takafulProducts: TakafulProduct[] = [
     monthlyPremium: 45,
     coverage: 'Jusqu\'à 50,000XOF par an',
     features: ['Consultations illimitées', 'Hospitalisation', 'Médicaments', 'Chirurgie'],
-    category: 'sante'
+    category: 'sante',
+    image: '/images/voile.png'
   },
   {
     id: '2',
@@ -202,7 +237,8 @@ export const takafulProducts: TakafulProduct[] = [
     monthlyPremium: 35,
     coverage: 'Valeur du véhicule',
     features: ['Accidents', 'Vol', 'Incendie', 'Assistance routière'],
-    category: 'automobile'
+    category: 'automobile',
+    image: '/images/skemoo.png'
   },
   {
     id: '3',
@@ -211,7 +247,8 @@ export const takafulProducts: TakafulProduct[] = [
     monthlyPremium: 25,
     coverage: 'Valeur du bien',
     features: ['Incendie', 'Vol', 'Dégâts des eaux', 'Responsabilité civile'],
-    category: 'habitation'
+    category: 'habitation',
+    image: '/images/img.png'
   }
 ];
 
@@ -287,6 +324,79 @@ export const savingsProducts: SavingsProduct[] = [
     category: 'objectif',
     location: 'Tunisie',
     beneficiaries: 10,
+  }
+];
+
+export const donations: Donation[] = [
+  {
+    id: '1',
+    title: 'Aide d\'urgence pour les réfugiés syriens',
+    description: 'Soutien vital pour les familles déplacées en Turquie et au Liban',
+    image: '/images/hope.png',
+    targetAmount: 50000,
+    currentAmount: 32450,
+    category: 'refugies',
+    location: 'Turquie, Liban',
+    endDate: '2024-12-31',
+    impact: 'Aide alimentaire et médicale pour 500 familles',
+    beneficiaries: 2500,
+    status: 'active'
+  },
+  {
+    id: '2',
+    title: 'Construction d\'une école au Mali',
+    description: 'Bâtir l\'avenir avec une école primaire moderne',
+    image: '/images/skemoo.png',
+    targetAmount: 75000,
+    currentAmount: 45600,
+    category: 'education',
+    location: 'Mali',
+    endDate: '2025-11-30',
+    impact: 'Éducation pour 200 enfants',
+    beneficiaries: 200,
+    status: 'active'
+  },
+  {
+    id: '3',
+    title: 'Centre médical mobile au Bangladesh',
+    description: 'Soins de santé primaires pour les communautés rurales',
+    image: '/images/img.png',
+    targetAmount: 30000,
+    currentAmount: 18900,
+    category: 'sante',
+    location: 'Bangladesh',
+    endDate: '2024-10-15',
+    impact: 'Soins pour 1000 patients',
+    beneficiaries: 1000,
+    status: 'active'
+  },
+  {
+    id: '4',
+    title: 'Microcrédits pour entrepreneurs',
+    description: 'Soutenir les petites entreprises locales',
+    image: '/images/voile.png',
+    targetAmount: 100000,
+    currentAmount: 67800,
+    category: 'developpement',
+    location: 'Sénégal',
+    endDate: '2024-12-15',
+    impact: 'Soutien à 50 entrepreneurs',
+    beneficiaries: 50,
+    status: 'active'
+  },
+  {
+    id: '5',
+    title: 'Microcrédits pour entrepreneurs',
+    description: 'Soutenir les petites entreprises locales',
+    image: '/images/skemoo.png',
+    targetAmount: 100000,
+    currentAmount: 67800,
+    category: 'developpement',
+    location: 'Sénégal',
+    endDate: '2024-12-15',
+    impact: 'Soutien à 50 entrepreneurs',
+    beneficiaries: 50,
+    status: 'active'
   }
 ];
 

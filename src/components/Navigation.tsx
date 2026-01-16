@@ -152,17 +152,17 @@ export default function Navigation() {
                     src="/icons/frame.png" 
                     alt="Transactions"
                     className={`w-[18px] h-[18px] object-contain transition-all duration-200 ${
-                      isActive('/portefeuille') ? 'brightness-0 saturate-100' : 'opacity-60'
+                      isActive('/transactions') ? 'brightness-0 saturate-100' : 'opacity-60'
                     }`}
-                    style={isActive('/portefeuille') 
+                    style={isActive('/transactions') 
                       ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
                       : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
                     }
                   />
                   <Link
-                    href="/portefeuille"
+                    href="/transactions"
                     className={`font-medium transition-colors duration-200 ${
-                      isActive('/portefeuille')
+                      isActive('/transactions')
                         ? 'text-white border-b-2 border-[#5CD07D] pb-1' 
                         : 'text-[#A8A9AB] hover:text-white'
                     }`}
@@ -181,15 +181,15 @@ export default function Navigation() {
                     src="/icons/people.png" 
                     alt="Communauté"
                     className="w-[18px] h-[18px] object-contain transition-all duration-200"
-                    style={isActive('/marketplace') 
+                    style={isActive('/communaute') 
                       ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
                       : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
                     }
                   />
                   <Link
-                    href="/marketplace"
+                    href="/communaute"
                     className={`font-medium transition-colors duration-200 ${
-                      isActive('/marketplace')
+                      isActive('/communaute')
                         ? 'text-white border-b-2 border-[#5CD07D] pb-1' 
                         : 'text-[#A8A9AB] hover:text-white'
                     }`}
@@ -492,16 +492,16 @@ export default function Navigation() {
                       src="/icons/frame.png" 
                       alt="Transactions"
                       className="w-[18px] h-[18px] object-contain transition-all duration-200"
-                      style={isActive('/portefeuille') 
+                      style={isActive('/transactions') 
                         ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
                         : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
                       }
                     />
                     <Link
-                      href="/portefeuille"
+                      href="/transactions"
                       onClick={() => setIsOpen(false)}
                       className={`flex-1 p-3 rounded-lg transition-colors duration-200 ${
-                        isActive('/portefeuille')
+                        isActive('/transactions')
                           ? 'bg-white/20 text-white' 
                           : 'text-[#A8A9AB] hover:bg-white/10'
                       }`}
@@ -521,16 +521,16 @@ export default function Navigation() {
                       src="/icons/people.png" 
                       alt="Communauté"
                       className="w-[18px] h-[18px] object-contain transition-all duration-200"
-                      style={isActive('/marketplace') 
+                      style={isActive('/communaute') 
                         ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
                         : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
                       }
                     />
                     <Link
-                      href="/marketplace"
+                      href="/communaute"
                       onClick={() => setIsOpen(false)}
                       className={`flex-1 p-3 rounded-lg transition-colors duration-200 ${
-                        isActive('/marketplace')
+                        isActive('/communaute')
                           ? 'bg-white/20 text-white' 
                           : 'text-[#A8A9AB] hover:bg-white/10'
                       }`}
