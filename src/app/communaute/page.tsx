@@ -7,8 +7,6 @@ import {
   ArrowRight, Heart, Users, MapPin, Calendar, ArrowLeft, ChevronDown,
   Apple, Play, TrendingUp, Bookmark
 } from 'lucide-react';
-import Wallet from '@/components/Wallet';
-import ServiceCards from '@/components/ServiceCards';
 import { campaigns, takafulProducts, donations } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -17,26 +15,19 @@ export default function CommunautePage() {
   const [currentTakafulSlide, setCurrentTakafulSlide] = useState(0);
   const featuredCampaigns = campaigns.slice(0, 3);
 
-  // Mock data for dashboard
-  const walletBalance = 125000;
-  const sadaqahScore = 320;
-  const donationsCount = 12;
-  const spentAmount = 125000;
-  const campaignsCount = 15;
-  const zakatPaid = 75;
-  const zakatRemaining = 25000;
-  const monthlyProgress = 5;
-  const monthlyTotal = 10;
   const slides = [
     {
       image: '/images/hope.png',
       title: 'Distribution Alimentaire Pendant Le Ramadan',
-      description: 'Grâce à la générosité des fidèles, des vivres essentiels ont été distribués aux familles les plus modestes durant le Ramadan, apportant espoir et bénédiction à leurs tables.'
+      description: 'Grâce à la générosité des fidèles, des vivres essentiels ont été distribués aux familles les plus modestes durant le Ramadan, apportant espoir et bénédiction à leurs tables.',
+      impact: '+ 2500 repas distribués'
+
     },
     {
       image: '/images/skemoo.png',
       title: 'Distribution Alimentaire Pendant Le Ramadan',
-      description: 'Grâce à la générosité des fidèles, des vivres essentiels ont été distribués aux familles les plus modestes durant le Ramadan, apportant espoir et bénédiction à leurs tables.'
+      description: 'Grâce à la générosité des fidèles, des vivres essentiels ont été distribués aux familles les plus modestes durant le Ramadan, apportant espoir et bénédiction à leurs tables.',
+      impact: '+ 1500 repas distribués'
     }
   ];
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -48,116 +39,148 @@ export default function CommunautePage() {
 
   return (
     <div className="min-h-screen bg-[#0B302F]">
-      {/* Section Dashboard - Affichée uniquement quand connecté */}
-      <section className="py-12 text-white" style={{ background: 'linear-gradient(to right left, #101919, #00644D)' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Colonne de gauche - Compte principal */}
-            <div className="lg:col-span-1">
-              <Wallet 
-                balance={walletBalance}
-                sadaqahScore={sadaqahScore}
-                rank="Argent"
-                donationsCount={donationsCount}
-                spentAmount={spentAmount}
-                campaignsCount={campaignsCount}
-              />
-            </div>
-
-            {/* Colonne du milieu - Actions (2x2 Grid) */}
-            <ServiceCards showHelpButton={true} />
-
-            {/* Colonne de droite - Activités et Zakat */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Activités du mois */}
+      {/* Section "Dons" */}
+      <section className="py-32 text-white relative overflow-hidden" style={{ background: 'linear-gradient(to right, #0B302F, #101919)' }}>
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            src="/images/bg.png"
+            alt="Background"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[#101919]/70" />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
                 viewport={{ once: true }}
-                className="rounded-2xl p-6"
               >
-                <h3 className="text-white font-bold text-xl mb-2">Activités du mois</h3>
-                <p className="text-white/70 text-sm mb-4">Vos œuvres accomplies par activité ce mois-ci</p>
-                
-                {/* Barre de progression */}
-                <div className="flex items-center space-x-2 mb-4">
-                  {Array.from({ length: monthlyTotal }).map((_, index) => (
-                    <div
-                      key={index}
-                      className={`flex-1 h-3 rounded-full ${
-                        index < monthlyProgress ? 'bg-[#5AB678]' : 'bg-white/20'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <p className="text-[#5AB678] font-bold text-sm mb-4">{monthlyProgress}/{monthlyTotal}</p>
-                
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-fit bg-[#10191975] border border-white/20 text-white px-4 py-2 rounded-xl font-medium text-sm"
-                >
-                  En savoir plus
-                </motion.button>
-              </motion.div>
-
-              {/* Statut Zakat */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true }}
-                className="bg-[#10191963] rounded-2xl p-6"
-              >
-                <p className="text-white font-bold text-lg mb-2">
-                  {zakatPaid}% de votre zakat déjà réglée !
-                </p>
-                <p className="text-white/80 text-sm mb-4 italic">
-                  "Donner, c'est purifier vos biens et votre cœur."
-                </p>
+                {/* Étoile décorative */}
                 <div className="mb-4">
-                  <p className="text-white/70 text-sm mb-1">Reste à payer</p>
-                  <div className="flex items-center justify-between">
-                    <p className="text-[#5AB678] font-bold text-xl">{zakatRemaining.toLocaleString('fr-FR')} F CFA</p>
-                    <Link href="/zakat">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
-                      >
-                        <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
-                        <span>Payer ma zakat</span>
-                      </motion.button>
-                    </Link>
-                  </div>
+                  <img src="/icons/Vector(2).png" alt="Star" className="h-6 w-6 text-[#5AB678]" />
                 </div>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentSlide}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+                      {slides[currentSlide].title}
+                    </h2>
+                    <p className="text-lg text-white/80 mb-6 leading-relaxed">
+                      {slides[currentSlide].description}
+                    </p>
+                    <p className="text-lg text-[#5AB678] font-bold mb-6 leading-relaxed">
+                      {slides[currentSlide].impact}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+                {/* <Link href="/campagnes" className="inline-flex items-center space-x-2 text-[#5AB678] hover:text-[#5AB678]/80 font-semibold">
+                  <span>En savoir plus</span>
+                  <ArrowRight size={20} />
+                </Link> */}
               </motion.div>
-
-              {/* Accomplissements */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                viewport={{ once: true }}
-                className="rounded-2xl p-3"
+            </div>
+            {/* Image slider pour mobile - visible uniquement sur mobile */}
+            <div className="lg:hidden mt-8 -mr-4 sm:-mr-6 relative">
+              <div 
+                className="relative z-0 w-full"
+                style={{
+                  aspectRatio: '868/579',
+                  borderRadius: '289.5px 0 0 289.5px',
+                  border: '3px solid #5AB678',
+                  overflow: 'hidden',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                }}
               >
-                <h3 className="text-white font-bold text-base mb-4">
-                  Vous avez contribué aux accomplissements suivants
-                </h3>
-                <div className="bg-[#83CBB4] rounded-xl p-3 pt-0 pl-0 flex items-start space-x-4 overflow-hidden">
-                  <div className="w-20 h-20 bg-[#00644D] rounded-full flex items-start justify-start flex-shrink-0 -ml-3">
-                    <img src="/images/sadaq.png" alt="Puits" className="w-full h-full rounded-full object-cover" />
-                  </div>
-                  <div className="flex-1 space-y-2 mt-2">
-                    <p className="text-white text-sm">Construction de puits dans 5 villages</p>
-                    <p className="text-white text-sm">Forages d'eau potable</p>
-                    <p className="text-[#00644D] text-sm">15 repas distribués</p>
-                  </div>
-                </div>
-              </motion.div>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentSlide}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="absolute inset-0"
+                  >
+                    <img
+                      src={slides[currentSlide].image}
+                      alt="Distribution Alimentaire"
+                      className="w-full h-full object-cover"
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </div>
           </div>
+        </div>
+        {/* Image slider alignée à droite pour desktop - cachée sur mobile */}
+        <div className="hidden lg:flex absolute left-[50%] -right-2 top-12 bottom-12 items-center justify-end pr-0 z-10">
+          <div 
+            className="relative z-0 w-full max-w-[688px]"
+            style={{
+              aspectRatio: '868/579',
+              borderRadius: '289.5px 0 0 289.5px',
+              border: '3px solid #5AB678',
+              overflow: 'hidden',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+            }}
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentSlide}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0"
+              >
+                <img
+                  src={slides[currentSlide].image}
+                  alt="Distribution Alimentaire"
+                  className="w-full h-full object-cover"
+                />
+              </motion.div>
+            </AnimatePresence>
+            {/* Navigation buttons pour desktop */}
+            <button
+              onClick={() => setCurrentSlide((prev) => Math.max(0, prev - 1))}
+              disabled={currentSlide === 0}
+              aria-label="Slide précédent"
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#5AB678] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
+            >
+              <ArrowLeft size={24} className="text-white" />
+            </button>
+            <button
+              onClick={() => setCurrentSlide((prev) => Math.min(slides.length - 1, prev + 1))}
+              disabled={currentSlide === slides.length - 1}
+              aria-label="Slide suivant"
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#5AB678] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
+            >
+              <ArrowRight size={24} className="text-white" />
+            </button>
+          </div>
+        </div>
+        {/* Navigation dots - Centré en bas de la section */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`transition-all duration-300 ${
+                index === currentSlide
+                  ? 'w-3 h-3 bg-white rounded-full'
+                  : 'w-3 h-3 border-2 border-white rounded-full hover:bg-white/50'
+              }`}
+              aria-label={`Aller au slide ${index + 1}`}
+            />
+          ))}
         </div>
       </section>
 

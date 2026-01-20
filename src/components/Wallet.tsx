@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Eye, EyeOff, Heart, Wallet as WalletIcon, Megaphone } from 'lucide-react';
+import MakeDepositModal from './MakeDepositModal';
 
 interface WalletProps {
   balance: number;
@@ -29,6 +30,7 @@ export default function Wallet({
   seeAllLink = '/points'
 }: WalletProps) {
   const [showBalance, setShowBalance] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
 
   return (
     <motion.div
@@ -62,20 +64,19 @@ export default function Wallet({
         </div>
         
         {/* Bouton Déposer de l'argent */}
-        <Link href={depositLink}>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full bg-white text-[#00644D] px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2 mb-6"
-          >
-            <img 
-              src="/icons/wallet-send-vertical(1).png" 
-              alt="Déposer" 
-              className="w-5 h-5 object-contain"
-            />
-            <span>Déposer de l'argent</span>
-          </motion.button>
-        </Link>
+        <motion.button
+          onClick={() => setShowDepositModal(true)}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full bg-white text-[#00644D] px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2 mb-6"
+        >
+          <img 
+            src="/icons/wallet-send-vertical(1).png" 
+            alt="Déposer" 
+            className="w-5 h-5 object-contain"
+          />
+          <span>Déposer de l'argent</span>
+        </motion.button>
       </div>
 
       {/* Mes sadaka scores */}
@@ -146,6 +147,12 @@ export default function Wallet({
           </motion.button>
         </Link>
       </div>
+
+      {/* Modal de dépôt */}
+      <MakeDepositModal 
+        isOpen={showDepositModal} 
+        onClose={() => setShowDepositModal(false)} 
+      />
     </motion.div>
   );
 }

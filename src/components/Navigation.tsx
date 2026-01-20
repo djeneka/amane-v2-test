@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { currentUser } from '@/data/mockData';
+import NotificationPopup from '@/components/NotificationPopup';
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -20,8 +21,27 @@ export default function Navigation() {
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
   const [showWalletAmount, setShowWalletAmount] = useState(false);
   const [showSadaqahScore, setShowSadaqahScore] = useState(false);
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fermer le dropdown quand on clique en dehors
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    }
+
+    if (isProfileDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileDropdownOpen]);
 
   // Mock data for wallet and sadaqah score
   const walletBalance = 125000; // 125,000 XOF
@@ -34,18 +54,20 @@ export default function Navigation() {
   ];
 
   const servicesItems = [
-    { name: 'Dons', href: '/don', image: '/icons/don.png' },
+    { name: 'Dons', href: '/campagnes', image: '/icons/don.png' },
     { name: 'Zakat', href: '/zakat', image: '/icons/profile-2user.png' },
     { name: 'Takaful', href: '/takaful', image: '/icons/purse(1).png' },
     { name: 'Investissement', href: '/investir', image: '/icons/status-up.png' },
   ];
 
   const profileDropdownItems = [
-    { name: 'Profil', href: '/profil', icon: User },
-    { name: 'Points', href: '/points', icon: Users },
-    { name: 'Portefeuille', href: '/portefeuille', icon: Wallet },
-    { name: 'Mes Épargnes', href: '/mes-epargnes', icon: Wallet },
-    { name: 'Mes Takafuls', href: '/mes-takafuls', icon: Shield },
+    { name: 'Information Personnelles', href: '/profil', image: '/icons/profile.png' },
+    { name: 'Mes Sadaqah Scores', href: '/points', image: '/icons/medal-star-g.png' },
+    { name: 'Paramètres', href: '/portefeuille', image: '/icons/setting-2.png' },
+    { name: 'A propos d\'Amane+', href: '/mes-epargnes', image: '/icons/information.png' },
+    { name: 'Aide & Support', href: '/mes-takafuls', image: '/icons/message-question.png' },
+    { name: 'Termes & Conditions', href: '/mes-takafuls', image: '/icons/security-safe.png' },
+    { name: 'Inviter des personnes', href: '/mes-takafuls', image: '/icons/share.png' },
     { name: 'Déconnexion', href: '/logout', icon: LogOut, isLogout: true },
   ];
 
@@ -315,6 +337,9 @@ export default function Navigation() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="relative cursor-pointer"
+                  onClick={() => {
+                    setShowNotificationPopup(!showNotificationPopup);
+                  }}
                 >
                   <img 
                     src="/icons/notification-bing.png" 
@@ -325,7 +350,7 @@ export default function Navigation() {
                 </motion.div>
 
                 {/* User Profile */}
-                <div className="relative">
+                <div className="relative" ref={profileDropdownRef}>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -361,40 +386,102 @@ export default function Navigation() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50"
+                        className="absolute right-0 mt-3 w-64 bg-[#1A1F1F] rounded-2xl shadow-2xl border border-[#00644D]/30 overflow-hidden z-50"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        {profileDropdownItems.map((item, index) => {
-                          const active = isActive(item.href);
-                          return (
-                            <motion.div
-                              key={item.name}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ duration: 0.2, delay: index * 0.05 }}
-                            >
-                              <Link
-                                href={item.href}
-                                onClick={() => {
-                                  setIsProfileDropdownOpen(false);
-                                  if (item.isLogout) {
-                                    logout();
-                                    window.location.href = '/';
-                                  }
-                                }}
-                                className={`flex items-center space-x-3 px-4 py-3 transition-colors duration-200 ${
-                                  item.isLogout 
-                                    ? 'text-red-600 hover:text-red-800 hover:bg-red-50' 
-                                    : active
-                                      ? 'text-green-800 bg-green-50'
-                                      : 'text-gray-700 hover:text-green-800 hover:bg-green-50'
-                                }`}
+                        {/* Header avec avatar et infos utilisateur */}
+                        <div className="px-4 py-4 bg-gradient-to-r from-[#00644D]/20 to-[#101919] border-b border-[#00644D]/20">
+                          <div className="flex items-center space-x-3">
+                            <div className="relative">
+                              <img
+                                src="/images/Ellipse 21(1).png"
+                                alt={user?.firstName || currentUser.name}
+                                className="w-12 h-12 rounded-full border-2 border-[#5CD07D]"
+                              />
+                              <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#5CD07D] rounded-full border-2 border-[#1A1F1F]"></div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-white truncate">
+                                {user?.firstName || currentUser.name}
+                              </p>
+                              <p className="text-xs text-[#A8A9AB] truncate">
+                                {user?.email || currentUser.email}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Menu Items */}
+                        <div className="py-2">
+                          {profileDropdownItems.filter(item => !item.isLogout).map((item, index) => {
+                            const active = isActive(item.href);
+                            return (
+                              <motion.div
+                                key={item.name}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.2, delay: index * 0.05 }}
                               >
-                                <item.icon size={18} />
-                                <span className="text-sm font-medium">{item.name}</span>
-                              </Link>
-                            </motion.div>
-                          );
-                        })}
+                                <Link
+                                  href={item.href}
+                                  onClick={() => {
+                                    setIsProfileDropdownOpen(false);
+                                  }}
+                                  className={`flex items-center space-x-3 px-4 py-3 transition-all duration-200 ${
+                                    active
+                                      ? 'bg-[#00644D]/30 text-[#5CD07D] border-l-2 border-[#5CD07D]'
+                                      : 'text-white hover:text-white hover:bg-[#00644D]/20'
+                                  }`}
+                                >
+                                  {item.image ? (
+                                    <img 
+                                      src={item.image} 
+                                      alt={item.name}
+                                      className={`w-[18px] h-[18px] object-contain ${
+                                        active ? 'opacity-100' : 'opacity-70'
+                                      }`}
+                                    />
+                                  ) : (
+                                    item.icon && (
+                                      <item.icon 
+                                        size={18} 
+                                        className={active ? 'text-[#5CD07D]' : 'text-[#A8A9AB]'} 
+                                      />
+                                    )
+                                  )}
+                                  <span className="text-sm font-medium">{item.name}</span>
+                                  {active && (
+                                    <ChevronRight size={16} className="ml-auto text-[#5CD07D]" />
+                                  )}
+                                </Link>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Séparateur */}
+                        <div className="border-t border-[#00644D]/20 my-1"></div>
+
+                        {/* Déconnexion */}
+                        <motion.div
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.2, delay: profileDropdownItems.filter(item => !item.isLogout).length * 0.05 }}
+                        >
+                          <Link
+                            href="/logout"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setIsProfileDropdownOpen(false);
+                              logout();
+                              window.location.href = '/';
+                            }}
+                            className="flex items-center space-x-3 px-4 py-3 text-[#FF6B6B] hover:text-[#FF5252] hover:bg-red-500/10 transition-all duration-200"
+                          >
+                            <LogOut size={18} />
+                            <span className="text-sm font-medium">Déconnexion</span>
+                          </Link>
+                        </motion.div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -706,7 +793,12 @@ export default function Navigation() {
                     transition={{ duration: 0.3, delay: 0.35 }}
                     className="flex items-center justify-between p-3 mb-4"
                   >
-                    <div className="relative cursor-pointer">
+                    <div 
+                      className="relative cursor-pointer"
+                      onClick={() => {
+                        setShowNotificationPopup(!showNotificationPopup);
+                      }}
+                    >
                       <img 
                         src="/icons/notification-bing.png" 
                         alt="Notifications"
@@ -758,7 +850,17 @@ export default function Navigation() {
                                 : 'text-white/80 hover:bg-white/10'
                           }`}
                         >
-                          <item.icon size={20} className={item.isLogout ? 'text-red-400' : 'text-white'} />
+                          {item.image ? (
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="w-5 h-5 object-contain opacity-80"
+                            />
+                          ) : (
+                            item.icon && (
+                              <item.icon size={20} className={item.isLogout ? 'text-red-400' : 'text-white'} />
+                            )
+                          )}
                           <span className="font-medium">{item.name}</span>
                         </Link>
                       </motion.div>
@@ -841,6 +943,12 @@ export default function Navigation() {
         </motion.div>
       )}
     </AnimatePresence>
+
+    {/* Notification Popup */}
+    <NotificationPopup
+      isOpen={showNotificationPopup}
+      onClose={() => setShowNotificationPopup(false)}
+    />
     </>
   );
 } 
