@@ -154,20 +154,20 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
   const renderStepContent = () => {
     if (currentStep === 1) {
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Question 1: Avez-vous de l'or / argent ? */}
-          <div className="space-y-4">
-            <h3 className="text-white font-bold text-lg">Avez-vous de l'or / argent ?</h3>
-            <div className="flex gap-4">
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-white font-bold text-base sm:text-lg">Avez-vous de l'or / argent ?</h3>
+            <div className="flex gap-3 sm:gap-4">
               <button
                 onClick={() => setHasGoldSilver(true)}
-                className={`w-fit py-2 px-6 rounded-3xl font-medium transition-all ${
+                className={`flex-1 sm:w-fit py-2.5 sm:py-2 px-4 sm:px-6 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                   hasGoldSilver === true
                     ? 'bg-[#43B48F] text-white'
                     : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   {hasGoldSilver === true && (
                     <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
@@ -178,13 +178,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               </button>
               <button
                 onClick={() => setHasGoldSilver(false)}
-                className={`w-fit py-2 px-4 rounded-3xl font-medium transition-all ${
+                className={`flex-1 sm:w-fit py-2.5 sm:py-2 px-4 sm:px-4 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                   hasGoldSilver === false
                     ? 'bg-[#43B48F] text-white'
                     : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   {hasGoldSilver === false && (
                     <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
@@ -203,36 +203,36 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
-              className="space-y-4"
+              className="space-y-3 sm:space-y-4"
             >
-              <h3 className="text-white font-bold text-lg">Unité de mesure</h3>
-              <div className="flex gap-4">
+              <h3 className="text-white font-bold text-base sm:text-lg">Unité de mesure</h3>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button
                   onClick={() => setUnit('monetary')}
-                  className={`w-fit py-4 px-6 rounded-3xl font-medium transition-all ${
+                  className={`w-full sm:w-fit py-3 sm:py-4 px-4 sm:px-6 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                     unit === 'monetary'
                       ? 'bg-[#43B48F] text-white'
                       : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                   }`}
                 >
-                  <div className="flex items-center justify-center space-x-3">
+                  <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                     {unit === 'monetary' && (
                       <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                         <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
                       </div>
                     )}
-                    <span>Valeur monétaire</span>
+                    <span className="whitespace-nowrap">Valeur monétaire</span>
                   </div>
                 </button>
                 <button
                   onClick={() => setUnit('weight')}
-                  className={`w-fit py-4 px-6 rounded-3xl font-medium transition-all ${
+                  className={`w-full sm:w-fit py-3 sm:py-4 px-4 sm:px-6 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                     unit === 'weight'
                       ? 'bg-[#43B48F] text-white'
                       : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                   }`}
                 >
-                  <div className="flex items-center justify-center space-x-3">
+                  <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                     {unit === 'weight' && (
                       <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                         <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
@@ -254,7 +254,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               transition={{ duration: 0.3 }}
               className="space-y-2"
             >
-              <label className="text-white font-bold text-lg">
+              <label className="text-white font-bold text-base sm:text-lg">
                 Valeur de l'argent / or
               </label>
               <div className="relative">
@@ -263,11 +263,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                   id="zakat-value-input"
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
-                  className="w-full py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F]"
+                  className="w-full py-3 sm:py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F] text-sm sm:text-base pr-20 sm:pr-20"
                   placeholder="0"
                   aria-label="Valeur de l'argent ou de l'or"
                 />
-                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs sm:text-sm">
                   F CFA
                 </span>
               </div>
@@ -279,20 +279,20 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
 
     if (currentStep === 2) {
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Question: Avez-vous de l'épargne ? */}
-          <div className="space-y-4">
-            <h3 className="text-white font-bold text-lg">Avez-vous de l'épargne ?</h3>
-            <div className="flex gap-4">
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-white font-bold text-base sm:text-lg">Avez-vous de l'épargne ?</h3>
+            <div className="flex gap-3 sm:gap-4">
               <button
                 onClick={() => setHasSavings(true)}
-                className={`w-fit py-2 px-6 rounded-3xl font-medium transition-all ${
+                className={`flex-1 sm:w-fit py-2.5 sm:py-2 px-4 sm:px-6 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                   hasSavings === true
                     ? 'bg-[#43B48F] text-white'
                     : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   {hasSavings === true && (
                     <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
@@ -303,13 +303,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               </button>
               <button
                 onClick={() => setHasSavings(false)}
-                className={`w-fit py-2 px-4 rounded-3xl font-medium transition-all ${
+                className={`flex-1 sm:w-fit py-2.5 sm:py-2 px-4 sm:px-4 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                   hasSavings === false
                     ? 'bg-[#43B48F] text-white'
                     : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   {hasSavings === false && (
                     <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
@@ -330,7 +330,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               transition={{ duration: 0.3 }}
               className="space-y-2"
             >
-              <label className="text-white font-bold text-lg">
+              <label className="text-white font-bold text-base sm:text-lg">
                 Valeur de l'épargne
               </label>
               <div className="relative">
@@ -339,11 +339,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                   id="savings-value-input"
                   value={savingsValue}
                   onChange={(e) => setSavingsValue(e.target.value)}
-                  className="w-full py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F]"
+                  className="w-full py-3 sm:py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F] text-sm sm:text-base pr-20 sm:pr-20"
                   placeholder="0"
                   aria-label="Valeur de l'épargne"
                 />
-                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs sm:text-sm">
                   F CFA
                 </span>
               </div>
@@ -355,20 +355,20 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
 
     if (currentStep === 3) {
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Question: Avez-vous des biens commerciaux ? */}
-          <div className="space-y-4">
-            <h3 className="text-white font-bold text-lg">Avez-vous des biens commerciaux ?</h3>
-            <div className="flex gap-4">
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-white font-bold text-base sm:text-lg">Avez-vous des biens commerciaux ?</h3>
+            <div className="flex gap-3 sm:gap-4">
               <button
                 onClick={() => setHasCommercialGoods(true)}
-                className={`w-fit py-2 px-6 rounded-3xl font-medium transition-all ${
+                className={`flex-1 sm:w-fit py-2.5 sm:py-2 px-4 sm:px-6 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                   hasCommercialGoods === true
                     ? 'bg-[#43B48F] text-white'
                     : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   {hasCommercialGoods === true && (
                     <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
@@ -379,13 +379,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               </button>
               <button
                 onClick={() => setHasCommercialGoods(false)}
-                className={`w-fit py-2 px-4 rounded-3xl font-medium transition-all ${
+                className={`flex-1 sm:w-fit py-2.5 sm:py-2 px-4 sm:px-4 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                   hasCommercialGoods === false
                     ? 'bg-[#43B48F] text-white'
                     : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   {hasCommercialGoods === false && (
                     <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
@@ -406,7 +406,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               transition={{ duration: 0.3 }}
               className="space-y-2"
             >
-              <label className="text-white font-bold text-lg">
+              <label className="text-white font-bold text-base sm:text-lg">
                 Valeur du stock
               </label>
               <div className="relative">
@@ -415,11 +415,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                   id="commercial-goods-value-input"
                   value={commercialGoodsValue}
                   onChange={(e) => setCommercialGoodsValue(e.target.value)}
-                  className="w-full py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F]"
+                  className="w-full py-3 sm:py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F] text-sm sm:text-base pr-20 sm:pr-20"
                   placeholder="0"
                   aria-label="Valeur du stock"
                 />
-                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs sm:text-sm">
                   F CFA
                 </span>
               </div>
@@ -431,20 +431,20 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
 
     if (currentStep === 4) {
       return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Question: Avez-vous des dettes ou obligations à soustraire ? */}
-          <div className="space-y-4">
-            <h3 className="text-white font-bold text-lg">Avez-vous des dettes ou obligations à soustraire ?</h3>
-            <div className="flex gap-4">
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-white font-bold text-base sm:text-lg">Avez-vous des dettes ou obligations à soustraire ?</h3>
+            <div className="flex gap-3 sm:gap-4">
               <button
                 onClick={() => setHasDebts(true)}
-                className={`w-fit py-2 px-6 rounded-3xl font-medium transition-all ${
+                className={`flex-1 sm:w-fit py-2.5 sm:py-2 px-4 sm:px-6 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                   hasDebts === true
                     ? 'bg-[#43B48F] text-white'
                     : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   {hasDebts === true && (
                     <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
@@ -455,13 +455,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               </button>
               <button
                 onClick={() => setHasDebts(false)}
-                className={`w-fit py-2 px-4 rounded-3xl font-medium transition-all ${
+                className={`flex-1 sm:w-fit py-2.5 sm:py-2 px-4 sm:px-4 rounded-3xl font-medium transition-all text-sm sm:text-base ${
                   hasDebts === false
                     ? 'bg-[#43B48F] text-white'
                     : 'bg-[#1F2A28] text-gray-400 hover:bg-[#2A3A38]'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-3">
+                <div className="flex items-center justify-center space-x-2 sm:space-x-3">
                   {hasDebts === false && (
                     <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-[#8DD17F]"></div>
@@ -482,7 +482,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               transition={{ duration: 0.3 }}
               className="space-y-2"
             >
-              <label className="text-white font-bold text-lg">
+              <label className="text-white font-bold text-base sm:text-lg">
                 Valeur des dettes
               </label>
               <div className="relative">
@@ -491,11 +491,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                   id="debts-value-input"
                   value={debtsValue}
                   onChange={(e) => setDebtsValue(e.target.value)}
-                  className="w-full py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F]"
+                  className="w-full py-3 sm:py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F] text-sm sm:text-base pr-20 sm:pr-20"
                   placeholder="0"
                   aria-label="Valeur des dettes"
                 />
-                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs sm:text-sm">
                   F CFA
                 </span>
               </div>
@@ -510,36 +510,36 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
       const zakatAmount = calculateZakat();
 
       return (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Montant total des biens */}
-          <div className="bg-[#101919] rounded-xl p-6">
-            <div className="flex justify-between items-center">
-              <span className="text-white font-medium text-lg">
+          <div className="bg-[#101919] rounded-xl p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+              <span className="text-white font-medium text-sm sm:text-lg">
                 Montant total des biens
               </span>
-              <div className="text-right">
-                <span className="text-white font-bold text-lg">
+              <div className="text-left sm:text-right">
+                <span className="text-white font-bold text-base sm:text-lg">
                   {formatAmount(totalAssets)}
                 </span>
-                <span className="text-white ml-2">F CFA</span>
+                <span className="text-white ml-2 text-sm sm:text-base">F CFA</span>
               </div>
             </div>
           </div>
 
           {/* Zakat à payer */}
-          <div className="bg-[#101919] rounded-xl p-6">
-            <div className="flex justify-between items-center">
-              <span className="text-white font-medium text-lg">
+          <div className="bg-[#101919] rounded-xl p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+              <span className="text-white font-medium text-sm sm:text-lg">
                 Zakat à payer
               </span>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <span 
-                  className="font-bold text-lg"
+                  className="font-bold text-base sm:text-lg"
                   style={{ color: '#8DD17F' }}
                 >
                   {formatAmount(zakatAmount)}
                 </span>
-                <span className="text-white ml-2">F CFA</span>
+                <span className="text-white ml-2 text-sm sm:text-base">F CFA</span>
               </div>
             </div>
           </div>
@@ -568,7 +568,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-[#101919]/20 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-[#101919]/20 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4"
           >
             {/* Modal */}
             <motion.div
@@ -577,20 +577,20 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ duration: 0.3 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#101919] rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden relative border border-white/10"
+              className="bg-[#101919] rounded-none sm:rounded-2xl w-full h-full sm:h-auto sm:max-w-5xl sm:max-h-[90vh] overflow-hidden relative border-0 sm:border border-white/10 flex flex-col"
             >
               {/* Close Button */}
               <button
                 onClick={handleClose}
-                className="absolute top-6 right-6 w-10 h-10 bg-[#8DD17F] rounded-full flex items-center justify-center hover:bg-[#7BC16F] transition-colors z-10"
+                className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 bg-[#8DD17F] rounded-full flex items-center justify-center hover:bg-[#7BC16F] transition-colors z-10"
                 aria-label="Fermer"
               >
-                <X size={20} className="text-[#101919]" />
+                <X size={18} className="sm:w-5 sm:h-5 text-[#101919]" />
               </button>
 
-              <div className="flex h-full">
-                {/* Barre latérale gauche - Étapes */}
-                <div className="w-1/4 bg-[#0A1515] border-r border-white/10 p-6">
+              <div className="flex flex-col sm:flex-row h-full">
+                {/* Barre latérale gauche - Étapes (cachée sur mobile) */}
+                <div className="hidden sm:block w-full sm:w-1/4 bg-[#0A1515] border-r border-white/10 p-4 sm:p-6">
                   <div className="space-y-6">
                     {STEPS.map((step, index) => {
                       const isActive = currentStep === step.id;
@@ -624,7 +624,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                             </div>
                             <div className="flex-1">
                               <p
-                                className={`font-medium ${
+                                className={`font-medium text-sm sm:text-base ${
                                   isActive
                                     ? 'text-white font-bold'
                                     : isCompleted
@@ -643,21 +643,53 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                 </div>
 
                 {/* Section principale - Contenu */}
-                <div className="flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col min-h-0">
                   {/* En-tête */}
-                  <div className="p-8 border-b border-white/10">
-                    <h2 className="text-white font-bold text-2xl mb-2">
+                  <div className="p-4 sm:p-8 border-b border-white/10">
+                    <h2 className="text-white font-bold text-xl sm:text-2xl mb-2">
                       Calculer ma Zakat
                     </h2>
-                    <p className="text-white font-medium mb-1">Mode de paiement</p>
-                    <p className="text-gray-400 text-sm">
+                    <p className="text-white font-medium mb-1 text-sm sm:text-base">Mode de paiement</p>
+                    <p className="text-gray-400 text-xs sm:text-sm">
                       Calculez et archivez vos obligations annuelle
                     </p>
+                    
+                    {/* Indicateur d'étapes mobile */}
+                    <div className="sm:hidden mt-4 flex items-center justify-between">
+                      {STEPS.map((step, index) => {
+                        const isActive = currentStep === step.id;
+                        const isCompleted = currentStep > step.id;
+                        
+                        return (
+                          <div key={step.id} className="flex items-center flex-1">
+                            <div
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                                isActive
+                                  ? 'bg-[#8DD17F] text-[#101919]'
+                                  : isCompleted
+                                  ? 'bg-[#8DD17F] text-[#101919]'
+                                  : 'bg-gray-600 text-gray-400'
+                              }`}
+                            >
+                              {step.id}
+                            </div>
+                            {index < STEPS.length - 1 && (
+                              <div
+                                className="flex-1 h-0.5 mx-2"
+                                style={{
+                                  backgroundColor: isCompleted ? '#8DD17F' : '#4B5563',
+                                }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Contenu de l'étape */}
-                  <div className="flex-1 p-8 overflow-y-auto">
-                    <div className="bg-[#00644d]/10 rounded-2xl p-8">
+                  <div className="flex-1 p-4 sm:p-8 overflow-y-auto">
+                    <div className="bg-[#00644d]/10 rounded-xl sm:rounded-2xl p-4 sm:p-8">
                       <AnimatePresence mode="wait">
                         <motion.div
                           key={currentStep}
@@ -673,10 +705,10 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                   </div>
 
                   {/* Boutons d'action */}
-                  <div className="p-8 border-t border-white/10 flex gap-4 mx-6">
+                  <div className="p-4 sm:p-8 border-t border-white/10 flex flex-col sm:flex-row gap-3 sm:gap-4 sm:mx-6">
                     <button
                       onClick={handleClose}
-                      className="flex-1 py-4 px-6 rounded-3xl bg-[#1F2A28] text-white font-medium hover:bg-[#2A3A38] transition-colors"
+                      className="w-full sm:flex-1 py-3 sm:py-4 px-6 rounded-3xl bg-[#1F2A28] text-white font-medium hover:bg-[#2A3A38] transition-colors text-sm sm:text-base"
                     >
                       Quitter
                     </button>
@@ -688,7 +720,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                         currentStep === 3 && (hasCommercialGoods === null || (hasCommercialGoods === true && !commercialGoodsValue)) ||
                         currentStep === 4 && (hasDebts === null || (hasDebts === true && !debtsValue))
                       }
-                      className="flex-1 py-4 px-6 rounded-3xl text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                      className="w-full sm:flex-1 py-3 sm:py-4 px-6 rounded-3xl text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm sm:text-base"
                       style={{
                         background: 'linear-gradient(90deg, #8FC99E 0%, #20B6B3 100%)'
                       }}
@@ -704,7 +736,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                       }}
                     >
                       <span>{currentStep === STEPS.length ? 'Sauvegarder' : 'Suivant'}</span>
-                      {currentStep !== STEPS.length && <ChevronRight size={20} />}
+                      {currentStep !== STEPS.length && <ChevronRight size={18} className="sm:w-5 sm:h-5" />}
                     </button>
                   </div>
                 </div>

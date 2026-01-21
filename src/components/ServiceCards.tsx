@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import AskForHelpModal from './AskForHelpModal';
 
 interface ServiceCard {
   href: string;
@@ -63,6 +64,8 @@ interface ServiceCardsProps {
 }
 
 export default function ServiceCards({ showHelpButton = true }: ServiceCardsProps) {
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
   return (
     <div className="lg:col-span-1">
       <div className="grid grid-cols-2 gap-4">
@@ -94,12 +97,19 @@ export default function ServiceCards({ showHelpButton = true }: ServiceCardsProp
           viewport={{ once: true }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          onClick={() => setIsHelpModalOpen(true)}
           className="mt-4 w-full bg-[#83CBB4] hover:bg-[#7FB88E] text-white font-semibold py-4 px-6 rounded-2xl transition-colors flex items-center justify-center gap-3"
         >
           <img src="/icons/volume-high.png" alt="" className="w-5 h-5 object-contain" />
           Demande de l'aide
         </motion.button>
       )}
+
+      {/* Modal de demande d'aide */}
+      <AskForHelpModal 
+        isOpen={isHelpModalOpen} 
+        onClose={() => setIsHelpModalOpen(false)} 
+      />
     </div>
   );
 }

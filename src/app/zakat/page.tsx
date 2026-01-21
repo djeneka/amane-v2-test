@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calculator, Info, Trash2, HandCoins, Apple, Play } from 'lucide-react';
 import Image from 'next/image';
 import ZakatCalculatorModal, { SavedZakat } from '@/components/ZakatCalculatorModal';
-import MakeDonationModal from '@/components/MakeDonationModal';
+import PayZakatModal from '@/components/PayZakatModal';
 
 // Composant pour l'icône personnalisée de la main tenant une bourse avec "2,5"
 const ZakatIcon = () => {
@@ -380,25 +380,14 @@ export default function ZakatPage() {
         onSave={handleZakatSaved}
       />
 
-      {/* Modal de don pour verser la zakat */}
-      <MakeDonationModal
+      {/* Modal de versement de zakat */}
+      <PayZakatModal
         isOpen={isDonationModalOpen}
         onClose={() => {
           setIsDonationModalOpen(false);
           setZakatAmountToPay(undefined);
         }}
         initialAmount={zakatAmountToPay}
-        title="Verser ma Zakat"
-        subtitle="Montant de la Zakat"
-        description="Confirmez le montant de votre Zakat à verser."
-        amountSectionTitle="Montant de la Zakat"
-        successTitle="Zakat versée avec succès !"
-        successMessage="Votre Zakat a été versée. Qu'Allah accepte votre aumône."
-        confirmationTitle="Confirmation du versement"
-        confirmationDescription="Vérifiez les informations avant de confirmer le versement de votre Zakat."
-        recapTitle="Vous allez verser une Zakat de:"
-        recapMessage="Amane+ s'engage à distribuer votre Zakat selon les principes islamiques aux bénéficiaires éligibles."
-        historyButtonLink="/zakat"
       />
     </>
   );
