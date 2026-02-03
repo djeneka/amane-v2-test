@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, TrendingUp, Users, Target, Calendar, MapPin, 
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { investmentProducts } from '@/data/mockData';
+import { getInvestmentProducts, mapInvestmentToDisplay, API_CATEGORY_LABELS, API_CATEGORY_TO_SLUG, type InvestmentProductDisplay, type InvestmentCategorySlug } from '@/services/investments';
 import MakeDonationModal from '@/components/MakeDonationModal';
 
 export default function InvestirPage() {
@@ -24,20 +24,41 @@ export default function InvestirPage() {
   const [activeTab, setActiveTab] = useState<'products' | 'investments'>('products');
   const [showInvestmentDetails, setShowInvestmentDetails] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState<any>(null);
+  const [products, setProducts] = useState<InvestmentProductDisplay[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const categoryIcons = {
+  useEffect(() => {
+    let cancelled = false;
+    getInvestmentProducts()
+      .then((list) => {
+        if (!cancelled) setProducts(list.map(mapInvestmentToDisplay));
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e?.message ?? 'Erreur lors du chargement des produits');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const categoryIcons: Record<InvestmentCategorySlug, React.ComponentType<{ size?: number; className?: string }>> = {
     immobilier: Building,
     agriculture: Leaf,
     technologie: Zap,
     energie: Zap,
   };
 
-  const categoryColors = {
+  const categoryColors: Record<InvestmentCategorySlug, string> = {
     immobilier: 'bg-green-500',
     agriculture: 'bg-blue-500',
     technologie: 'bg-purple-500',
     energie: 'bg-orange-500',
   };
+
+  /** Ordre d’affichage des catégories API dans le filtre */
+  const API_CATEGORY_ORDER = ['REAL_ESTATE', 'ETHICAL', 'AGRICULTURE', 'TECHNOLOGY', 'TECH', 'ENERGY'];
 
   const riskColors = {
     faible: 'bg-green-500',
@@ -80,20 +101,41 @@ export default function InvestirPage() {
     }));
   };
 
-  // Fonction pour obtenir l'image actuelle
+  // Fonction pour obtenir l'image actuelle (fallback catégories si pas d'image API)
   const getCurrentImage = (productId: string, category: string) => {
     const images = categoryImages[category as keyof typeof categoryImages] || [];
     const currentIndex = currentImageIndex[productId] || 0;
     return images[currentIndex] || 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
   };
 
-  const categories = [
-    { id: 'all', name: 'Toutes', icon: Globe, color: 'bg-gray-500' },
-    { id: 'immobilier', name: 'Immobilier', icon: Building, color: 'bg-green-500' },
-    { id: 'agriculture', name: 'Agriculture', icon: Leaf, color: 'bg-blue-500' },
-    { id: 'technologie', name: 'Technologie', icon: Zap, color: 'bg-purple-500' },
-    { id: 'energie', name: 'Énergie', icon: Zap, color: 'bg-orange-500' },
-  ];
+  const getProductImage = (product: InvestmentProductDisplay) =>
+    product.picture || getCurrentImage(product.id, product.category);
+
+  const hasMultipleImages = (product: InvestmentProductDisplay) => !product.picture;
+
+  /** Filtres : "Toutes" + catégories API des investissements, dédupliquées et ordonnées */
+  const categories = useMemo(() => {
+    const uniqueApiCategories = Array.from(
+      new Set(products.flatMap((p) => p.categories).filter(Boolean))
+    );
+    const ordered = API_CATEGORY_ORDER.filter((apiCat) =>
+      uniqueApiCategories.includes(apiCat)
+    );
+    const rest = uniqueApiCategories.filter((apiCat) => !API_CATEGORY_ORDER.includes(apiCat)).sort();
+    const allOrdered = [...ordered, ...rest];
+    return [
+      { id: 'all', name: 'Toutes', icon: Globe, color: 'bg-gray-500' },
+      ...allOrdered.map((apiCat) => {
+        const slug = API_CATEGORY_TO_SLUG[apiCat] ?? 'immobilier';
+        return {
+          id: apiCat,
+          name: API_CATEGORY_LABELS[apiCat] ?? apiCat.replace(/_/g, ' '),
+          icon: categoryIcons[slug],
+          color: categoryColors[slug],
+        };
+      }),
+    ];
+  }, [products]);
 
   const sortOptions = [
     { id: 'popular', name: 'Plus populaires' },
@@ -102,17 +144,20 @@ export default function InvestirPage() {
     { id: 'risk', name: 'Risque faible' },
   ];
 
-  const filteredProducts = investmentProducts
+  const filteredProducts = products
     .filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           product.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+      const matchesCategory =
+        selectedCategory === 'all' || product.categories.includes(selectedCategory);
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'popular':
           return b.expectedReturn - a.expectedReturn;
+        case 'recent':
+          return (b.createdAt ?? '').localeCompare(a.createdAt ?? '');
         case 'return':
           return b.expectedReturn - a.expectedReturn;
         case 'risk':
@@ -122,10 +167,11 @@ export default function InvestirPage() {
       }
     });
 
-  // Effet pour le défilement automatique du carrousel
+  // Effet pour le défilement automatique du carrousel (uniquement produits sans image API)
   useEffect(() => {
     const interval = setInterval(() => {
       filteredProducts.forEach((product) => {
+        if (!hasMultipleImages(product)) return;
         const images = categoryImages[product.category as keyof typeof categoryImages] || [];
         if (images.length > 1) {
           const currentIndex = currentImageIndex[product.id] || 0;
@@ -136,7 +182,7 @@ export default function InvestirPage() {
           }));
         }
       });
-    }, 3000); // Change d'image toutes les 3 secondes
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [filteredProducts, currentImageIndex, categoryImages]);
@@ -394,7 +440,7 @@ export default function InvestirPage() {
                   >
                     <Target size={24} className="text-green-600" />
                   </motion.div>
-                  <p className="text-2xl font-bold text-white">{investmentProducts.length}</p>
+                  <p className="text-2xl font-bold text-white">{products.length}</p>
                   <p className="text-sm text-white">Produits disponibles</p>
                 </div>
               </motion.div>
@@ -570,7 +616,26 @@ export default function InvestirPage() {
         {/* Affichage conditionnel selon l'onglet sélectionné */}
         {activeTab === 'products' ? (
           <>
-        {/* Products Grid */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-white"
+          >
+            {error}
+          </motion.div>
+        )}
+        {loading ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-20"
+          >
+            <div className="w-12 h-12 border-4 border-[#5FB678] border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-white/80">Chargement des produits...</p>
+          </motion.div>
+        ) : (
+          <>
         <AnimatePresence mode="wait">
           {viewMode === 'grid' ? (
             <motion.div
@@ -598,16 +663,15 @@ export default function InvestirPage() {
                         <div className="w-full h-48 relative overflow-hidden">
                           <AnimatePresence mode="wait">
                             <motion.img
-                              key={`${product.id}-${currentImageIndex[product.id] || 0}`}
-                              src={getCurrentImage(product.id, product.category)}
-                              alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
+                              key={hasMultipleImages(product) ? `${product.id}-${currentImageIndex[product.id] || 0}` : product.id}
+                              src={getProductImage(product)}
+                              alt={product.name}
                               className="w-full h-full object-cover absolute inset-0"
                               initial={{ x: 300, opacity: 0 }}
                               animate={{ x: 0, opacity: 1 }}
                               exit={{ x: -300, opacity: 0 }}
                               transition={{ duration: 0.5, ease: "easeInOut" }}
                               onError={(e) => {
-                                // Fallback vers une image par défaut si l'image ne charge pas
                                 const target = e.target as HTMLImageElement;
                                 target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
                               }}
@@ -615,19 +679,20 @@ export default function InvestirPage() {
                           </AnimatePresence>
                           <div className="absolute inset-0 bg-black/20"></div>
                           
-                          {/* Indicateurs d'images */}
-                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                            {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
-                              <div
-                                key={index}
-                                className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                                  (currentImageIndex[product.id] || 0) === index
-                                    ? 'bg-white'
-                                    : 'bg-white/50'
-                                }`}
-                              />
-                            ))}
-                          </div>
+                          {hasMultipleImages(product) && (
+                            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                              {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
+                                <div
+                                  key={index}
+                                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                                    (currentImageIndex[product.id] || 0) === index
+                                      ? 'bg-white'
+                                      : 'bg-white/50'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          )}
                           
                           {/* Bouton pour voir les détails */}
                           <Link href={`/investir/${product.id}`}>
@@ -665,7 +730,7 @@ export default function InvestirPage() {
                           {product.description}
                         </p>
 
-                        <div className="space-y-4">
+                          <div className="space-y-4">
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="text-white/80">Rendement attendu</span>
@@ -690,18 +755,12 @@ export default function InvestirPage() {
                           <div className="mb-4">
                             <h4 className="font-bold text-white mb-3">Avantages inclus :</h4>
                             <ul className="space-y-2">
-                              <li className="flex items-center space-x-2 text-sm text-white/80">
-                                <CheckCircle size={16} className="text-green-500" />
-                                <span>Conforme aux principes islamiques</span>
-                              </li>
-                              <li className="flex items-center space-x-2 text-sm text-white/80">
-                                <CheckCircle size={16} className="text-green-500" />
-                                <span>Transparence totale</span>
-                              </li>
-                              <li className="flex items-center space-x-2 text-sm text-white/80">
-                                <CheckCircle size={16} className="text-green-500" />
-                                <span>Gestion professionnelle</span>
-                              </li>
+                              {(product.benefits?.length ? product.benefits : ['Conforme aux principes islamiques', 'Transparence totale', 'Gestion professionnelle']).map((benefit, i) => (
+                                <li key={i} className="flex items-center space-x-2 text-sm text-white/80">
+                                  <CheckCircle size={16} className="text-green-500" />
+                                  <span>{benefit}</span>
+                                </li>
+                              ))}
                             </ul>
                           </div>
 
@@ -749,16 +808,15 @@ export default function InvestirPage() {
                           <div className="w-32 h-32 rounded-xl overflow-hidden relative">
                             <AnimatePresence mode="wait">
                               <motion.img
-                                key={`${product.id}-list-${currentImageIndex[product.id] || 0}`}
-                                src={getCurrentImage(product.id, product.category)}
-                                alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
+                                key={hasMultipleImages(product) ? `${product.id}-list-${currentImageIndex[product.id] || 0}` : product.id}
+                                src={getProductImage(product)}
+                                alt={product.name}
                                 className="w-full h-full object-cover absolute inset-0"
                                 initial={{ x: 100, opacity: 0 }}
                                 animate={{ x: 0, opacity: 1 }}
                                 exit={{ x: -100, opacity: 0 }}
                                 transition={{ duration: 0.5, ease: "easeInOut" }}
                                 onError={(e) => {
-                                  // Fallback vers une image par défaut si l'image ne charge pas
                                   const target = e.target as HTMLImageElement;
                                   target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
                                 }}
@@ -766,19 +824,20 @@ export default function InvestirPage() {
                             </AnimatePresence>
                             <div className="absolute inset-0 bg-black/20"></div>
                             
-                            {/* Indicateurs d'images */}
-                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                              {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
-                                <div
-                                  key={index}
-                                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
-                                    (currentImageIndex[product.id] || 0) === index
-                                      ? 'bg-white'
-                                      : 'bg-white/50'
-                                  }`}
-                                />
-                              ))}
-                            </div>
+                            {hasMultipleImages(product) && (
+                              <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                                {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
+                                  <div
+                                    key={index}
+                                    className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
+                                      (currentImageIndex[product.id] || 0) === index
+                                        ? 'bg-white'
+                                        : 'bg-white/50'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            )}
                             
                             {/* Bouton pour voir les détails */}
                             <Link href={`/investir/${product.id}`}>
@@ -827,22 +886,16 @@ export default function InvestirPage() {
                             </div>
                           </div>
 
-                          <div className="space-y-3">
+                            <div className="space-y-3">
                             <div className="mb-4">
                               <h4 className="font-medium text-gray-900 mb-3">Avantages :</h4>
                               <ul className="space-y-2">
-                                <li className="flex items-center space-x-2 text-sm text-gray-600">
-                                  <CheckCircle size={16} className="text-green-500" />
-                                  <span>Conforme aux principes islamiques</span>
-                                </li>
-                                <li className="flex items-center space-x-2 text-sm text-gray-600">
-                                  <CheckCircle size={16} className="text-green-500" />
-                                  <span>Transparence totale</span>
-                                </li>
-                                <li className="flex items-center space-x-2 text-sm text-gray-600">
-                                  <CheckCircle size={16} className="text-green-500" />
-                                  <span>Gestion professionnelle</span>
-                                </li>
+                                {(product.benefits?.length ? product.benefits : ['Conforme aux principes islamiques', 'Transparence totale', 'Gestion professionnelle']).map((benefit, i) => (
+                                  <li key={i} className="flex items-center space-x-2 text-sm text-gray-600">
+                                    <CheckCircle size={16} className="text-green-500" />
+                                    <span>{benefit}</span>
+                                  </li>
+                                ))}
                               </ul>
                             </div>
 
@@ -877,7 +930,7 @@ export default function InvestirPage() {
         </AnimatePresence>
 
         {/* No Results */}
-        {filteredProducts.length === 0 && (
+        {!loading && filteredProducts.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -893,6 +946,8 @@ export default function InvestirPage() {
               Essayez de modifier vos critères de recherche
             </p>
           </motion.div>
+        )}
+          </>
         )}
           </>
         ) : (

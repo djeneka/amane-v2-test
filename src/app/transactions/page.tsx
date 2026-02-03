@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { 
   ArrowRight, Heart, Users, Star, MapPin, Calendar,
   Smartphone, Apple, Play, ChevronDown, ChevronLeft, ChevronRight,
@@ -12,9 +11,12 @@ import {
 } from 'lucide-react';
 import CampaignCard from '@/components/CampaignCard';
 import Wallet from '@/components/Wallet';
-import { campaigns, transactions as mockTransactions } from '@/data/mockData';
+import { transactions as mockTransactions } from '@/data/mockData';
+import type { Campaign } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { Transaction } from '@/data/mockData';
+import { getActiveCampaigns } from '@/services/campaigns';
+import { getDonationsStatistics } from '@/services/statistics';
 
 export default function TransactionsPage() {
   const { isAuthenticated } = useAuth();
@@ -23,6 +25,10 @@ export default function TransactionsPage() {
   const [selectedStatus, setSelectedStatus] = useState('tout');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState<ReturnType<typeof formatTransaction> | null>(null);
+  const [featuredCampaigns, setFeaturedCampaigns] = useState<Campaign[]>([]);
+  const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
+  const [campaignsError, setCampaignsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -30,7 +36,31 @@ export default function TransactionsPage() {
     }
   }, [isAuthenticated, router]);
 
-  const featuredCampaigns = campaigns.slice(0, 3);
+  useEffect(() => {
+    let cancelled = false;
+    setCampaignsLoading(true);
+    setCampaignsError(null);
+    getActiveCampaigns()
+      .then((list) => { if (!cancelled) setFeaturedCampaigns(list.slice(0, 3)); })
+      .catch((err) => { if (!cancelled) setCampaignsError(err?.message ?? 'Erreur chargement des campagnes'); })
+      .finally(() => { if (!cancelled) setCampaignsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDonationsStatistics()
+      .then((stats) => {
+        if (cancelled) return;
+        const byId: Record<string, number> = {};
+        for (const row of stats.byCampaign) {
+          byId[row.campaignId] = row.count;
+        }
+        setDonorCountByCampaignId(byId);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Fonction pour transformer les transactions de mockData en format d'affichage
   const formatTransaction = (transaction: Transaction) => {
@@ -609,23 +639,26 @@ export default function TransactionsPage() {
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8 mb-12">
-            {featuredCampaigns.map((campaign, index) => {
-              const percentage = Math.min((campaign.currentAmount / campaign.targetAmount) * 100, 100);
-              const endDate = new Date(campaign.endDate);
-              const formattedDate = endDate.toLocaleDateString('fr-FR', { 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
-              });
-              
+            {campaignsLoading && (
+              <div className="col-span-full text-center text-white/80 py-8">Chargement des campagnes...</div>
+            )}
+            {!campaignsLoading && campaignsError && (
+              <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
+            )}
+            {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
+              const hasTarget = campaign.targetAmount > 0;
+              const progressPercent = hasTarget
+                ? Math.min(100, (campaign.currentAmount / campaign.targetAmount) * 100)
+                : 0;
+              const hasEndDate = campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime());
+              const formattedDate = hasEndDate
+                ? new Date(campaign.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+                : 'En cours';
               const categoryLabels: Record<string, string> = {
-                'urgence': 'Urgence',
-                'education': 'Éducation',
-                'sante': 'Santé',
-                'developpement': 'Développement',
-                'refugies': 'Réfugiés'
+                'urgence': 'Urgence', 'education': 'Éducation', 'sante': 'Santé',
+                'developpement': 'Développement', 'refugies': 'Réfugiés',
+                HEALTH: 'Santé', EDUCATION: 'Éducation', FOOD: 'Alimentation', OTHER: 'Autre'
               };
-              
               return (
                 <motion.div
                   key={campaign.id}
@@ -649,63 +682,54 @@ export default function TransactionsPage() {
                       <h3 className="text-xl lg:text-2xl font-bold text-white mb-3">
                         {campaign.title}
                       </h3>
-                    <p className="text-white/70 text-sm mb-2 leading-relaxed">
-                      {campaign.description}
-                    </p>
-                    <p className="text-white/70 text-sm mb-4 leading-relaxed">
-                      {campaign.impact}
-                    </p>
-                    
-                    {/* Location and Deadline */}
-                    <div className="flex justify-between items-center mb-4 text-sm text-white/70">
-                      <div className="flex items-center space-x-2">
-                        <MapPin size={16} className="text-green-800" />
-                        <span>{campaign.location}</span>
+                      <p className="text-white/70 text-sm mb-2 leading-relaxed">
+                        {campaign.description}
+                      </p>
+                      <div className="flex justify-between items-center mb-4 text-sm text-white/70">
+                        <div className="flex items-center space-x-2">
+                          <MapPin size={16} className="text-green-800" />
+                          <span>{campaign.location || '—'}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Calendar size={16} className="text-green-800" />
+                          <span>Fin: {formattedDate}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Calendar size={16} className="text-green-800" />
-                        <span>Fin: {formattedDate}</span>
+                      {hasTarget && (
+                        <div className="mb-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-white font-bold">
+                              {campaign.currentAmount.toLocaleString('fr-FR')} F CFA / {campaign.targetAmount.toLocaleString('fr-FR')} F CFA
+                            </span>
+                            <span className="text-white">{progressPercent.toFixed(1)}%</span>
+                          </div>
+                          <div className="w-full bg-white/20 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full transition-all duration-300"
+                              style={{
+                                width: `${progressPercent}%`,
+                                background: 'linear-gradient(to right, #5AB678, #20B6B3)'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center space-x-2 mb-6 text-sm text-white/70">
+                        <Users size={16} className="text-green-800" />
+                        <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString('fr-FR')} donateurs</span>
                       </div>
-                    </div>
-
-                    {/* Funding Progress */}
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-white font-bold">
-                          {campaign.currentAmount.toLocaleString('fr-FR')} F CFA / {campaign.targetAmount.toLocaleString('fr-FR')} F CFA
-                        </span>
-                        <span className="text-white">{percentage.toFixed(1)}%</span>
-                      </div>
-                      <div className="w-full bg-white/20 rounded-full h-2">
-                        <div
-                          className="h-2 rounded-full transition-all duration-300"
-                          style={{ 
-                            width: `${percentage}%`,
-                            background: 'linear-gradient(to right, #5AB678, #20B6B3)'
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Beneficiaries */}
-                    <div className="flex items-center space-x-2 mb-6 text-sm text-white/70">
-                      <Users size={16} className="text-green-800" />
-                      <span>{campaign.beneficiaries.toLocaleString('fr-FR')} bénéficiaires</span>
-                    </div>
-
-                    {/* CTA Button */}
-                    <Link href={`/campagnes/${campaign.id}`}>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="w-full text-white py-3 rounded-2xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
-                        style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
-                      >
-                        <Heart size={18} className="fill-white" />
-                        <span>Soutenir cette campagne</span>
-                        <ArrowRight size={18} />
-                      </motion.button>
-                    </Link>
+                      <Link href={`/campagnes/${campaign.id}`}>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="w-full text-white py-3 rounded-2xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
+                          style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                        >
+                          <Heart size={18} className="fill-white" />
+                          <span>Soutenir cette campagne</span>
+                          <ArrowRight size={18} />
+                        </motion.button>
+                      </Link>
                     </div>
                   </div>
                 </motion.div>

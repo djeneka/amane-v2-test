@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthGuardProps {
@@ -15,22 +15,23 @@ export default function AuthGuard({
   requireAuth = false, 
   redirectTo = '/' 
 }: AuthGuardProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authReady } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    // Ne pas rediriger avant d'avoir lu le statut d'auth (localStorage)
+    if (!authReady) return;
+
     // Si l'authentification est requise et l'utilisateur n'est pas connecté
     if (requireAuth && !isAuthenticated) {
       router.push('/connexion');
       return;
     }
 
-    // Si l'utilisateur est connecté et essaie d'accéder aux pages d'auth
-    if (isAuthenticated && (window.location.pathname === '/connexion' || window.location.pathname === '/inscription')) {
-      router.push(redirectTo);
-      return;
-    }
-  }, [isAuthenticated, requireAuth, redirectTo, router]);
+    // Si l'utilisateur est connecté sur connexion/inscription, on ne redirige plus :
+    // la page affichera un message "Déjà connecté" pour permettre d'y accéder (ex. changer de compte).
+  }, [authReady, isAuthenticated, requireAuth, redirectTo, router, pathname]);
 
   return <>{children}</>;
 } 

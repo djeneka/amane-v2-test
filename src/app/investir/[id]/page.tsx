@@ -8,17 +8,100 @@ import {
   Eye, Apple, Play
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { investmentProducts } from '@/data/mockData';
+import { useParams } from 'next/navigation';
+import { getInvestmentProductById, mapInvestmentToDisplay, type InvestmentProductDisplay } from '@/services/investments';
 import MakeDonationModal from '@/components/MakeDonationModal';
 
-export default function InvestirDetailPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
+export default function InvestirDetailPage() {
+  const params = useParams();
+  const id = typeof params?.id === 'string' ? params.id : null;
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
+  const [product, setProduct] = useState<InvestmentProductDisplay | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Trouver le produit par ID
-  const product = investmentProducts.find(p => p.id === params.id);
+  useEffect(() => {
+    if (!id) {
+      setProduct(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setCurrentImageIndex(0);
+    let cancelled = false;
+    getInvestmentProductById(id)
+      .then((apiProduct) => {
+        if (!cancelled)
+          setProduct(apiProduct ? mapInvestmentToDisplay(apiProduct) : null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  // Images pour chaque catégorie
+  const categoryImages = {
+    immobilier: [
+      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&h=300&fit=crop'
+    ],
+    agriculture: [
+      'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1574943320219-553eb213f72f?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?w=400&h=300&fit=crop'
+    ],
+    technologie: [
+      'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop'
+    ],
+    energie: [
+      'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop',
+      'https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop'
+    ]
+  };
+
+  const images = product?.picture
+    ? [product.picture]
+    : (product ? (categoryImages[product.category as keyof typeof categoryImages] || []) : []);
+
+  // Effet pour le défilement automatique du carrousel
+  useEffect(() => {
+    if (images.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [images.length]);
+
+  if (id == null || id === '') {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to left, #101919, #00644D)' }}>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Identifiant manquant</h1>
+          <Link href="/investir" className="text-white hover:text-green-200 underline">
+            Retour aux produits
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to left, #101919, #00644D)' }}>
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-[#5FB678] border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-white/80">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -52,42 +135,6 @@ export default function InvestirDetailPage({ params }: { params: { id: string } 
     modere: 'bg-yellow-500',
     eleve: 'bg-red-500',
   };
-
-  // Images pour chaque catégorie
-  const categoryImages = {
-    immobilier: [
-      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&h=300&fit=crop'
-    ],
-    agriculture: [
-      'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1574943320219-553eb213f72f?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?w=400&h=300&fit=crop'
-    ],
-    technologie: [
-      'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop'
-    ],
-    energie: [
-      'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop'
-    ]
-  };
-
-  const images = categoryImages[product.category as keyof typeof categoryImages] || [];
-
-  // Effet pour le défilement automatique du carrousel
-  useEffect(() => {
-    if (images.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentImageIndex((prev) => (prev + 1) % images.length);
-      }, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [images.length]);
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
@@ -308,12 +355,12 @@ export default function InvestirDetailPage({ params }: { params: { id: string } 
             <div className="space-y-4">
               <h3 className="text-xl font-bold text-white">Avantages inclus</h3>
               <div className="space-y-3">
-                {[
+                {(product.benefits?.length ? product.benefits : [
                   'Conforme aux principes islamiques',
                   'Transparence totale',
                   'Gestion professionnelle',
                   'Suivi en temps réel'
-                ].map((feature, index) => (
+                ]).map((feature, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: 20 }}

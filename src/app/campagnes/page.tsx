@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, Heart, Users, Target, Calendar, MapPin, 
@@ -9,11 +9,27 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import CampaignCard from '@/components/CampaignCard';
-import { campaigns } from '@/data/mockData';
+import type { Campaign } from '@/data/mockData';
 import Image from 'next/image';
 import MakeDonationModal from '@/components/MakeDonationModal';
+import { getActiveCampaigns } from '@/services/campaigns';
+import { getDonationsStatistics } from '@/services/statistics';
+
+const COUNTRY_LABELS: Record<string, string> = {
+  ci: "côte d'ivoire",
+  sn: 'sénégal',
+  ml: 'mali',
+};
+const CITY_LABELS: Record<string, string> = {
+  abidjan: 'abidjan',
+  dakar: 'dakar',
+  bamako: 'bamako',
+};
 
 export default function CampagnesPage() {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
@@ -23,8 +39,35 @@ export default function CampagnesPage() {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [showDonationModal, setShowDonationModal] = useState(false);
-  
-  // Solde de l'utilisateur (à récupérer depuis le contexte ou l'API)
+  /** Nombre de donateurs par campaignId (API statistics) */
+  const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getActiveCampaigns()
+      .then((list) => { if (!cancelled) setCampaigns(list); })
+      .catch((err) => { if (!cancelled) setError(err?.message ?? 'Erreur chargement des campagnes'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDonationsStatistics()
+      .then((stats) => {
+        if (cancelled) return;
+        const byId: Record<string, number> = {};
+        for (const row of stats.byCampaign) {
+          byId[row.campaignId] = row.count;
+        }
+        setDonorCountByCampaignId(byId);
+      })
+      .catch(() => { /* ignore: on garde le fallback bénéficiaires */ });
+    return () => { cancelled = true; };
+  }, []);
+
   const walletBalance = 610473;
 
   const categories = [
@@ -34,6 +77,7 @@ export default function CampagnesPage() {
     { id: 'sante', name: 'Santé', icon: Heart, color: 'bg-green-600' },
     { id: 'developpement', name: 'Développement', icon: TrendingUp, color: 'bg-green-700' },
     { id: 'refugies', name: 'Réfugiés', icon: Users, color: 'bg-orange-500' },
+    { id: 'autres', name: 'Autre', icon: Star, color: 'bg-gray-500' },
   ];
 
   const sortOptions = [
@@ -44,22 +88,37 @@ export default function CampagnesPage() {
   ];
 
   const filteredCampaigns = campaigns
-    .filter(campaign => {
-      const matchesSearch = campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          campaign.description.toLowerCase().includes(searchTerm.toLowerCase());
+    .filter((campaign) => {
+      const term = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        !term ||
+        campaign.title.toLowerCase().includes(term) ||
+        campaign.description.toLowerCase().includes(term);
       const matchesCategory = selectedCategory === 'all' || campaign.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      const endTime = campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime())
+        ? new Date(campaign.endDate).getTime()
+        : null;
+      const matchesDate =
+        (!dateRange.start && !dateRange.end) ||
+        (endTime != null && dateRange.start && dateRange.end && endTime >= new Date(dateRange.start).getTime() && endTime <= new Date(dateRange.end).getTime()) ||
+        (endTime != null && dateRange.start && !dateRange.end && endTime >= new Date(dateRange.start).getTime()) ||
+        (endTime != null && !dateRange.start && dateRange.end && endTime <= new Date(dateRange.end).getTime());
+      const loc = (campaign.location || '').toLowerCase();
+      const matchesCountry = !selectedCountry || loc.includes(COUNTRY_LABELS[selectedCountry] ?? selectedCountry);
+      const matchesCity = !selectedCity || loc.includes(CITY_LABELS[selectedCity] ?? selectedCity);
+      return matchesSearch && matchesCategory && matchesDate && matchesCountry && matchesCity;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'popular':
-          return b.beneficiaries - a.beneficiaries;
+          return (donorCountByCampaignId[b.id] ?? 0) - (donorCountByCampaignId[a.id] ?? 0);
         case 'ending':
-          return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+          return (a.endDate ? new Date(a.endDate).getTime() : 0) - (b.endDate ? new Date(b.endDate).getTime() : 0);
         case 'amount':
           return b.targetAmount - a.targetAmount;
+        case 'recent':
         default:
-          return 0;
+          return (b.endDate ? new Date(b.endDate).getTime() : 0) - (a.endDate ? new Date(a.endDate).getTime() : 0);
       }
     });
 
@@ -72,38 +131,16 @@ export default function CampagnesPage() {
   };
 
   const getProgressPercentage = (current: number, target: number) => {
-    return Math.min((current / target) * 100, 100);
+    if (!target || target <= 0) return 0;
+    return Math.min(100, (current / target) * 100);
   };
 
+  const totalDonors = campaigns.reduce((sum, c) => sum + (donorCountByCampaignId[c.id] ?? 0), 0);
   const statsCards = [
-    {
-      icon: '/icons/volume-high.png',
-      value: campaigns.length,
-      label: 'Campagnes actives',
-      rotateDirection: 1,
-      cardRotate: 5,
-    },
-    {
-      icon: '/icons/people.png',
-      value: campaigns.reduce((sum, c) => sum + c.beneficiaries, 0).toLocaleString(),
-      label: 'Bénéficiaires',
-      rotateDirection: -1,
-      cardRotate: -5,
-    },
-    {
-      icon: '/icons/hand-coin(2).png',
-      value: formatAmount(campaigns.reduce((sum, c) => sum + c.currentAmount, 0)),
-      label: 'Collecté',
-      rotateDirection: 1,
-      cardRotate: 5,
-    },
-    {
-      icon: '/icons/global.png',
-      value: new Set(campaigns.map(c => c.location)).size,
-      label: 'Pays',
-      rotateDirection: -1,
-      cardRotate: -5,
-    },
+    { icon: '/icons/volume-high.png', value: campaigns.length, label: 'Campagnes actives', rotateDirection: 1, cardRotate: 5 },
+    { icon: '/icons/people.png', value: totalDonors.toLocaleString(), label: 'Donateurs', rotateDirection: -1, cardRotate: -5 },
+    { icon: '/icons/hand-coin(2).png', value: formatAmount(campaigns.reduce((sum, c) => sum + c.currentAmount, 0)), label: 'Collecté', rotateDirection: 1, cardRotate: 5 },
+    { icon: '/icons/global.png', value: new Set(campaigns.map((c) => c.location).filter(Boolean)).size || 0, label: 'Pays', rotateDirection: -1, cardRotate: -5 },
   ];
 
   return (
@@ -202,6 +239,14 @@ export default function CampagnesPage() {
               </motion.button>
             </div>
 
+            {error && (
+              <div className="mb-6 p-4 rounded-xl bg-red-500/20 text-white text-center">
+                {error}
+              </div>
+            )}
+            {loading && (
+              <div className="mb-6 text-white/80 text-center py-4">Chargement des campagnes...</div>
+            )}
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
               {statsCards.map((stat, index) => {
@@ -245,8 +290,8 @@ export default function CampagnesPage() {
           
         >
           <div className="flex flex-col gap-6">
-            {/* First Row: Search, Period, Country, City, Apply Button */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* First Row: Search, Period (2 cols), Country, City, Apply Button */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               {/* Search */}
               <div className="lg:col-span-1">
                 <label className="block text-white text-sm font-medium mb-2">Recherche</label>
@@ -263,29 +308,31 @@ export default function CampagnesPage() {
                 </div>
               </div>
 
-              {/* Period */}
-              <div className="lg:col-span-1">
+              {/* Period - Du / Au (2 colonnes pour bien séparer de Pays) */}
+              <div className="lg:col-span-2 min-w-0">
                 <label className="block text-white text-sm font-medium mb-2">Période</label>
-                <div className="relative flex items-center">
-                  <Calendar size={18} className="absolute left-3 text-white/70 z-10" />
-                  <input
-                    type="text"
-                    placeholder="09/09/2024 - 09/09/2025"
-                    value={dateRange.start && dateRange.end 
-                      ? `${new Date(dateRange.start).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${new Date(dateRange.end).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
-                      : dateRange.start || dateRange.end
-                      ? dateRange.start 
-                        ? new Date(dateRange.start).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                        : new Date(dateRange.end).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                      : ''
-                    }
-                    readOnly
-                    onClick={() => {
-                      // Ouvrir un date picker ou modal pour sélectionner la période
-                    }}
-                    className="w-full pl-10 pr-10 py-3 rounded-xl text-white bg-gray-800/50 border border-gray-700 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 cursor-pointer placeholder-gray-400"
-                  />
-                  <Calendar size={18} className="absolute right-3 text-white/70 z-10" />
+                <div className="flex gap-2">
+                  <div className="relative flex-1 min-w-0">
+                    <Calendar size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/70 z-10 pointer-events-none" />
+                    <input
+                      type="date"
+                      value={dateRange.start}
+                      onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
+                      className="w-full pl-9 pr-2 py-3 rounded-xl text-white bg-gray-800/50 border border-gray-700 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 [color-scheme:dark]"
+                      title="Date de début"
+                    />
+                  </div>
+                  <span className="self-center text-white/70 flex-shrink-0">→</span>
+                  <div className="relative flex-1 min-w-0">
+                    <Calendar size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/70 z-10 pointer-events-none" />
+                    <input
+                      type="date"
+                      value={dateRange.end}
+                      onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
+                      className="w-full pl-9 pr-2 py-3 rounded-xl text-white bg-gray-800/50 border border-gray-700 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 [color-scheme:dark]"
+                      title="Date de fin"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -412,7 +459,9 @@ export default function CampagnesPage() {
 
         {/* Campaigns Grid */}
         <AnimatePresence mode="wait">
-          {viewMode === 'grid' ? (
+          {loading ? (
+            <div className="text-center py-12 text-white/80">Chargement des campagnes...</div>
+          ) : viewMode === 'grid' ? (
             <motion.div
               key="grid"
               initial={{ opacity: 0 }}
@@ -422,22 +471,16 @@ export default function CampagnesPage() {
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
             >
               {filteredCampaigns.map((campaign, index) => {
-                const percentage = Math.min((campaign.currentAmount / campaign.targetAmount) * 100, 100);
-                const endDate = new Date(campaign.endDate);
-                const formattedDate = endDate.toLocaleDateString('fr-FR', { 
-                  day: 'numeric', 
-                  month: 'long', 
-                  year: 'numeric' 
-                });
-                
+                const hasTarget = campaign.targetAmount > 0;
+                const progressPercent = hasTarget ? getProgressPercentage(campaign.currentAmount, campaign.targetAmount) : 0;
+                const hasEndDate = campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime());
+                const formattedDate = hasEndDate
+                  ? new Date(campaign.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+                  : 'En cours';
                 const categoryLabels: Record<string, string> = {
-                  'urgence': 'Urgence',
-                  'education': 'Éducation',
-                  'sante': 'Santé',
-                  'developpement': 'Développement',
-                  'refugies': 'Réfugiés'
+                  urgence: 'Urgence', education: 'Éducation', sante: 'Santé',
+                  developpement: 'Développement', refugies: 'Réfugiés', autres: 'Autre',
                 };
-                
                 return (
                   <motion.div
                     key={campaign.id}
@@ -464,45 +507,38 @@ export default function CampagnesPage() {
                         <p className="text-white/70 text-sm mb-2 leading-relaxed">
                           {campaign.description}
                         </p>
-                        <p className="text-white/70 text-sm mb-4 leading-relaxed">
-                          {campaign.impact}
-                        </p>
-                        
-                        {/* Location and Deadline */}
+                        {/* <p className="text-white/70 text-sm mb-4 leading-relaxed">{campaign.impact}</p> */}
                         <div className="flex justify-between items-center mb-4 text-sm text-white/70">
                           <div className="flex items-center space-x-2">
                             <MapPin size={16} className="text-green-800" />
-                            <span>{campaign.location}</span>
+                            <span>{campaign.location || '—'}</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Calendar size={16} className="text-green-800" />
                             <span>Fin: {formattedDate}</span>
                           </div>
                         </div>
-
-                        {/* Funding Progress */}
+                        {hasTarget && (
                         <div className="mb-4">
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-white font-bold">
                               {campaign.currentAmount.toLocaleString('fr-FR')} F CFA / {campaign.targetAmount.toLocaleString('fr-FR')} F CFA
                             </span>
-                            <span className="text-white">{percentage.toFixed(1)}%</span>
+                            <span className="text-white">{progressPercent.toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-white/20 rounded-full h-2">
                             <div
                               className="h-2 rounded-full transition-all duration-300"
-                              style={{ 
-                                width: `${percentage}%`,
-                                background: 'linear-gradient(to right, #5AB678, #20B6B3)'
-                              }}
+                              style={{ width: `${progressPercent}%`, background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                             />
                           </div>
                         </div>
+                        )}
 
-                        {/* Beneficiaries */}
+                        {/* Donateurs */}
                         <div className="flex items-center space-x-2 mb-6 text-sm text-white/70">
                           <Users size={16} className="text-green-800" />
-                          <span>{campaign.beneficiaries.toLocaleString('fr-FR')} bénéficiaires</span>
+                          <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString('fr-FR')} donateurs</span>
                         </div>
 
                         {/* CTA Button */}
@@ -557,9 +593,10 @@ export default function CampagnesPage() {
                               campaign.category === 'education' ? 'bg-blue-500' :
                               campaign.category === 'sante' ? 'bg-green-500' :
                               campaign.category === 'developpement' ? 'bg-purple-500' :
-                              'bg-orange-500'
+                              campaign.category === 'refugies' ? 'bg-orange-500' :
+                              'bg-gray-500'
                             }`}>
-                              {campaign.category.charAt(0).toUpperCase() + campaign.category.slice(1)}
+                              {campaign.category === 'autres' ? 'Autre' : campaign.category.charAt(0).toUpperCase() + campaign.category.slice(1)}
                             </span>
                           </div>
                         </div>
@@ -575,19 +612,24 @@ export default function CampagnesPage() {
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-xs sm:text-sm text-white/70 mb-4">
                             <div className="flex items-center space-x-1">
                               <MapPin size={14} className="sm:w-4 sm:h-4" />
-                              <span className="truncate">{campaign.location}</span>
+                              <span className="truncate">{campaign.location || '—'}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Users size={14} className="sm:w-4 sm:h-4" />
-                              <span>{campaign.beneficiaries.toLocaleString()} bénéficiaires</span>
+                              <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString()} donateurs</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Calendar size={14} className="sm:w-4 sm:h-4" />
-                              <span className="truncate">Se termine le {new Date(campaign.endDate).toLocaleDateString('fr-FR')}</span>
+                              <span className="truncate">
+                                {campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime())
+                                  ? `Se termine le ${new Date(campaign.endDate).toLocaleDateString('fr-FR')}`
+                                  : 'En cours'}
+                              </span>
                             </div>
                           </div>
 
                           <div className="space-y-3">
+                            {campaign.targetAmount > 0 && (
                             <div>
                               <div className="flex justify-between text-xs sm:text-sm mb-1">
                                 <span className="text-white/70">Progression</span>
@@ -608,6 +650,7 @@ export default function CampagnesPage() {
                                 />
                               </div>
                             </div>
+                            )}
 
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                               <div>
@@ -639,7 +682,7 @@ export default function CampagnesPage() {
         </AnimatePresence>
 
         {/* No Results */}
-        {filteredCampaigns.length === 0 && (
+        {!loading && filteredCampaigns.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -652,7 +695,7 @@ export default function CampagnesPage() {
               Aucune campagne trouvée
             </h3>
             <p className="text-white/70">
-              Essayez de modifier vos critères de recherche
+              {campaigns.length === 0 ? 'Aucune campagne active pour le moment.' : 'Essayez de modifier vos critères de recherche ou de filtres.'}
             </p>
           </motion.div>
         )}

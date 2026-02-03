@@ -1,36 +1,93 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { 
   ArrowRight, Heart, Users, MapPin, Calendar, ArrowLeft, ChevronDown,
   Apple, Play, TrendingUp, Bookmark
 } from 'lucide-react';
-import { campaigns, takafulProducts, donations } from '@/data/mockData';
+import { getTakafulPlans, type TakafulPlan } from '@/services/takaful-plans';
+import type { Campaign } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
+import { getActiveCampaigns } from '@/services/campaigns';
+import { getDonationsStatistics } from '@/services/statistics';
+import { getActivities, type Activity } from '@/services/activities';
+
+const DEFAULT_ACTIVITY_IMAGE = '/images/no-image.png';
+const DEFAULT_TAKAFUL_IMAGE = '/images/no-image.png';
 
 export default function CommunautePage() {
   const { isAuthenticated } = useAuth();
   const [currentTakafulSlide, setCurrentTakafulSlide] = useState(0);
-  const featuredCampaigns = campaigns.slice(0, 3);
-
-  const slides = [
-    {
-      image: '/images/hope.png',
-      title: 'Distribution Alimentaire Pendant Le Ramadan',
-      description: 'Grâce à la générosité des fidèles, des vivres essentiels ont été distribués aux familles les plus modestes durant le Ramadan, apportant espoir et bénédiction à leurs tables.',
-      impact: '+ 2500 repas distribués'
-
-    },
-    {
-      image: '/images/skemoo.png',
-      title: 'Distribution Alimentaire Pendant Le Ramadan',
-      description: 'Grâce à la générosité des fidèles, des vivres essentiels ont été distribués aux familles les plus modestes durant le Ramadan, apportant espoir et bénédiction à leurs tables.',
-      impact: '+ 1500 repas distribués'
-    }
-  ];
+  const [featuredCampaigns, setFeaturedCampaigns] = useState<Campaign[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
+  const [campaignsError, setCampaignsError] = useState<string | null>(null);
+  const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [activitiesError, setActivitiesError] = useState<string | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentCagnotteSlide, setCurrentCagnotteSlide] = useState(0);
+  const [takafulPlans, setTakafulPlans] = useState<TakafulPlan[]>([]);
+  const [takafulLoading, setTakafulLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCampaignsLoading(true);
+    setCampaignsError(null);
+    getActiveCampaigns()
+      .then((list) => { if (!cancelled) setFeaturedCampaigns(list.slice(0, 3)); })
+      .catch((err) => { if (!cancelled) setCampaignsError(err?.message ?? 'Erreur chargement des campagnes'); })
+      .finally(() => { if (!cancelled) setCampaignsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTakafulLoading(true);
+    getTakafulPlans()
+      .then((list) => { if (!cancelled) setTakafulPlans(list.slice(0, 3)); })
+      .catch(() => { if (!cancelled) setTakafulPlans([]); })
+      .finally(() => { if (!cancelled) setTakafulLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDonationsStatistics()
+      .then((stats) => {
+        if (cancelled) return;
+        const byId: Record<string, number> = {};
+        for (const row of stats.byCampaign) {
+          byId[row.campaignId] = row.count;
+        }
+        setDonorCountByCampaignId(byId);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setActivitiesLoading(true);
+    setActivitiesError(null);
+    getActivities()
+      .then((result) => {
+        if (cancelled) return;
+        if (result.success) {
+          setActivities(result.data);
+          setCurrentSlide((prev) => (prev >= result.data.length ? Math.max(0, result.data.length - 1) : prev));
+        } else {
+          setActivitiesError(result.error);
+        }
+      })
+      .finally(() => { if (!cancelled) setActivitiesLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const currentActivity = activities[currentSlide];
+  const slideImage = currentActivity?.images?.[0] || DEFAULT_ACTIVITY_IMAGE;
 
 
   if (!isAuthenticated) {
@@ -39,7 +96,8 @@ export default function CommunautePage() {
 
   return (
     <div className="min-h-screen bg-[#0B302F]">
-      {/* Section "Dons" */}
+      {/* Section "Dons" - affichée uniquement s'il y a au moins 1 activité */}
+      {activities.length > 0 && (
       <section className="py-32 text-white relative overflow-hidden" style={{ background: 'linear-gradient(to right, #0B302F, #101919)' }}>
         {/* Background Image */}
         <div className="absolute inset-0">
@@ -52,137 +110,150 @@ export default function CommunautePage() {
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
+            {/* Gauche : titre, description, résultat */}
+            <div>
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8 }}
                 viewport={{ once: true }}
               >
-                {/* Étoile décorative */}
                 <div className="mb-4">
                   <img src="/icons/Vector(2).png" alt="Star" className="h-6 w-6 text-[#5AB678]" />
                 </div>
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentSlide}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-                      {slides[currentSlide].title}
-                    </h2>
-                    <p className="text-lg text-white/80 mb-6 leading-relaxed">
-                      {slides[currentSlide].description}
-                    </p>
-                    <p className="text-lg text-[#5AB678] font-bold mb-6 leading-relaxed">
-                      {slides[currentSlide].impact}
-                    </p>
-                  </motion.div>
-                </AnimatePresence>
-                {/* <Link href="/campagnes" className="inline-flex items-center space-x-2 text-[#5AB678] hover:text-[#5AB678]/80 font-semibold">
-                  <span>En savoir plus</span>
-                  <ArrowRight size={20} />
-                </Link> */}
+                {activitiesLoading && (
+                  <div className="text-white/80 py-8">Chargement des activités...</div>
+                )}
+                {!activitiesLoading && activitiesError && (
+                  <div className="text-white/90 py-4">{activitiesError}</div>
+                )}
+                {!activitiesLoading && !activitiesError && currentActivity && (
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentSlide}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+                        {currentActivity.title}
+                      </h2>
+                      <p className="text-lg text-white/80 mb-6 leading-relaxed">
+                        {currentActivity.description}
+                      </p>
+                      <p className="text-lg text-[#5AB678] font-bold mb-6 leading-relaxed">
+                        {currentActivity.result}
+                      </p>
+                    </motion.div>
+                  </AnimatePresence>
+                )}
+                {!activitiesLoading && !activitiesError && activities.length === 0 && (
+                  <p className="text-white/80">Aucune activité pour le moment.</p>
+                )}
               </motion.div>
             </div>
-            {/* Image slider pour mobile - visible uniquement sur mobile */}
+            {/* Image à droite (mobile : en dessous) */}
             <div className="lg:hidden mt-8 -mr-4 sm:-mr-6 relative">
-              <div 
-                className="relative z-0 w-full"
-                style={{
-                  aspectRatio: '868/579',
-                  borderRadius: '289.5px 0 0 289.5px',
-                  border: '3px solid #5AB678',
-                  overflow: 'hidden',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
-                }}
-              >
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentSlide}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="absolute inset-0"
-                  >
-                    <img
-                      src={slides[currentSlide].image}
-                      alt="Distribution Alimentaire"
-                      className="w-full h-full object-cover"
-                    />
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+              {currentActivity && (
+                <div
+                  className="relative z-0 w-full"
+                  style={{
+                    aspectRatio: '868/579',
+                    borderRadius: '289.5px 0 0 289.5px',
+                    border: '3px solid #5AB678',
+                    overflow: 'hidden',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentSlide}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="absolute inset-0"
+                    >
+                      <img
+                        src={slideImage}
+                        alt={currentActivity.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
           </div>
         </div>
-        {/* Image slider alignée à droite pour desktop - cachée sur mobile */}
-        <div className="hidden lg:flex absolute left-[50%] -right-2 top-12 bottom-12 items-center justify-end pr-0 z-10">
-          <div 
-            className="relative z-0 w-full max-w-[688px]"
-            style={{
-              aspectRatio: '868/579',
-              borderRadius: '289.5px 0 0 289.5px',
-              border: '3px solid #5AB678',
-              overflow: 'hidden',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
-            }}
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentSlide}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0"
+        {/* Image à droite pour desktop */}
+        {currentActivity && (
+          <div className="hidden lg:flex absolute left-[50%] -right-2 top-12 bottom-12 items-center justify-end pr-0 z-10">
+            <div
+              className="relative z-0 w-full max-w-[688px]"
+              style={{
+                aspectRatio: '868/579',
+                borderRadius: '289.5px 0 0 289.5px',
+                border: '3px solid #5AB678',
+                overflow: 'hidden',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+              }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute inset-0"
+                >
+                  <img
+                    src={slideImage}
+                    alt={currentActivity.title}
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
+              </AnimatePresence>
+              <button
+                onClick={() => setCurrentSlide((prev) => Math.max(0, prev - 1))}
+                disabled={currentSlide === 0}
+                aria-label="Slide précédent"
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#5AB678] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
               >
-                <img
-                  src={slides[currentSlide].image}
-                  alt="Distribution Alimentaire"
-                  className="w-full h-full object-cover"
-                />
-              </motion.div>
-            </AnimatePresence>
-            {/* Navigation buttons pour desktop */}
-            <button
-              onClick={() => setCurrentSlide((prev) => Math.max(0, prev - 1))}
-              disabled={currentSlide === 0}
-              aria-label="Slide précédent"
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#5AB678] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
-            >
-              <ArrowLeft size={24} className="text-white" />
-            </button>
-            <button
-              onClick={() => setCurrentSlide((prev) => Math.min(slides.length - 1, prev + 1))}
-              disabled={currentSlide === slides.length - 1}
-              aria-label="Slide suivant"
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#5AB678] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
-            >
-              <ArrowRight size={24} className="text-white" />
-            </button>
+                <ArrowLeft size={24} className="text-white" />
+              </button>
+              <button
+                onClick={() => setCurrentSlide((prev) => Math.min(activities.length - 1, prev + 1))}
+                disabled={currentSlide === activities.length - 1}
+                aria-label="Slide suivant"
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#5AB678] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
+              >
+                <ArrowRight size={24} className="text-white" />
+              </button>
+            </div>
           </div>
-        </div>
-        {/* Navigation dots - Centré en bas de la section */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`transition-all duration-300 ${
-                index === currentSlide
-                  ? 'w-3 h-3 bg-white rounded-full'
-                  : 'w-3 h-3 border-2 border-white rounded-full hover:bg-white/50'
-              }`}
-              aria-label={`Aller au slide ${index + 1}`}
-            />
-          ))}
-        </div>
+        )}
+        {/* Navigation dots */}
+        {activities.length > 0 && (
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+            {activities.map((_, index) => (
+              <button
+                key={activities[index].id}
+                onClick={() => setCurrentSlide(index)}
+                className={`transition-all duration-300 ${
+                  index === currentSlide
+                    ? 'w-3 h-3 bg-white rounded-full'
+                    : 'w-3 h-3 border-2 border-white rounded-full hover:bg-white/50'
+                }`}
+                aria-label={`Aller au slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </section>
+      )}
 
         {/* Section Nos Donations */}
         <section className="py-20 text-white relative overflow-hidden" style={{ background: 'linear-gradient(to left, #226c3a, #5ab678)' }}>
@@ -206,7 +277,7 @@ export default function CommunautePage() {
                 </p>
             </motion.div>
 
-            {/* Right Side - Product Cards Slider */}
+            {/* Right Side - Slider des 3 dernières campagnes */}
             <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -217,24 +288,24 @@ export default function CommunautePage() {
                 <div className="relative overflow-hidden">
                 <div 
                     className="flex transition-transform duration-500 ease-in-out"
-                    style={{ transform: `translateX(-${currentTakafulSlide * 100}%)` }}
+                    style={{ transform: `translateX(-${currentCagnotteSlide * 100}%)` }}
                 >
-                    {donations.map((product) => (
-                    <div key={product.id} className="min-w-full px-2">
+                    {featuredCampaigns.map((campaign) => (
+                    <div key={campaign.id} className="min-w-full px-2">
                         <div className="bg-white rounded-3xl overflow-hidden relative" style={{ height: '600px' }}>
                         <div className="absolute inset-0">
                             <img 
-                            src={product.image} 
-                            alt={product.title} 
+                            src={campaign.image} 
+                            alt={campaign.title} 
                             className="w-full h-full object-cover"
                             />
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
-                            <h3 className="text-white text-2xl font-bold mb-2">{product.title}</h3>
+                            <h3 className="text-white text-2xl font-bold mb-2">{campaign.title}</h3>
                             <p className="text-white/90 text-sm mb-4 line-clamp-3">
-                            {product.description}
+                            {campaign.description}
                             </p>
-                            <Link href={`/campagnes/${product.id}`}>
+                            <Link href={`/campagnes/${campaign.id}`}>
                             <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
                                 En savoir plus
                             </button>
@@ -247,17 +318,19 @@ export default function CommunautePage() {
                 </div>
 
                 {/* Navigation Buttons */}
+                {featuredCampaigns.length > 0 && (
+                <>
                 <button
-                onClick={() => setCurrentTakafulSlide((prev) => Math.max(0, prev - 1))}
-                disabled={currentTakafulSlide === 0}
+                onClick={() => setCurrentCagnotteSlide((prev) => Math.max(0, prev - 1))}
+                disabled={currentCagnotteSlide === 0}
                 aria-label="Carte précédente"
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#00644D] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
                 >
                 <ArrowLeft size={28} className="text-white" />
                 </button>
                 <button
-                onClick={() => setCurrentTakafulSlide((prev) => Math.min(takafulProducts.length - 1, prev + 1))}
-                disabled={currentTakafulSlide === takafulProducts.length - 1}
+                onClick={() => setCurrentCagnotteSlide((prev) => Math.min(featuredCampaigns.length - 1, prev + 1))}
+                disabled={currentCagnotteSlide === featuredCampaigns.length - 1}
                 aria-label="Carte suivante"
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
                 >
@@ -266,32 +339,34 @@ export default function CommunautePage() {
 
                 {/* Pagination Dots */}
                 <div className="flex justify-center gap-2 mt-6">
-                {takafulProducts.map((_, index) => (
+                {featuredCampaigns.map((campaign, index) => (
                     <button
-                    key={index}
-                    onClick={() => setCurrentTakafulSlide(index)}
-                    aria-label={`Aller au produit ${index + 1}`}
-                    title={`Aller au produit ${index + 1}`}
+                    key={campaign.id}
+                    onClick={() => setCurrentCagnotteSlide(index)}
+                    aria-label={`Aller à la campagne ${index + 1}`}
+                    title={`Aller à la campagne ${index + 1}`}
                     className={`w-2 h-2 rounded-full transition-all ${
-                        currentTakafulSlide === index 
+                        currentCagnotteSlide === index 
                         ? 'bg-white w-8' 
                         : 'bg-white/30'
                     }`}
                     />
                 ))}
                 </div>
+                </>
+                )}
             </motion.div>
             </div>
 
-            {/* Bouton Voir tous les produits - En dehors de la grid */}
+            {/* Bouton Voir toutes les campagnes */}
             <div className="text-center mt-12">
-            <Link href="/takaful">
+            <Link href="/campagnes">
                 <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="border-1 border-white text-white px-6 py-3 rounded-3xl font-semibold flex items-center gap-2 w-fit mx-auto hover:bg-white/10 transition-colors"
                 >
-                Voir tous les produits
+                Voir toutes les campagnes
                 <ArrowRight size={20} />
                 </motion.button>
             </Link>
@@ -318,23 +393,26 @@ export default function CommunautePage() {
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8 mb-12">
-            {featuredCampaigns.map((campaign, index) => {
-              const percentage = Math.min((campaign.currentAmount / campaign.targetAmount) * 100, 100);
-              const endDate = new Date(campaign.endDate);
-              const formattedDate = endDate.toLocaleDateString('fr-FR', { 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
-              });
-              
+            {campaignsLoading && (
+              <div className="col-span-full text-center text-white/80 py-8">Chargement des campagnes...</div>
+            )}
+            {!campaignsLoading && campaignsError && (
+              <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
+            )}
+            {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
+              const hasTarget = campaign.targetAmount > 0;
+              const progressPercent = hasTarget
+                ? Math.min(100, (campaign.currentAmount / campaign.targetAmount) * 100)
+                : 0;
+              const hasEndDate = campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime());
+              const formattedDate = hasEndDate
+                ? new Date(campaign.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+                : 'En cours';
               const categoryLabels: Record<string, string> = {
-                'urgence': 'Urgence',
-                'education': 'Éducation',
-                'sante': 'Santé',
-                'developpement': 'Développement',
-                'refugies': 'Réfugiés'
+                'urgence': 'Urgence', 'education': 'Éducation', 'sante': 'Santé',
+                'developpement': 'Développement', 'refugies': 'Réfugiés',
+                HEALTH: 'Santé', EDUCATION: 'Éducation', FOOD: 'Alimentation', OTHER: 'Autre'
               };
-              
               return (
                 <motion.div
                   key={campaign.id}
@@ -358,63 +436,51 @@ export default function CommunautePage() {
                       <h3 className="text-xl lg:text-2xl font-bold text-white mb-3">
                         {campaign.title}
                       </h3>
-                    <p className="text-white/70 text-sm mb-2 leading-relaxed">
-                      {campaign.description}
-                    </p>
-                    <p className="text-white/70 text-sm mb-4 leading-relaxed">
-                      {campaign.impact}
-                    </p>
-                    
-                    {/* Location and Deadline */}
-                    <div className="flex justify-between items-center mb-4 text-sm text-white/70">
-                      <div className="flex items-center space-x-2">
-                        <MapPin size={16} className="text-green-800" />
-                        <span>{campaign.location}</span>
+                      <p className="text-white/70 text-sm mb-2 leading-relaxed">
+                        {campaign.description}
+                      </p>
+                      <div className="flex justify-between items-center mb-4 text-sm text-white/70">
+                        <div className="flex items-center space-x-2">
+                          <MapPin size={16} className="text-green-800" />
+                          <span>{campaign.location || '—'}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Calendar size={16} className="text-green-800" />
+                          <span>Fin: {formattedDate}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Calendar size={16} className="text-green-800" />
-                        <span>Fin: {formattedDate}</span>
+                      {hasTarget && (
+                        <div className="mb-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-white font-bold">
+                              {campaign.currentAmount.toLocaleString('fr-FR')} F CFA / {campaign.targetAmount.toLocaleString('fr-FR')} F CFA
+                            </span>
+                            <span className="text-white">{progressPercent.toFixed(1)}%</span>
+                          </div>
+                          <div className="w-full bg-white/20 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${progressPercent}%`, background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center space-x-2 mb-6 text-sm text-white/70">
+                        <Users size={16} className="text-green-800" />
+                        <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString('fr-FR')} donateurs</span>
                       </div>
-                    </div>
-
-                    {/* Funding Progress */}
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-white font-bold">
-                          {campaign.currentAmount.toLocaleString('fr-FR')} F CFA / {campaign.targetAmount.toLocaleString('fr-FR')} F CFA
-                        </span>
-                        <span className="text-white">{percentage.toFixed(1)}%</span>
-                      </div>
-                      <div className="w-full bg-white/20 rounded-full h-2">
-                        <div
-                          className="h-2 rounded-full transition-all duration-300"
-                          style={{ 
-                            width: `${percentage}%`,
-                            background: 'linear-gradient(to right, #5AB678, #20B6B3)'
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Beneficiaries */}
-                    <div className="flex items-center space-x-2 mb-6 text-sm text-white/70">
-                      <Users size={16} className="text-green-800" />
-                      <span>{campaign.beneficiaries.toLocaleString('fr-FR')} bénéficiaires</span>
-                    </div>
-
-                    {/* CTA Button */}
-                    <Link href={`/campagnes/${campaign.id}`}>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="w-full text-white py-3 rounded-2xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
-                        style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
-                      >
-                        <Heart size={18} className="fill-white" />
-                        <span>Soutenir cette campagne</span>
-                        <ArrowRight size={18} />
-                      </motion.button>
-                    </Link>
+                      <Link href={`/campagnes/${campaign.id}`}>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="w-full text-white py-3 rounded-2xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
+                          style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                        >
+                          <Heart size={18} className="fill-white" />
+                          <span>Soutenir cette campagne</span>
+                          <ArrowRight size={18} />
+                        </motion.button>
+                      </Link>
                     </div>
                   </div>
                 </motion.div>
@@ -430,7 +496,7 @@ export default function CommunautePage() {
                 className=" text-white px-8 py-4 rounded-4xl font-semibold hover:bg-green-500 transition-all duration-200 shadow-lg"
                 style={{ background: 'linear-gradient(to bottom, #00644D, #101919)' }}
               >
-                Voir toutes les campagnes
+                Voir plus
               </motion.button>
             </Link>
           </div>
@@ -468,7 +534,8 @@ export default function CommunautePage() {
             </div>
         </section>
 
-        {/* Section "Distribution Alimentaire Pendant Le Ramadan" */}
+        {/* Section activités (même slider que la première section) */}
+        {activities.length > 0 && (
         <section className="relative text-white overflow-hidden min-h-[680px] flex items-center m-6">
             <AnimatePresence mode="wait">
             <motion.div
@@ -480,8 +547,8 @@ export default function CommunautePage() {
                 className="absolute inset-0"
             >
                 <img
-                src={slides[currentSlide].image}
-                alt="Distribution Alimentaire"
+                src={slideImage}
+                alt={currentActivity?.title ?? 'Activité'}
                 className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/60" />
@@ -498,11 +565,10 @@ export default function CommunautePage() {
                 transition={{ duration: 0.5 }}
                 >
                 <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-white">
-                    <span className="block">Distribution Alimentaire Pendant</span>
-                    <span className="block">Le Ramadan</span>
+                    {currentActivity?.title}
                 </h2>
                 <p className="text-lg text-white mb-8 leading-relaxed max-w-2xl mx-auto">
-                    {slides[currentSlide].description}
+                    {currentActivity?.description}
                 </p>
                 <Link href="/don">
                     <motion.button
@@ -517,9 +583,9 @@ export default function CommunautePage() {
                 </motion.div>
             </AnimatePresence>
             <div className="flex justify-center mt-8 space-x-2">
-                {slides.map((_, index) => (
+                {activities.map((activity, index) => (
                 <button
-                    key={index}
+                    key={activity.id}
                     onClick={() => setCurrentSlide(index)}
                     className={`transition-all duration-300 ${
                     index === currentSlide
@@ -532,6 +598,7 @@ export default function CommunautePage() {
             </div>
             </div>
         </section>
+        )}
 
         {/* Section Nos produits Takafuls */}
         <section className="py-20 text-white relative overflow-hidden" style={{ background: 'linear-gradient(to left, #101919, #00644D)' }}>
@@ -556,7 +623,7 @@ export default function CommunautePage() {
                 </p>
             </motion.div>
 
-            {/* Right Side - Product Cards Slider */}
+            {/* Right Side - Slider des 3 derniers plans Takaful */}
             <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -564,27 +631,39 @@ export default function CommunautePage() {
                 viewport={{ once: true }}
                 className="relative"
             >
+                {takafulLoading && (
+                <div className="text-white/80 py-12 text-center min-h-[200px] flex items-center justify-center">
+                    Chargement des produits Takaful...
+                </div>
+                )}
+                {!takafulLoading && takafulPlans.length === 0 && (
+                <div className="text-white/90 py-12 text-center min-h-[200px] flex items-center justify-center rounded-2xl bg-white/5">
+                    Aucun produit disponible pour le moment.
+                </div>
+                )}
+                {!takafulLoading && takafulPlans.length > 0 && (
+                <>
                 <div className="relative overflow-hidden">
                 <div 
                     className="flex transition-transform duration-500 ease-in-out"
                     style={{ transform: `translateX(-${currentTakafulSlide * 100}%)` }}
                 >
-                    {takafulProducts.map((product) => (
-                    <div key={product.id} className="min-w-full px-2">
+                    {takafulPlans.map((plan) => (
+                    <div key={plan.id} className="min-w-full px-2">
                         <div className="bg-white rounded-3xl overflow-hidden relative" style={{ height: '600px' }}>
                         <div className="absolute inset-0">
                             <img 
-                            src={product.image} 
-                            alt={product.name} 
+                            src={plan.picture && plan.picture.trim() ? plan.picture : DEFAULT_TAKAFUL_IMAGE} 
+                            alt={plan.title} 
                             className="w-full h-full object-cover"
                             />
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
-                            <h3 className="text-white text-2xl font-bold mb-2">{product.name}</h3>
+                            <h3 className="text-white text-2xl font-bold mb-2">{plan.title}</h3>
                             <p className="text-white/90 text-sm mb-4 line-clamp-3">
-                            {product.description}
+                            {plan.description}
                             </p>
-                            <Link href={`/takaful/${product.id}`}>
+                            <Link href={`/takaful/${plan.id}`}>
                             <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
                                 En savoir plus
                             </button>
@@ -606,8 +685,8 @@ export default function CommunautePage() {
                 <ArrowLeft size={28} className="text-white" />
                 </button>
                 <button
-                onClick={() => setCurrentTakafulSlide((prev) => Math.min(takafulProducts.length - 1, prev + 1))}
-                disabled={currentTakafulSlide === takafulProducts.length - 1}
+                onClick={() => setCurrentTakafulSlide((prev) => Math.min(takafulPlans.length - 1, prev + 1))}
+                disabled={currentTakafulSlide === takafulPlans.length - 1}
                 aria-label="Carte suivante"
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
                 >
@@ -616,9 +695,9 @@ export default function CommunautePage() {
 
                 {/* Pagination Dots */}
                 <div className="flex justify-center gap-2 mt-6">
-                {takafulProducts.map((_, index) => (
+                {takafulPlans.map((plan, index) => (
                     <button
-                    key={index}
+                    key={plan.id}
                     onClick={() => setCurrentTakafulSlide(index)}
                     aria-label={`Aller au produit ${index + 1}`}
                     title={`Aller au produit ${index + 1}`}
@@ -630,10 +709,12 @@ export default function CommunautePage() {
                     />
                 ))}
                 </div>
+                </>
+                )}
             </motion.div>
             </div>
 
-            {/* Bouton Voir tous les produits - En dehors de la grid */}
+            {/* Bouton Voir tous les produits */}
             <div className="text-center mt-12">
             <Link href="/takaful">
                 <motion.button

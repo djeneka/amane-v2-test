@@ -15,6 +15,8 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  /** True une fois que le localStorage a été lu (évite redirections incorrectes au premier rendu) */
+  authReady: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (userData: {
     firstName: string;
@@ -31,8 +33,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
-  // Charger l'utilisateur depuis localStorage au démarrage
+  // Charger l'utilisateur depuis localStorage au démarrage (côté client uniquement)
   useEffect(() => {
     const savedUser = localStorage.getItem('amane-user');
     if (savedUser) {
@@ -45,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('amane-user');
       }
     }
+    setAuthReady(true);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -112,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextType = {
     user,
     isAuthenticated,
+    authReady,
     login,
     register,
     logout

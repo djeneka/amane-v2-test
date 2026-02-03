@@ -7,7 +7,7 @@ export interface Campaign {
   video?: string;
   targetAmount: number;
   currentAmount: number;
-  category: 'urgence' | 'education' | 'sante' | 'developpement' | 'refugies';
+  category: 'urgence' | 'education' | 'sante' | 'developpement' | 'refugies' | 'autres';
   location: string;
   endDate: string;
   impact: string;

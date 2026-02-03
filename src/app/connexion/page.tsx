@@ -10,7 +10,7 @@ import AuthGuard from "@/components/AuthGuard";
 
 export default function ConnexionPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isAuthenticated, authReady } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -161,6 +161,21 @@ export default function ConnexionPage() {
               <div className="absolute inset-0 bg-black/60"></div>
               
               <div className="w-full max-w-lg px-4 relative z-10">
+              {/* Message si déjà connecté */}
+              {authReady && isAuthenticated && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 rounded-2xl bg-[#00644D]/90 text-white text-center"
+                >
+                  <p className="font-medium mb-3">Vous êtes déjà connecté.</p>
+                  <div className="flex flex-wrap gap-3 justify-center">
+                    <Link href="/" className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 font-medium transition">
+                      Retour à l&apos;accueil
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
               <div className="text-center mb-8">
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}

@@ -1,44 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
-  Heart, Users, MapPin, Calendar, ArrowRight, Play, Share2, Download, Eye, Target,
-  CreditCard, Shield, CheckCircle, Zap, Lock, EyeOff, X, Wallet, Droplets, BookOpen, UtensilsCrossed, CheckCircle2, Apple
+  Heart, Users, MapPin, Calendar, ArrowRight, Play, Target,
+  Droplets, BookOpen, UtensilsCrossed, CheckCircle2, Apple
 } from 'lucide-react';
 import MakeDonationModal from '@/components/MakeDonationModal';
-
-interface Campaign {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  location: string;
-  endDate: string;
-  beneficiaries: number;
-  impact: string;
-  currentAmount: number;
-  targetAmount: number;
-  image: string;
-  images?: string[];
-  video?: string;
-}
+import type { Campaign } from '@/data/mockData';
 
 interface CampaignDetailClientProps {
   campaign: Campaign;
+  /** Nombre de donateurs (API statistics). Par défaut 0. */
+  donorCount?: number;
 }
 
-export default function CampaignDetailClient({ campaign }: CampaignDetailClientProps) {
+export default function CampaignDetailClient({ campaign, donorCount = 0 }: CampaignDetailClientProps) {
   const [selectedImage, setSelectedImage] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
   const [showDonationModal, setShowDonationModal] = useState(false);
-  
-  // Solde de l'utilisateur (à récupérer depuis le contexte ou l'API)
-  const walletBalance = 610473;
 
-  const progress = (campaign.currentAmount / campaign.targetAmount) * 100;
+  const walletBalance = 610473;
+  const progress = campaign.targetAmount > 0 ? (campaign.currentAmount / campaign.targetAmount) * 100 : 0;
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -75,15 +60,12 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
     return categoryLabels[category.toLowerCase()] || category.charAt(0).toUpperCase() + category.slice(1);
   };
 
-  // Mock data pour les statistiques d'impact
   const impactStats = [
-    { icon: Users, value: '+1 000', label: 'Bénéficiaires' },
-    { icon: UtensilsCrossed, value: '+12 000', label: 'Repas' },
-    { icon: Droplets, value: '+15', label: 'Puits' },
+    { icon: Users, value: donorCount.toLocaleString('fr-FR'), label: 'Donateurs' },
+    // { icon: UtensilsCrossed, value: '+12 000', label: 'Repas' },
+    // { icon: Droplets, value: '+15', label: 'Puits' },
   ];
 
-  // Mock data pour les donateurs
-  const donorsCount = 320;
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom right, #0d4d3d, #001a14)' }}>
@@ -216,7 +198,7 @@ export default function CampaignDetailClient({ campaign }: CampaignDetailClientP
                     {formatAmount(campaign.currentAmount)} collectés / {formatAmount(campaign.targetAmount)}
                   </span>
                   <span className="text-green-400 text-sm font-medium">
-                    {donorsCount} donateurs
+                    {donorCount.toLocaleString('fr-FR')} donateurs
                   </span>
                 </div>
                 <div className="w-full bg-white/20 rounded-full h-3 mb-2">

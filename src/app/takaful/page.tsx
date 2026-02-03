@@ -9,9 +9,29 @@ import {
   Heart, Car, Home, User, CheckCircle, X, Apple
 } from 'lucide-react';
 import Link from 'next/link';
-import { takafulProducts } from '@/data/mockData';
 import Image from 'next/image';
 import MakeDonationModal from '@/components/MakeDonationModal';
+import { getTakafulPlans, type TakafulPlan } from '@/services/takaful-plans';
+
+const DEFAULT_TAKAFUL_IMAGE = '/images/no-image.png';
+
+/** Catégorie affichée à partir des categories API (HEALTH, FAMILY, HOME, etc.) */
+function getDisplayCategory(plan: TakafulPlan): 'sante' | 'automobile' | 'habitation' | 'vie' | 'autres' {
+  const c = plan.categories || [];
+  if (c.some((x) => x === 'HEALTH')) return 'sante';
+  if (c.some((x) => x === 'HOME')) return 'habitation';
+  if (c.some((x) => x === 'FAMILY')) return 'vie';
+  if (c.some((x) => x === 'AUTO' || x === 'AUTOMOBILE')) return 'automobile';
+  return 'autres';
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  sante: 'Santé',
+  automobile: 'Automobile',
+  habitation: 'Habitation',
+  vie: 'Vie',
+  autres: 'Autre',
+};
 
 export default function TakafulPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,65 +40,43 @@ export default function TakafulPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [expandedFilters, setExpandedFilters] = useState(false);
   const [showTakafulModal, setShowTakafulModal] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
   const [activeTab, setActiveTab] = useState<'solutions' | 'subscriptions'>('solutions');
   const [showSubscriptionDetails, setShowSubscriptionDetails] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
+  const [plans, setPlans] = useState<TakafulPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
 
-  const categoryIcons = {
+  useEffect(() => {
+    let cancelled = false;
+    setPlansLoading(true);
+    setPlansError(null);
+    getTakafulPlans()
+      .then((list) => { if (!cancelled) setPlans(list); })
+      .catch((err) => {
+        if (!cancelled) {
+          setPlansError(err?.message ?? 'Erreur chargement des produits Takaful');
+          setPlans([]);
+        }
+      })
+      .finally(() => { if (!cancelled) setPlansLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const categoryIcons: Record<string, typeof Heart> = {
     sante: Heart,
     automobile: Car,
     habitation: Home,
     vie: User,
+    autres: Shield,
   };
 
-  const categoryColors = {
+  const categoryColors: Record<string, string> = {
     sante: 'bg-green-500',
     automobile: 'bg-blue-500',
     habitation: 'bg-purple-500',
     vie: 'bg-orange-500',
-  };
-
-  // Images pour chaque catégorie
-  const categoryImages = {
-    sante: [
-      'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=300&fit=crop'
-    ],
-    automobile: [
-      'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop'
-    ],
-    habitation: [
-      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&h=300&fit=crop'
-    ],
-    vie: [
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=300&fit=crop'
-    ]
-  };
-
-  // Fonction pour changer d'image
-  const nextImage = (productId: string, category: string) => {
-    const images = categoryImages[category as keyof typeof categoryImages] || [];
-    const currentIndex = currentImageIndex[productId] || 0;
-    const nextIndex = (currentIndex + 1) % images.length;
-    setCurrentImageIndex(prev => ({
-      ...prev,
-      [productId]: nextIndex
-    }));
-  };
-
-  // Fonction pour obtenir l'image actuelle
-  const getCurrentImage = (productId: string, category: string) => {
-    const images = categoryImages[category as keyof typeof categoryImages] || [];
-    const currentIndex = currentImageIndex[productId] || 0;
-    return images[currentIndex] || 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+    autres: 'bg-gray-500',
   };
 
   const categories = [
@@ -87,6 +85,7 @@ export default function TakafulPage() {
     { id: 'automobile', name: 'Automobile', icon: Car, color: 'bg-blue-500' },
     { id: 'habitation', name: 'Habitation', icon: Home, color: 'bg-purple-500' },
     { id: 'vie', name: 'Vie', icon: User, color: 'bg-orange-500' },
+    { id: 'autres', name: 'Autre', icon: Shield, color: 'bg-gray-500' },
   ];
 
   const sortOptions = [
@@ -96,44 +95,31 @@ export default function TakafulPage() {
     { id: 'coverage', name: 'Couverture élevée' },
   ];
 
-  const filteredProducts = takafulProducts
-    .filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+  const filteredPlans = plans
+    .filter((plan) => {
+      const term = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        !term ||
+        (plan.title && plan.title.toLowerCase().includes(term)) ||
+        (plan.description && plan.description.toLowerCase().includes(term));
+      const displayCat = getDisplayCategory(plan);
+      const matchesCategory = selectedCategory === 'all' || displayCat === selectedCategory;
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'popular':
-          return b.monthlyPremium - a.monthlyPremium;
+          return (b.monthlyContribution ?? 0) - (a.monthlyContribution ?? 0);
         case 'price':
-          return a.monthlyPremium - b.monthlyPremium;
+          return (a.monthlyContribution ?? 0) - (b.monthlyContribution ?? 0);
         case 'coverage':
-          return b.monthlyPremium - a.monthlyPremium;
+          return (b.monthlyContribution ?? 0) - (a.monthlyContribution ?? 0);
+        case 'recent':
+          return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
         default:
           return 0;
       }
     });
-
-  // Effet pour le défilement automatique du carrousel
-  useEffect(() => {
-    const interval = setInterval(() => {
-      filteredProducts.forEach((product) => {
-        const images = categoryImages[product.category as keyof typeof categoryImages] || [];
-        if (images.length > 1) {
-          const currentIndex = currentImageIndex[product.id] || 0;
-          const nextIndex = (currentIndex + 1) % images.length;
-          setCurrentImageIndex(prev => ({
-            ...prev,
-            [product.id]: nextIndex
-          }));
-        }
-      });
-    }, 3000); // Change d'image toutes les 3 secondes
-
-    return () => clearInterval(interval);
-  }, [filteredProducts, currentImageIndex, categoryImages]);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -162,7 +148,7 @@ export default function TakafulPage() {
   const statsData = [
     { 
       label: 'Produits disponibles', 
-      value: takafulProducts.length, 
+      value: plans.length, 
       icon: Target,
       iconBgColor: 'bg-green-100',
       iconColor: 'text-green-600',
@@ -529,7 +515,16 @@ export default function TakafulPage() {
         {activeTab === 'solutions' ? (
           <>
 
+        {/* Loading / Error */}
+        {plansLoading && (
+          <div className="text-center text-white/80 py-12">Chargement des produits Takaful...</div>
+        )}
+        {!plansLoading && plansError && (
+          <div className="text-center text-white/90 py-4">{plansError}</div>
+        )}
+
         {/* Products Grid */}
+        {!plansLoading && !plansError && (
         <AnimatePresence mode="wait">
           {viewMode === 'grid' ? (
             <motion.div
@@ -540,12 +535,12 @@ export default function TakafulPage() {
               transition={{ duration: 0.3 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
             >
-              {filteredProducts.map((product, index) => {
-                const IconComponent = categoryIcons[product.category];
-                
+              {filteredPlans.map((plan, index) => {
+                const displayCat = getDisplayCategory(plan);
+                const planImage = plan.picture && plan.picture.trim() ? plan.picture : DEFAULT_TAKAFUL_IMAGE;
                 return (
                   <motion.div
-                    key={product.id}
+                    key={plan.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -555,41 +550,17 @@ export default function TakafulPage() {
                     <div className="bg-[#101919] rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300">
                       <div className="relative">
                         <div className="w-full h-48 relative overflow-hidden">
-                          <AnimatePresence mode="wait">
-                            <motion.img
-                              key={`${product.id}-${currentImageIndex[product.id] || 0}`}
-                              src={getCurrentImage(product.id, product.category)}
-                              alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
-                              className="w-full h-full object-cover absolute inset-0"
-                              initial={{ x: 300, opacity: 0 }}
-                              animate={{ x: 0, opacity: 1 }}
-                              exit={{ x: -300, opacity: 0 }}
-                              transition={{ duration: 0.5, ease: "easeInOut" }}
-                              onError={(e) => {
-                                // Fallback vers une image par défaut si l'image ne charge pas
-                                const target = e.target as HTMLImageElement;
-                                target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
-                              }}
-                            />
-                          </AnimatePresence>
-                          <div className="absolute inset-0 bg-black/20"></div>
-                          
-                          {/* Indicateurs d'images */}
-                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                            {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
-                              <div
-                                key={index}
-                                className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                                  (currentImageIndex[product.id] || 0) === index
-                                    ? 'bg-white'
-                                    : 'bg-white/50'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          
-                          {/* Bouton pour voir les détails */}
-                          <Link href={`/takaful/${product.id}`}>
+                          <img
+                            src={planImage}
+                            alt={plan.title}
+                            className="w-full h-full object-cover absolute inset-0"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = DEFAULT_TAKAFUL_IMAGE;
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/20" />
+                          <Link href={`/takaful/${plan.id}`}>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
@@ -601,35 +572,26 @@ export default function TakafulPage() {
                           </Link>
                         </div>
                         <div className="absolute top-4 left-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
-                            categoryColors[product.category]
-                          }`}>
-                            {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${categoryColors[displayCat] ?? categoryColors.autres}`}>
+                            {CATEGORY_LABELS[displayCat] ?? displayCat}
                           </span>
                         </div>
-
                       </div>
 
                       <div className="p-6">
                         <h3 className="text-xl font-bold text-white mb-2 group-hover:text-green-600 transition-colors">
-                          {product.name}
+                          {plan.title}
                         </h3>
                         <p className="text-white/80 mb-4 line-clamp-2">
-                          {product.description}
+                          {plan.description}
                         </p>
 
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
-                              <span className="text-white/80">Prime mensuelle</span>
+                              <span className="text-white/80">Cotisation mensuelle</span>
                               <span className="font-semibold text-white truncate">
-                                {formatCompactAmount(product.monthlyPremium)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-white/80">Couverture</span>
-                              <span className="font-semibold text-white">
-                                {product.coverage}
+                                {formatCompactAmount(plan.monthlyContribution ?? 0)}
                               </span>
                             </div>
                           </div>
@@ -637,12 +599,15 @@ export default function TakafulPage() {
                           <div className="mb-4">
                             <h4 className="font-bold text-white mb-3">Avantages inclus :</h4>
                             <ul className="space-y-2">
-                              {product.features.slice(0, 3).map((feature, featureIndex) => (
-                                <li key={featureIndex} className="flex items-center space-x-2 text-sm text-white/80">
+                              {(plan.benefits ?? []).slice(0, 3).map((benefit, i) => (
+                                <li key={i} className="flex items-center space-x-2 text-sm text-white/80">
                                   <CheckCircle size={16} className="text-green-500" />
-                                  <span>{feature}</span>
+                                  <span>{benefit}</span>
                                 </li>
                               ))}
+                              {(!plan.benefits || plan.benefits.length === 0) && (
+                                <li className="text-sm text-white/60">—</li>
+                              )}
                             </ul>
                           </div>
 
@@ -672,12 +637,12 @@ export default function TakafulPage() {
               transition={{ duration: 0.3 }}
               className="space-y-6"
             >
-              {filteredProducts.map((product, index) => {
-                const IconComponent = categoryIcons[product.category];
-                
+              {filteredPlans.map((plan, index) => {
+                const displayCat = getDisplayCategory(plan);
+                const planImage = plan.picture && plan.picture.trim() ? plan.picture : DEFAULT_TAKAFUL_IMAGE;
                 return (
                   <motion.div
-                    key={product.id}
+                    key={plan.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -688,41 +653,17 @@ export default function TakafulPage() {
                       <div className="flex items-center space-x-6">
                         <div className="relative">
                           <div className="w-32 h-32 rounded-xl overflow-hidden relative">
-                            <AnimatePresence mode="wait">
-                              <motion.img
-                                key={`${product.id}-list-${currentImageIndex[product.id] || 0}`}
-                                src={getCurrentImage(product.id, product.category)}
-                                alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
-                                className="w-full h-full object-cover absolute inset-0"
-                                initial={{ x: 100, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                exit={{ x: -100, opacity: 0 }}
-                                transition={{ duration: 0.5, ease: "easeInOut" }}
-                                onError={(e) => {
-                                  // Fallback vers une image par défaut si l'image ne charge pas
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
-                                }}
-                              />
-                            </AnimatePresence>
-                            <div className="absolute inset-0 bg-black/20"></div>
-                            
-                            {/* Indicateurs d'images */}
-                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                              {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
-                                <div
-                                  key={index}
-                                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
-                                    (currentImageIndex[product.id] || 0) === index
-                                      ? 'bg-white'
-                                      : 'bg-white/50'
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                            
-                            {/* Bouton pour voir les détails */}
-                            <Link href={`/takaful/${product.id}`}>
+                            <img
+                              src={planImage}
+                              alt={plan.title}
+                              className="w-full h-full object-cover absolute inset-0"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = DEFAULT_TAKAFUL_IMAGE;
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/20" />
+                            <Link href={`/takaful/${plan.id}`}>
                               <motion.button
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
@@ -734,30 +675,24 @@ export default function TakafulPage() {
                             </Link>
                           </div>
                           <div className="absolute top-2 left-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${
-                              categoryColors[product.category]
-                            }`}>
-                              {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${categoryColors[displayCat] ?? categoryColors.autres}`}>
+                              {CATEGORY_LABELS[displayCat] ?? displayCat}
                             </span>
                           </div>
                         </div>
 
                         <div className="flex-1">
                           <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">
-                            {product.name}
+                            {plan.title}
                           </h3>
                           <p className="text-gray-600 mb-4">
-                            {product.description}
+                            {plan.description}
                           </p>
 
                           <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
                             <div className="flex items-center space-x-1">
-                              <Shield size={16} />
-                              <span>Couverture: {product.coverage}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
                               <Calendar size={16} />
-                              <span>Prime: {formatCompactAmount(product.monthlyPremium)}/mois</span>
+                              <span>Cotisation: {formatCompactAmount(plan.monthlyContribution ?? 0)}/mois</span>
                             </div>
                           </div>
 
@@ -765,22 +700,25 @@ export default function TakafulPage() {
                             <div className="mb-4">
                               <h4 className="font-medium text-gray-900 mb-3">Avantages inclus :</h4>
                               <ul className="space-y-2">
-                                {product.features.map((feature, featureIndex) => (
-                                  <li key={featureIndex} className="flex items-center space-x-2 text-sm text-gray-600">
+                                {(plan.benefits ?? []).map((benefit, i) => (
+                                  <li key={i} className="flex items-center space-x-2 text-sm text-gray-600">
                                     <CheckCircle size={16} className="text-green-500" />
-                                    <span>{feature}</span>
+                                    <span>{benefit}</span>
                                   </li>
                                 ))}
+                                {(!plan.benefits || plan.benefits.length === 0) && (
+                                  <li className="text-sm text-gray-500">—</li>
+                                )}
                               </ul>
                             </div>
 
                             <div className="flex items-center justify-between">
                               <div className="flex-1 min-w-0">
                                 <p className="text-lg font-bold text-gray-900 truncate">
-                                  {formatCompactAmount(product.monthlyPremium)}
+                                  {formatCompactAmount(plan.monthlyContribution ?? 0)}
                                 </p>
                                 <p className="text-sm text-gray-500 truncate">
-                                  prime mensuelle
+                                  cotisation mensuelle
                                 </p>
                               </div>
                               <motion.button
@@ -803,9 +741,10 @@ export default function TakafulPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        )}
 
         {/* No Results */}
-        {filteredProducts.length === 0 && (
+        {!plansLoading && !plansError && filteredPlans.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1118,7 +1057,7 @@ export default function TakafulPage() {
                 {/* Additional Info */}
                 <div className="pt-4 border-t border-[#1A2A2A]">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-white/80">Prime mensuelle</span>
+                    <span className="text-white/80">Cotisation mensuelle</span>
                     <span className="text-white font-semibold">{selectedSubscription.monthlyPremium}</span>
                   </div>
                 </div>
