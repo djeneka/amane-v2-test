@@ -6,10 +6,32 @@ import {
   Search, Filter, Shield, Users, Target, Calendar, MapPin, 
   Star, Eye, Share2, Globe, Zap,
   ChevronDown, ChevronUp, ArrowRight, Play, Pause, Calculator,
-  Heart, Car, Home, User, CheckCircle, CreditCard, Lock, EyeOff, X, Wallet
+  Heart, Car, Home, User, CheckCircle, X, Apple
 } from 'lucide-react';
 import Link from 'next/link';
-import { takafulProducts } from '@/data/mockData';
+import Image from 'next/image';
+import MakeDonationModal from '@/components/MakeDonationModal';
+import { getTakafulPlans, type TakafulPlan } from '@/services/takaful-plans';
+
+const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
+
+/** Catégorie affichée à partir des categories API (HEALTH, FAMILY, HOME, etc.) */
+function getDisplayCategory(plan: TakafulPlan): 'sante' | 'automobile' | 'habitation' | 'vie' | 'autres' {
+  const c = plan.categories || [];
+  if (c.some((x) => x === 'HEALTH')) return 'sante';
+  if (c.some((x) => x === 'HOME')) return 'habitation';
+  if (c.some((x) => x === 'FAMILY')) return 'vie';
+  if (c.some((x) => x === 'AUTO' || x === 'AUTOMOBILE')) return 'automobile';
+  return 'autres';
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  sante: 'Santé',
+  automobile: 'Automobile',
+  habitation: 'Habitation',
+  vie: 'Vie',
+  autres: 'Autre',
+};
 
 export default function TakafulPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,83 +39,44 @@ export default function TakafulPage() {
   const [sortBy, setSortBy] = useState<string>('popular');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [expandedFilters, setExpandedFilters] = useState(false);
-  const [showPaymentPopup, setShowPaymentPopup] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState('card');
-  const [showPassword, setShowPassword] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    anonymous: false,
-    amaneEmail: '',
-    amanePassword: '',
-  });
+  const [showTakafulModal, setShowTakafulModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'solutions' | 'subscriptions'>('solutions');
+  const [showSubscriptionDetails, setShowSubscriptionDetails] = useState(false);
+  const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
+  const [plans, setPlans] = useState<TakafulPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
 
-  const steps = [
-    { id: 1, title: 'Paiement', icon: CreditCard },
-    { id: 2, title: 'Confirmation', icon: CheckCircle },
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    setPlansLoading(true);
+    setPlansError(null);
+    getTakafulPlans()
+      .then((list) => { if (!cancelled) setPlans(list); })
+      .catch((err) => {
+        if (!cancelled) {
+          setPlansError(err?.message ?? 'Erreur chargement des produits Takaful');
+          setPlans([]);
+        }
+      })
+      .finally(() => { if (!cancelled) setPlansLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
-  const categoryIcons = {
+  const categoryIcons: Record<string, typeof Heart> = {
     sante: Heart,
     automobile: Car,
     habitation: Home,
     vie: User,
+    autres: Shield,
   };
 
-  const categoryColors = {
+  const categoryColors: Record<string, string> = {
     sante: 'bg-green-500',
     automobile: 'bg-blue-500',
     habitation: 'bg-purple-500',
     vie: 'bg-orange-500',
-  };
-
-  // Images pour chaque catégorie
-  const categoryImages = {
-    sante: [
-      'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=300&fit=crop'
-    ],
-    automobile: [
-      'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop'
-    ],
-    habitation: [
-      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&h=300&fit=crop'
-    ],
-    vie: [
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop',
-      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=300&fit=crop'
-    ]
-  };
-
-  // Fonction pour changer d'image
-  const nextImage = (productId: string, category: string) => {
-    const images = categoryImages[category as keyof typeof categoryImages] || [];
-    const currentIndex = currentImageIndex[productId] || 0;
-    const nextIndex = (currentIndex + 1) % images.length;
-    setCurrentImageIndex(prev => ({
-      ...prev,
-      [productId]: nextIndex
-    }));
-  };
-
-  // Fonction pour obtenir l'image actuelle
-  const getCurrentImage = (productId: string, category: string) => {
-    const images = categoryImages[category as keyof typeof categoryImages] || [];
-    const currentIndex = currentImageIndex[productId] || 0;
-    return images[currentIndex] || 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+    autres: 'bg-gray-500',
   };
 
   const categories = [
@@ -102,6 +85,7 @@ export default function TakafulPage() {
     { id: 'automobile', name: 'Automobile', icon: Car, color: 'bg-blue-500' },
     { id: 'habitation', name: 'Habitation', icon: Home, color: 'bg-purple-500' },
     { id: 'vie', name: 'Vie', icon: User, color: 'bg-orange-500' },
+    { id: 'autres', name: 'Autre', icon: Shield, color: 'bg-gray-500' },
   ];
 
   const sortOptions = [
@@ -111,44 +95,31 @@ export default function TakafulPage() {
     { id: 'coverage', name: 'Couverture élevée' },
   ];
 
-  const filteredProducts = takafulProducts
-    .filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+  const filteredPlans = plans
+    .filter((plan) => {
+      const term = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        !term ||
+        (plan.title && plan.title.toLowerCase().includes(term)) ||
+        (plan.description && plan.description.toLowerCase().includes(term));
+      const displayCat = getDisplayCategory(plan);
+      const matchesCategory = selectedCategory === 'all' || displayCat === selectedCategory;
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'popular':
-          return b.monthlyPremium - a.monthlyPremium;
+          return (b.monthlyContribution ?? 0) - (a.monthlyContribution ?? 0);
         case 'price':
-          return a.monthlyPremium - b.monthlyPremium;
+          return (a.monthlyContribution ?? 0) - (b.monthlyContribution ?? 0);
         case 'coverage':
-          return b.monthlyPremium - a.monthlyPremium;
+          return (b.monthlyContribution ?? 0) - (a.monthlyContribution ?? 0);
+        case 'recent':
+          return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
         default:
           return 0;
       }
     });
-
-  // Effet pour le défilement automatique du carrousel
-  useEffect(() => {
-    const interval = setInterval(() => {
-      filteredProducts.forEach((product) => {
-        const images = categoryImages[product.category as keyof typeof categoryImages] || [];
-        if (images.length > 1) {
-          const currentIndex = currentImageIndex[product.id] || 0;
-          const nextIndex = (currentIndex + 1) % images.length;
-          setCurrentImageIndex(prev => ({
-            ...prev,
-            [product.id]: nextIndex
-          }));
-        }
-      });
-    }, 3000); // Change d'image toutes les 3 secondes
-
-    return () => clearInterval(interval);
-  }, [filteredProducts, currentImageIndex, categoryImages]);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -170,37 +141,151 @@ export default function TakafulPage() {
     }
   };
 
-  const handleNext = () => {
-    if (currentStep < 2) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
   const handleSubscribe = () => {
-    setShowPaymentPopup(true);
-    setCurrentStep(1);
+    setShowTakafulModal(true);
   };
 
-  const handleClosePopup = () => {
-    setShowPaymentPopup(false);
-    setCurrentStep(1);
-  };
-
-  const stats = [
-    { label: 'Clients protégés', value: '50K+', icon: Users },
-    { label: 'Produits disponibles', value: '8+', icon: Shield },
-    { label: 'Taux de satisfaction', value: '98%', icon: Star },
-    { label: 'Pays couverts', value: '15+', icon: Shield },
+  const statsData = [
+    { 
+      label: 'Produits disponibles', 
+      value: plans.length, 
+      icon: Target,
+      iconBgColor: 'bg-green-100',
+      iconColor: 'text-green-600',
+      rotateDirection: 1, // 1 pour rotation positive, -1 pour négative
+      hoverRotate: 5
+    },
+    { 
+      label: 'Clients protégés', 
+      value: '50K+', 
+      icon: Users,
+      iconBgColor: 'bg-green-100',
+      iconColor: 'text-green-600',
+      rotateDirection: -1,
+      hoverRotate: -5
+    },
+    { 
+      label: 'Satisfaction', 
+      value: '98%', 
+      icon: Star,
+      iconBgColor: 'bg-green-100',
+      iconColor: 'text-green-600',
+      rotateDirection: 1,
+      hoverRotate: 5
+    },
+    { 
+      label: 'Pays couverts', 
+      value: '15+', 
+      icon: Globe,
+      iconBgColor: 'bg-orange-100',
+      iconColor: 'text-orange-600',
+      rotateDirection: -1,
+      hoverRotate: -5
+    },
   ];
 
+  // Données des souscriptions Takaful
+  const mySubscriptions = [
+    {
+      id: '1',
+      icon: Heart,
+      name: 'Takaful Santé',
+      shortName: 'Santé',
+      category: 'sante',
+      monthlyPremium: '8 000 F/mois',
+      monthlyPremiumValue: 8000,
+      status: 'Actif',
+      dueDate: '7 Septembre, 2024',
+      dueDateValue: new Date('2024-09-07'),
+      description: 'Protection santé complète pour toute la famille.',
+      guarantees: [
+        'Frais médicaux',
+        'Hospitalisation',
+        'Assistance 24/7',
+      ],
+    },
+    {
+      id: '2',
+      icon: Car,
+      name: 'Takaful Automobile',
+      shortName: 'Automobile',
+      category: 'automobile',
+      monthlyPremium: '15 000 F/mois',
+      monthlyPremiumValue: 15000,
+      status: 'Actif',
+      dueDate: '12 Octobre, 2024',
+      dueDateValue: new Date('2024-10-12'),
+      description: 'Protection complète pour votre véhicule et votre famille.',
+      guarantees: [
+        'Dommages collision',
+        'Vol et vandalisme',
+        'Assistance dépannage',
+      ],
+    },
+    {
+      id: '3',
+      icon: Home,
+      name: 'Takaful Habitation',
+      shortName: 'Habitation',
+      category: 'habitation',
+      monthlyPremium: '12 000 F/mois',
+      monthlyPremiumValue: 12000,
+      status: 'Actif',
+      dueDate: '20 Octobre, 2024',
+      dueDateValue: new Date('2024-10-20'),
+      description: 'Protection complète pour votre domicile et vos biens.',
+      guarantees: [
+        'Incendie et dégâts des eaux',
+        'Vol et vandalisme',
+        'Responsabilité civile',
+      ],
+    },
+    {
+      id: '4',
+      icon: User,
+      name: 'Takaful Vie',
+      shortName: 'Vie',
+      category: 'vie',
+      monthlyPremium: '10 000 F/mois',
+      monthlyPremiumValue: 10000,
+      status: 'Actif',
+      dueDate: '5 Novembre, 2024',
+      dueDateValue: new Date('2024-11-05'),
+      description: 'Protection financière pour vos proches en cas de décès.',
+      guarantees: [
+        'Capital décès',
+        'Invalidité permanente',
+        'Assistance famille',
+      ],
+    },
+  ];
+
+  // Filtrer et trier les souscriptions
+  const filteredSubscriptions = mySubscriptions
+    .filter(subscription => {
+      const matchesSearch = subscription.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           subscription.monthlyPremium.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           subscription.status.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || subscription.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'popular':
+          return b.monthlyPremiumValue - a.monthlyPremiumValue;
+        case 'price':
+          return a.monthlyPremiumValue - b.monthlyPremiumValue;
+        case 'recent':
+          return b.dueDateValue.getTime() - a.dueDateValue.getTime();
+        case 'coverage':
+          return b.monthlyPremiumValue - a.monthlyPremiumValue;
+        default:
+          return 0;
+      }
+    });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(to left, #101919, #00644D)' }}>
       {/* Floating Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -226,6 +311,24 @@ export default function TakafulPage() {
       {/* Header Section */}
       <section className="relative pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Titre et fil d'Ariane en haut à gauche */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="flex flex-col items-start mb-8"
+          >
+            {/* Fil d'Ariane */}
+            <h3 className="text-white text-xl font-bold mb-2">Takaful</h3>
+            <nav className="text-sm mb-2">
+              <Link href="/">
+                <span className="text-gray-300 font-bold">Accueil</span>
+              </Link>
+              <span className="text-gray-300 mx-2">/</span>
+              <span className="text-green-400">Takaful</span>
+            </nav>
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -236,132 +339,100 @@ export default function TakafulPage() {
               whileHover={{ scale: 1.05, rotate: 5 }}
               className="inline-block mb-8"
             >
-              <div className="w-24 h-24 bg-gradient-to-br from-green-800 to-green-600 rounded-full flex items-center justify-center shadow-2xl">
-                <Shield size={40} className="text-white" />
+              <div className=" bg-[#00644d] rounded-full flex items-center justify-center shadow-2xl">
+                <Image src="/images/Image(9).png" alt="Shield" width={100} height={100} className="object-contain" />
               </div>
             </motion.div>
             
-            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-              Produits de <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-800 to-green-600">Protection</span>
+            <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
+              Produits de <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-green-600">Protection</span>
             </h1>
-            <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-white mb-12 max-w-3xl mx-auto leading-relaxed">
               Découvrez nos solutions d'assurance islamique éthique. Protégez-vous et votre famille selon les principes de la mutualité islamique.
             </p>
 
+            {/* Onglets Solutions takaful / Mes souscriptions */}
+            <div className="flex justify-center gap-4 mb-8">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveTab('solutions')}
+                className={`px-6 py-3 rounded-lg font-bold transition-all duration-200 ${
+                  activeTab === 'solutions'
+                    ? 'bg-[#192D2D] text-[#5FB678]'
+                    : 'text-[#D9D9D9]'
+                }`}
+              >
+                Solutions takaful
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveTab('subscriptions')}
+                className={`px-6 py-3 rounded-full font-bold transition-all duration-200 ${
+                  activeTab === 'subscriptions'
+                    ? 'bg-[#192D2D] text-[#5FB678]'
+                    : 'text-[#D9D9D9]'
+                }`}
+              >
+                Mes souscriptions
+              </motion.button>
+            </div>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
-              <motion.div
-                whileHover={{ y: -5, rotate: 5 }}
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ 
-                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-                  y: { duration: 0.2 }
-                }}
-                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
-              >
-                <div className="text-center">
-                  <motion.div 
-                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
-                    animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              {statsData.map((stat, index) => {
+                const IconComponent = stat.icon;
+                return (
+                  <motion.div
+                    key={index}
+                    whileHover={{ y: -5, rotate: stat.hoverRotate }}
+                    animate={{ rotate: [0, stat.hoverRotate, -stat.hoverRotate, 0] }}
+                    transition={{ 
+                      rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                      y: { duration: 0.2 }
+                    }}
+                    className="bg-[#00644d]/20 rounded-2xl p-6 shadow-lg"
                   >
-                    <Target size={24} className="text-green-600" />
+                    <div className="text-center">
+                      <motion.div 
+                        className={`w-12 h-12 ${stat.iconBgColor} rounded-full flex items-center justify-center mx-auto mb-3`}
+                        animate={{ rotate: [0, 360 * stat.rotateDirection] }}
+                        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                      >
+                        <IconComponent size={24} className={stat.iconColor} />
+                      </motion.div>
+                      <p className="text-2xl font-bold text-white">{stat.value}</p>
+                      <p className="text-sm text-white">{stat.label}</p>
+                    </div>
                   </motion.div>
-                  <p className="text-2xl font-bold text-gray-900">{takafulProducts.length}</p>
-                  <p className="text-sm text-gray-600">Produits disponibles</p>
-                </div>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ y: -5, rotate: -5 }}
-                animate={{ rotate: [0, -5, 5, 0] }}
-                transition={{ 
-                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-                  y: { duration: 0.2 }
-                }}
-                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
-              >
-                <div className="text-center">
-                  <motion.div 
-                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
-                    animate={{ rotate: [0, -360] }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Users size={24} className="text-green-600" />
-                  </motion.div>
-                  <p className="text-2xl font-bold text-gray-900">50K+</p>
-                  <p className="text-sm text-gray-600">Clients protégés</p>
-                </div>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ y: -5, rotate: 5 }}
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ 
-                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-                  y: { duration: 0.2 }
-                }}
-                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
-              >
-                <div className="text-center">
-                  <motion.div 
-                    className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
-                    animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Star size={24} className="text-green-600" />
-                  </motion.div>
-                  <p className="text-2xl font-bold text-gray-900">98%</p>
-                  <p className="text-sm text-gray-600">Satisfaction</p>
-                </div>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ y: -5, rotate: -5 }}
-                animate={{ rotate: [0, -5, 5, 0] }}
-                transition={{ 
-                  rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-                  y: { duration: 0.2 }
-                }}
-                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
-              >
-                <div className="text-center">
-                  <motion.div 
-                    className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3"
-                    animate={{ rotate: [0, -360] }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Globe size={24} className="text-orange-600" />
-                  </motion.div>
-                  <p className="text-2xl font-bold text-gray-900">15+</p>
-                  <p className="text-sm text-gray-600">Pays couverts</p>
-                </div>
-              </motion.div>
+                );
+              })}
             </div>
           </motion.div>
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        {/* Filters Section */}
+        {/* Filters Section - Visible pour les deux onglets */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6 mb-8"
+          className="bg-[#101919]/20 rounded-3xl shadow-xl p-6 mb-8"
         >
           <div className="space-y-6">
             {/* Search */}
             <div className="w-full">
               <div className="relative">
-                <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/20" />
                 <input
                   type="text"
-                  placeholder="Rechercher un produit de protection..."
+                  placeholder={activeTab === 'solutions' ? "Rechercher un produit de protection..." : "Rechercher une souscription..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-400 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
-                  title="Rechercher un produit de protection"
+                  className="w-full pl-12 pr-4 py-4 border-2 border-green-400 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-white placeholder-white/80 bg-transparent"
+                  title={activeTab === 'solutions' ? "Rechercher un produit de protection" : "Rechercher une souscription"}
                 />
               </div>
             </div>
@@ -376,10 +447,10 @@ export default function TakafulPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setSelectedCategory(category.id)}
-                    className={`flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    className={`flex items-center space-x-2 px-4 py-3 rounded-3xl font-medium transition-all duration-200 ${
                       selectedCategory === category.id
-                        ? 'bg-gradient-to-r from-green-800 to-green-600 text-white shadow-lg'
-                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                        ? 'bg-[#101919] text-white shadow-lg'
+                        : 'bg-[#101919]/20 text-white/80 hover:bg-[#101919]/50 border border-white/20'
                     }`}
                   >
                     <category.icon size={16} />
@@ -393,9 +464,9 @@ export default function TakafulPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="px-4 py-3 border-2 border-gray-400 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-gray-900"
-                  title="Trier les produits"
-                  aria-label="Trier les produits"
+                  className="px-4 py-3 border-2 border-gray-400 rounded-xl focus:ring-4 focus:ring-[#00644d]/20 focus:border-[#00644d] transition-all duration-200 text-white"
+                  title={activeTab === 'solutions' ? "Trier les produits" : "Trier les souscriptions"}
+                  aria-label={activeTab === 'solutions' ? "Trier les produits" : "Trier les souscriptions"}
                 >
                   {sortOptions.map((option) => (
                     <option key={option.id} value={option.id}>
@@ -404,13 +475,13 @@ export default function TakafulPage() {
                   ))}
                 </select>
 
-                <div className="flex bg-gray-100 rounded-xl p-1">
+                <div className="flex bg-[#00644d]/20 rounded-xl p-1">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setViewMode('grid')}
                     className={`p-2 rounded-lg transition-all duration-200 ${
-                      viewMode === 'grid' ? 'bg-white shadow-md' : 'text-gray-600'
+                      viewMode === 'grid' ? 'bg-white/20 shadow-md' : 'text-gray-600'
                     }`}
                   >
                     <div className="grid grid-cols-2 gap-1 w-5 h-5">
@@ -425,7 +496,7 @@ export default function TakafulPage() {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setViewMode('list')}
                     className={`p-2 rounded-lg transition-all duration-200 ${
-                      viewMode === 'list' ? 'bg-white shadow-md' : 'text-gray-600'
+                      viewMode === 'list' ? 'bg-[#101919] shadow-md' : 'text-gray-600'
                     }`}
                   >
                     <div className="space-y-1 w-5 h-5">
@@ -440,7 +511,20 @@ export default function TakafulPage() {
           </div>
         </motion.div>
 
+        {/* Affichage conditionnel selon l'onglet sélectionné */}
+        {activeTab === 'solutions' ? (
+          <>
+
+        {/* Loading / Error */}
+        {plansLoading && (
+          <div className="text-center text-white/80 py-12">Chargement des produits Takaful...</div>
+        )}
+        {!plansLoading && plansError && (
+          <div className="text-center text-white/90 py-4">{plansError}</div>
+        )}
+
         {/* Products Grid */}
+        {!plansLoading && !plansError && (
         <AnimatePresence mode="wait">
           {viewMode === 'grid' ? (
             <motion.div
@@ -451,56 +535,32 @@ export default function TakafulPage() {
               transition={{ duration: 0.3 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
             >
-              {filteredProducts.map((product, index) => {
-                const IconComponent = categoryIcons[product.category];
-                
+              {filteredPlans.map((plan, index) => {
+                const displayCat = getDisplayCategory(plan);
+                const planImage = plan.picture && plan.picture.trim() ? plan.picture : DEFAULT_TAKAFUL_IMAGE;
                 return (
                   <motion.div
-                    key={product.id}
+                    key={plan.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                     whileHover={{ y: -5 }}
                     className="group"
                   >
-                    <div className="bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="bg-[#101919] rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300">
                       <div className="relative">
                         <div className="w-full h-48 relative overflow-hidden">
-                          <AnimatePresence mode="wait">
-                            <motion.img
-                              key={`${product.id}-${currentImageIndex[product.id] || 0}`}
-                              src={getCurrentImage(product.id, product.category)}
-                              alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
-                              className="w-full h-full object-cover absolute inset-0"
-                              initial={{ x: 300, opacity: 0 }}
-                              animate={{ x: 0, opacity: 1 }}
-                              exit={{ x: -300, opacity: 0 }}
-                              transition={{ duration: 0.5, ease: "easeInOut" }}
-                              onError={(e) => {
-                                // Fallback vers une image par défaut si l'image ne charge pas
-                                const target = e.target as HTMLImageElement;
-                                target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
-                              }}
-                            />
-                          </AnimatePresence>
-                          <div className="absolute inset-0 bg-black/20"></div>
-                          
-                          {/* Indicateurs d'images */}
-                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                            {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
-                              <div
-                                key={index}
-                                className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                                  (currentImageIndex[product.id] || 0) === index
-                                    ? 'bg-white'
-                                    : 'bg-white/50'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          
-                          {/* Bouton pour voir les détails */}
-                          <Link href={`/takaful/${product.id}`}>
+                          <img
+                            src={planImage}
+                            alt={plan.title}
+                            className="w-full h-full object-cover absolute inset-0"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = DEFAULT_TAKAFUL_IMAGE;
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/20" />
+                          <Link href={`/takaful/${plan.id}`}>
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
@@ -512,65 +572,51 @@ export default function TakafulPage() {
                           </Link>
                         </div>
                         <div className="absolute top-4 left-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
-                            categoryColors[product.category]
-                          }`}>
-                            {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${categoryColors[displayCat] ?? categoryColors.autres}`}>
+                            {CATEGORY_LABELS[displayCat] ?? displayCat}
                           </span>
                         </div>
-
                       </div>
 
                       <div className="p-6">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">
-                          {product.name}
+                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-green-600 transition-colors">
+                          {plan.title}
                         </h3>
-                        <p className="text-gray-600 mb-4 line-clamp-2">
-                          {product.description}
+                        <p className="text-white/80 mb-4 line-clamp-2">
+                          {plan.description}
                         </p>
 
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Prime mensuelle</span>
-                              <span className="font-semibold text-gray-900 truncate">
-                                {formatCompactAmount(product.monthlyPremium)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Couverture</span>
-                              <span className="font-semibold text-gray-900">
-                                {product.coverage}
+                              <span className="text-white/80">Cotisation mensuelle</span>
+                              <span className="font-semibold text-white truncate">
+                                {formatCompactAmount(plan.monthlyContribution ?? 0)}
                               </span>
                             </div>
                           </div>
 
                           <div className="mb-4">
-                            <h4 className="font-medium text-gray-900 mb-3">Avantages inclus :</h4>
+                            <h4 className="font-bold text-white mb-3">Avantages inclus :</h4>
                             <ul className="space-y-2">
-                              {product.features.slice(0, 3).map((feature, featureIndex) => (
-                                <li key={featureIndex} className="flex items-center space-x-2 text-sm text-gray-600">
+                              {(plan.benefits ?? []).slice(0, 3).map((benefit, i) => (
+                                <li key={i} className="flex items-center space-x-2 text-sm text-white/80">
                                   <CheckCircle size={16} className="text-green-500" />
-                                  <span>{feature}</span>
+                                  <span>{benefit}</span>
                                 </li>
                               ))}
+                              {(!plan.benefits || plan.benefits.length === 0) && (
+                                <li className="text-sm text-white/60">—</li>
+                              )}
                             </ul>
                           </div>
 
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-gray-900 truncate">
-                                {formatCompactAmount(product.monthlyPremium)}
-                              </p>
-                              <p className="text-xs text-gray-500 truncate">
-                                prime mensuelle
-                              </p>
-                            </div>
+                          <div className="flex items-center justify-center">
                             <motion.button
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                               onClick={handleSubscribe}
-                              className="px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all duration-200 text-sm flex-shrink-0 ml-2"
+                              className="w-full px-3 py-2 bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white rounded-2xl font-semibold hover:from-[#20b6b3] hover:to-[#00644d] transition-all duration-200 text-sm flex-shrink-0 ml-2"
                             >
                               Souscrire
                             </motion.button>
@@ -591,12 +637,12 @@ export default function TakafulPage() {
               transition={{ duration: 0.3 }}
               className="space-y-6"
             >
-              {filteredProducts.map((product, index) => {
-                const IconComponent = categoryIcons[product.category];
-                
+              {filteredPlans.map((plan, index) => {
+                const displayCat = getDisplayCategory(plan);
+                const planImage = plan.picture && plan.picture.trim() ? plan.picture : DEFAULT_TAKAFUL_IMAGE;
                 return (
                   <motion.div
-                    key={product.id}
+                    key={plan.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -607,41 +653,17 @@ export default function TakafulPage() {
                       <div className="flex items-center space-x-6">
                         <div className="relative">
                           <div className="w-32 h-32 rounded-xl overflow-hidden relative">
-                            <AnimatePresence mode="wait">
-                              <motion.img
-                                key={`${product.id}-list-${currentImageIndex[product.id] || 0}`}
-                                src={getCurrentImage(product.id, product.category)}
-                                alt={`${product.name} - Image ${(currentImageIndex[product.id] || 0) + 1}`}
-                                className="w-full h-full object-cover absolute inset-0"
-                                initial={{ x: 100, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                exit={{ x: -100, opacity: 0 }}
-                                transition={{ duration: 0.5, ease: "easeInOut" }}
-                                onError={(e) => {
-                                  // Fallback vers une image par défaut si l'image ne charge pas
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
-                                }}
-                              />
-                            </AnimatePresence>
-                            <div className="absolute inset-0 bg-black/20"></div>
-                            
-                            {/* Indicateurs d'images */}
-                            <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                              {categoryImages[product.category as keyof typeof categoryImages]?.map((_, index) => (
-                                <div
-                                  key={index}
-                                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
-                                    (currentImageIndex[product.id] || 0) === index
-                                      ? 'bg-white'
-                                      : 'bg-white/50'
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                            
-                            {/* Bouton pour voir les détails */}
-                            <Link href={`/takaful/${product.id}`}>
+                            <img
+                              src={planImage}
+                              alt={plan.title}
+                              className="w-full h-full object-cover absolute inset-0"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = DEFAULT_TAKAFUL_IMAGE;
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/20" />
+                            <Link href={`/takaful/${plan.id}`}>
                               <motion.button
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
@@ -653,30 +675,24 @@ export default function TakafulPage() {
                             </Link>
                           </div>
                           <div className="absolute top-2 left-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${
-                              categoryColors[product.category]
-                            }`}>
-                              {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${categoryColors[displayCat] ?? categoryColors.autres}`}>
+                              {CATEGORY_LABELS[displayCat] ?? displayCat}
                             </span>
                           </div>
                         </div>
 
                         <div className="flex-1">
                           <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">
-                            {product.name}
+                            {plan.title}
                           </h3>
                           <p className="text-gray-600 mb-4">
-                            {product.description}
+                            {plan.description}
                           </p>
 
                           <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
                             <div className="flex items-center space-x-1">
-                              <Shield size={16} />
-                              <span>Couverture: {product.coverage}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
                               <Calendar size={16} />
-                              <span>Prime: {formatCompactAmount(product.monthlyPremium)}/mois</span>
+                              <span>Cotisation: {formatCompactAmount(plan.monthlyContribution ?? 0)}/mois</span>
                             </div>
                           </div>
 
@@ -684,22 +700,25 @@ export default function TakafulPage() {
                             <div className="mb-4">
                               <h4 className="font-medium text-gray-900 mb-3">Avantages inclus :</h4>
                               <ul className="space-y-2">
-                                {product.features.map((feature, featureIndex) => (
-                                  <li key={featureIndex} className="flex items-center space-x-2 text-sm text-gray-600">
+                                {(plan.benefits ?? []).map((benefit, i) => (
+                                  <li key={i} className="flex items-center space-x-2 text-sm text-gray-600">
                                     <CheckCircle size={16} className="text-green-500" />
-                                    <span>{feature}</span>
+                                    <span>{benefit}</span>
                                   </li>
                                 ))}
+                                {(!plan.benefits || plan.benefits.length === 0) && (
+                                  <li className="text-sm text-gray-500">—</li>
+                                )}
                               </ul>
                             </div>
 
                             <div className="flex items-center justify-between">
                               <div className="flex-1 min-w-0">
                                 <p className="text-lg font-bold text-gray-900 truncate">
-                                  {formatCompactAmount(product.monthlyPremium)}
+                                  {formatCompactAmount(plan.monthlyContribution ?? 0)}
                                 </p>
                                 <p className="text-sm text-gray-500 truncate">
-                                  prime mensuelle
+                                  cotisation mensuelle
                                 </p>
                               </div>
                               <motion.button
@@ -722,9 +741,10 @@ export default function TakafulPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        )}
 
         {/* No Results */}
-        {filteredProducts.length === 0 && (
+        {!plansLoading && !plansError && filteredPlans.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -733,18 +753,93 @@ export default function TakafulPage() {
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Search size={32} className="text-gray-400" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold text-white mb-2">
               Aucun produit trouvé
             </h3>
-            <p className="text-gray-600">
+            <p className="text-white/80">
               Essayez de modifier vos critères de recherche
             </p>
+          </motion.div>
+        )}
+          </>
+        ) : (
+          /* Section Mes souscriptions */
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-6"
+          >
+            {filteredSubscriptions.length > 0 ? (
+              filteredSubscriptions.map((subscription, index) => {
+                const IconComponent = subscription.icon;
+                return (
+                  <motion.div
+                    key={subscription.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    whileHover={{ x: 5 }}
+                    onClick={() => {
+                      setSelectedSubscription(subscription);
+                      setShowSubscriptionDetails(true);
+                    }}
+                    className="bg-[#1A2A2A] rounded-3xl p-6 border border-[#5FB678] shadow-lg cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between">
+                      {/* Section gauche : Icône et informations */}
+                      <div className="flex items-center space-x-4 flex-1">
+                        <div className="w-12 h-12 bg-[#2C3E3E] rounded-xl flex items-center justify-center flex-shrink-0">
+                          <IconComponent size={24} className="text-[#5FB678]" />
+                        </div>
+                        <div className="flex flex-col">
+                          <h3 className="text-xl font-semibold text-white mb-1">
+                            {subscription.name}
+                          </h3>
+                          <p className="text-white/80 text-sm">
+                            {subscription.monthlyPremium}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Section droite : Statut et date */}
+                      <div className="flex flex-col items-end">
+                        <span className="text-[#5FB678] font-semibold mb-1">
+                          {subscription.status}
+                        </span>
+                        <p className="text-white/80 text-sm">
+                          {subscription.dueDate}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-12"
+              >
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Search size={32} className="text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  {searchTerm ? 'Aucune souscription trouvée' : 'Aucune souscription'}
+                </h3>
+                <p className="text-white/80">
+                  {searchTerm 
+                    ? 'Essayez de modifier vos critères de recherche'
+                    : 'Vous n\'avez pas encore de souscription active'}
+                </p>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </div>
 
       {/* Why Takaful Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-[#101919]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -753,10 +848,10 @@ export default function TakafulPage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
               Pourquoi choisir le Takaful ?
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-white/80 max-w-3xl mx-auto">
               Découvrez les avantages de l'assurance islamique éthique
             </p>
           </motion.div>
@@ -772,10 +867,10 @@ export default function TakafulPage() {
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Heart size={32} className="text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              <h3 className="text-xl font-semibold text-white mb-3">
                 Principe de Mutualité
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-white/80 leading-relaxed">
                 Les participants contribuent ensemble pour aider ceux qui en ont besoin, 
                 selon les principes de solidarité islamique.
               </p>
@@ -791,10 +886,10 @@ export default function TakafulPage() {
               <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Shield size={32} className="text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              <h3 className="text-xl font-semibold text-white mb-3">
                 Transparence Totale
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-white/80 leading-relaxed">
                 Aucun intérêt, aucune spéculation. Tous les fonds sont utilisés 
                 exclusivement pour la protection des participants.
               </p>
@@ -810,10 +905,10 @@ export default function TakafulPage() {
               <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Star size={32} className="text-purple-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              <h3 className="text-xl font-semibold text-white mb-3">
                 Excellence Éthique
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-white/80 leading-relaxed">
                 Nos produits respectent strictement les principes islamiques 
                 et offrent une protection complète et éthique.
               </p>
@@ -822,381 +917,150 @@ export default function TakafulPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-green-800 to-green-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Prêt à vous protéger ?
-            </h2>
-            <p className="text-xl text-green-100 mb-8 max-w-2xl mx-auto">
-              Rejoignez des milliers de personnes qui ont choisi la protection Takaful. 
-              Commencez dès aujourd'hui.
-            </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleSubscribe}
-              className="bg-white text-green-800 px-8 py-4 rounded-xl font-semibold hover:bg-green-50 transition-colors duration-200 flex items-center justify-center space-x-2 mx-auto"
-            >
-              <Shield size={20} />
-              <span>Commencer maintenant</span>
-              <ArrowRight size={20} />
-            </motion.button>
-          </motion.div>
+      {/* Section "Emportez Amane+ partout avec vous" */}
+      <section className="py-20" style={{ background: 'linear-gradient(to top, #d6fcf6, #229693)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <img
+                src="/images/phone.png"
+                alt="App Mobile"
+                className="rounded-2xl w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="text-3xl lg:text-6xl font-extrabold mb-6 text-[#00644d]">
+                  Emportez Amane+ partout avec vous
+                </h2>
+                <p className="text-lg text-white/80 mb-8 leading-relaxed">
+                Retrouvez toutes les fonctionnalités d’Amane+ dans une seule application. Faites vos dons, suivez vos rendements, automatisez votre Zakat et participez à des actions solidaires, où que vous soyez.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <Apple size={24} />
+                    <span>Disponible sur l'App Store</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <Play size={24} />
+                    <span>Télécharger sur Google Play</span>
+                  </motion.button>
+                </div>
+              </motion.div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Payment Popup */}
+      {/* Takaful Modal */}
+      <MakeDonationModal
+        isOpen={showTakafulModal}
+        onClose={() => setShowTakafulModal(false)}
+        title="Takaful"
+        subtitle="Montant du produit takaful"
+        description="Veuillez saisir le montant du produit takaful."
+        amountSectionTitle="Montant du produits takaful"
+        confirmationTitle="Veuillez confirmer votre transaction"
+        confirmationDescription="Vérifiez les informations avant de confirmer votre souscription."
+        recapTitle="Vous allez payer la somme de"
+        recapMessage="Sur amane+ souscrivez a des produits takafuls halal."
+        successTitle="Souscription confirmée !"
+        successMessage="Votre souscription a été effectuée avec succès."
+        historyButtonText="Consulter l'historique"
+        historyButtonLink="/transactions"
+      />
+
+      {/* Subscription Details Modal */}
       <AnimatePresence>
-        {showPaymentPopup && (
+        {showSubscriptionDetails && selectedSubscription && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowSubscriptionDetails(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#0B1212] rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             >
               {/* Header */}
-              <div className="sticky top-0 bg-white rounded-t-3xl p-6 border-b border-gray-100">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-900">Paiement sécurisé</h3>
-                    <p className="text-gray-600">Souscription Takaful</p>
-                  </div>
-                  <button 
-                    onClick={handleClosePopup} 
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Fermer"
-                  >
-                    <X size={24} />
-                  </button>
-                </div>
-
-                {/* Progress Steps */}
-                <div className="flex justify-center">
-                  <div className="flex space-x-4">
-                    {steps.map((step, index) => (
-                      <motion.div
-                        key={step.id}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.1 }}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-full ${
-                          currentStep >= step.id 
-                            ? 'bg-gradient-to-r from-green-800 to-green-600 text-white' 
-                            : 'bg-gray-100 text-gray-600'
-                        } shadow-lg`}
-                      >
-                        <step.icon size={20} />
-                        <span className="font-medium">{step.title}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
+              <div className="sticky top-0 bg-[#0B1212] rounded-t-3xl p-6 border-b border-[#1A2A2A] flex justify-between items-center">
+                <h3 className="text-2xl font-bold text-white">Détails de la transaction</h3>
+                <button 
+                  onClick={() => setShowSubscriptionDetails(false)} 
+                  className="w-10 h-10 bg-[#5FB678] rounded-full flex items-center justify-center text-white hover:bg-[#4FA568] transition-colors"
+                  title="Fermer"
+                >
+                  <X size={20} />
+                </button>
               </div>
 
               {/* Content */}
-              <div className="p-6">
-                <AnimatePresence mode="wait">
-                  {currentStep === 1 && (
-                    <motion.div
-                      key="step1"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3 }}
-                      className="space-y-6"
-                    >
-                      <div className="text-center mb-8">
-                        <h4 className="text-2xl font-bold text-gray-900 mb-2">Méthode de paiement</h4>
-                        <p className="text-gray-700">Choisissez votre méthode de paiement sécurisée</p>
-                      </div>
+              <div className="p-6 space-y-6">
+                {/* Subscription Type Section */}
+                <div className="flex items-start space-x-4">
+                  <div className="w-16 h-16 bg-[#2C3E3E] rounded-full flex items-center justify-center flex-shrink-0">
+                    <selectedSubscription.icon size={32} className="text-[#5FB678]" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-2xl font-bold text-white mb-2">
+                      {selectedSubscription.shortName}
+                    </h4>
+                    <p className="text-white/80">
+                      {selectedSubscription.description}
+                    </p>
+                  </div>
+                </div>
 
-                      <div className="space-y-4">
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setPaymentMethod('card')}
-                          className={`w-full p-6 rounded-2xl border-2 transition-all duration-200 ${
-                            paymentMethod === 'card'
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 hover:border-green-300'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                              <CreditCard size={24} className="text-green-600" />
-                            </div>
-                            <div className="flex-1 text-left">
-                              <h3 className="font-semibold text-gray-900">Carte bancaire</h3>
-                              <p className="text-sm text-gray-700">Paiement sécurisé par carte</p>
-                            </div>
-                          </div>
-                        </motion.button>
+                {/* Status and Date */}
+                <div className="flex flex-col space-y-2">
+                  <span className="text-[#5FB678] font-semibold text-lg">
+                    {selectedSubscription.status}
+                  </span>
+                  <p className="text-white/80">
+                    {selectedSubscription.dueDate}
+                  </p>
+                </div>
 
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setPaymentMethod('mobile')}
-                          className={`w-full p-6 rounded-2xl border-2 transition-all duration-200 ${
-                            paymentMethod === 'mobile'
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 hover:border-green-300'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                              <Zap size={24} className="text-green-600" />
-                            </div>
-                            <div className="flex-1 text-left">
-                              <h3 className="font-semibold text-gray-900">Paiement mobile</h3>
-                              <p className="text-sm text-gray-700">Orange Money, MTN Mobile Money</p>
-                            </div>
-                          </div>
-                        </motion.button>
-
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setPaymentMethod('amane')}
-                          className={`w-full p-6 rounded-2xl border-2 transition-all duration-200 ${
-                            paymentMethod === 'amane'
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 hover:border-green-300'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                              <Wallet size={24} className="text-green-600" />
-                            </div>
-                            <div className="flex-1 text-left">
-                              <h3 className="font-semibold text-gray-900">Compte Amane</h3>
-                              <p className="text-sm text-gray-700">Paiement depuis votre compte Amane</p>
-                            </div>
-                          </div>
-                        </motion.button>
-                      </div>
-
-                      {paymentMethod === 'card' && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="space-y-4 mt-6"
-                        >
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Numéro de carte
-                            </label>
-                            <input
-                              type="text"
-                              value={formData.cardNumber}
-                              onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
-                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
-                              placeholder="1234 5678 9012 3456"
-                              title="Numéro de carte"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Date d'expiration
-                              </label>
-                              <input
-                                type="text"
-                                value={formData.expiryDate}
-                                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
-                                placeholder="MM/AA"
-                                title="Date d'expiration"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                CVV
-                              </label>
-                              <div className="relative">
-                                <input
-                                  type={showPassword ? "text" : "password"}
-                                  value={formData.cvv}
-                                  onChange={(e) => setFormData({ ...formData, cvv: e.target.value })}
-                                  className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
-                                  placeholder="123"
-                                  title="Code de sécurité"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setShowPassword(!showPassword)}
-                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                  title={showPassword ? "Masquer" : "Afficher"}
-                                >
-                                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-
-                                              {paymentMethod === 'mobile' && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="space-y-4 mt-6"
-                          >
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Numéro de téléphone
-                              </label>
-                              <input
-                                type="tel"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
-                                placeholder="+225 07 12 34 56 78"
-                                title="Numéro de téléphone"
-                              />
-                            </div>
-                          </motion.div>
-                        )}
-
-                        {paymentMethod === 'amane' && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="space-y-4 mt-6"
-                          >
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Email Amane
-                              </label>
-                              <input
-                                type="email"
-                                value={formData.amaneEmail}
-                                onChange={(e) => setFormData({ ...formData, amaneEmail: e.target.value })}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
-                                placeholder="votre@email.com"
-                                title="Email de votre compte Amane"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Mot de passe Amane
-                              </label>
-                              <div className="relative">
-                                <input
-                                  type={showPassword ? "text" : "password"}
-                                  value={formData.amanePassword}
-                                  onChange={(e) => setFormData({ ...formData, amanePassword: e.target.value })}
-                                  className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200"
-                                  placeholder="Votre mot de passe"
-                                  title="Mot de passe de votre compte Amane"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setShowPassword(!showPassword)}
-                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                  title={showPassword ? "Masquer" : "Afficher"}
-                                >
-                                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                    </motion.div>
-                  )}
-
-                  {currentStep === 2 && (
-                    <motion.div
-                      key="step2"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3 }}
-                      className="text-center space-y-8"
-                    >
-                      <motion.div
-                        animate={{ rotate: [0, 10, -10, 0] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto"
-                      >
-                        <CheckCircle size={48} className="text-white" />
-                      </motion.div>
-
-                      <div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Souscription confirmée !</h2>
-                        <p className="text-gray-700 mb-6">
-                          Votre souscription Takaful a été effectuée avec succès. Vous êtes maintenant protégé.
-                        </p>
-                      </div>
-
-                      <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
-                        <h3 className="font-semibold text-green-900 mb-2">Récapitulatif</h3>
-                        <div className="space-y-2 text-sm text-green-800">
-                          <div className="flex justify-between">
-                            <span>Service:</span>
-                            <span className="font-semibold">Souscription Takaful</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Méthode:</span>
-                            <span className="font-semibold">
-                              {paymentMethod === 'card' ? 'Carte bancaire' : 'Paiement mobile'}
-                            </span>
-                          </div>
+                {/* Main Guarantees Section */}
+                <div className="space-y-4">
+                  <h5 className="text-xl font-bold text-white">Garanties principales</h5>
+                  <ul className="space-y-3">
+                    {selectedSubscription.guarantees.map((guarantee: string, index: number) => (
+                      <li key={index} className="flex items-center space-x-3">
+                        <div className="w-6 h-6 bg-[#5FB678] rounded-full flex items-center justify-center flex-shrink-0">
+                          <CheckCircle size={16} className="text-white" />
                         </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        <span className="text-white/80">{guarantee}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-                {/* Navigation Buttons */}
-                {currentStep < 2 && (
-                  <div className="flex justify-between mt-8 pt-6 border-t border-gray-100">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleClosePopup}
-                      className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:border-gray-400 transition-all duration-200"
-                    >
-                      Annuler
-                    </motion.button>
-
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleNext}
-                      className="px-8 py-3 bg-gradient-to-r from-green-800 to-green-600 text-white rounded-xl font-semibold hover:from-green-900 hover:to-green-700 transition-all duration-200 flex items-center space-x-2"
-                    >
-                      <span>Confirmer le paiement</span>
-                      <ArrowRight size={20} />
-                    </motion.button>
+                {/* Additional Info */}
+                <div className="pt-4 border-t border-[#1A2A2A]">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white/80">Cotisation mensuelle</span>
+                    <span className="text-white font-semibold">{selectedSubscription.monthlyPremium}</span>
                   </div>
-                )}
-
-                {currentStep === 2 && (
-                  <div className="flex justify-center mt-8 pt-6 border-t border-gray-100">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleClosePopup}
-                      className="px-8 py-3 bg-gradient-to-r from-green-800 to-green-600 text-white rounded-xl font-semibold hover:from-green-900 hover:to-green-700 transition-all duration-200"
-                    >
-                      Fermer
-                    </motion.button>
-                  </div>
-                )}
+                </div>
               </div>
             </motion.div>
           </motion.div>

@@ -8,9 +8,11 @@ import { Campaign } from '@/data/mockData';
 interface CampaignCardProps {
   campaign: Campaign;
   showVideo?: boolean;
+  /** Nombre de donateurs (API statistics). Si fourni, affiché à la place des bénéficiaires. */
+  donorCount?: number;
 }
 
-export default function CampaignCard({ campaign, showVideo = false }: CampaignCardProps) {
+export default function CampaignCard({ campaign, showVideo = false, donorCount }: CampaignCardProps) {
   const progress = (campaign.currentAmount / campaign.targetAmount) * 100;
   
   const categoryColors = {
@@ -54,14 +56,14 @@ export default function CampaignCard({ campaign, showVideo = false }: CampaignCa
               src={campaign.video}
               className="w-full h-full object-cover"
               controls
-              poster={campaign.image}
+              poster={campaign.image || '/images/no-picture.png'}
             />
             <div className="absolute inset-0 bg-black/20" />
           </div>
         ) : (
           <div className="relative w-full h-full">
             <img
-              src={campaign.image}
+              src={campaign.image || '/images/no-picture.png'}
               alt={campaign.title}
               className="w-full h-full object-cover"
             />
@@ -128,11 +130,14 @@ export default function CampaignCard({ campaign, showVideo = false }: CampaignCa
           </div>
         </div>
 
-        {/* Impact and Beneficiaries */}
+        {/* Impact et nombre de donateurs (ou bénéficiaires en fallback) */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-1 text-sm text-gray-600">
             <Users size={14} />
-            <span>{campaign.beneficiaries.toLocaleString()} bénéficiaires</span>
+            <span>
+              {(donorCount !== undefined ? donorCount : campaign.beneficiaries).toLocaleString()}{' '}
+              {donorCount !== undefined ? 'donateurs' : 'bénéficiaires'}
+            </span>
           </div>
           <div className="text-sm text-gray-600">
             <span className="font-medium">{campaign.impact}</span>

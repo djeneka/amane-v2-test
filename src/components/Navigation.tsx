@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -8,19 +8,39 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, X, User, Heart, Calculator, Shield, TrendingUp, Home, Users, 
   Gift, Wallet, Settings, ChevronDown, LogOut, PiggyBank, LogIn, 
-  Star, Coins, ChevronRight, Eye, EyeOff, ShoppingBag
+  Star, Coins, ChevronRight, Eye, EyeOff, ShoppingBag, Mail, 
+  ArrowRight, ArrowUpDown, Grid3x3
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { currentUser } from '@/data/mockData';
+import NotificationPopup from '@/components/NotificationPopup';
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [isDonDropdownOpen, setIsDonDropdownOpen] = useState(false);
+  const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
   const [showWalletAmount, setShowWalletAmount] = useState(false);
   const [showSadaqahScore, setShowSadaqahScore] = useState(false);
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fermer le dropdown quand on clique en dehors
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    }
+
+    if (isProfileDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileDropdownOpen]);
 
   // Mock data for wallet and sadaqah score
   const walletBalance = 125000; // 125,000 XOF
@@ -28,22 +48,25 @@ export default function Navigation() {
 
   const navigationItems = [
     { name: 'Accueil', href: '/', icon: Home },
-    { name: 'Zakat', href: '/zakat', icon: Calculator },
-    { name: 'Takaful', href: '/takaful', icon: Shield },
-    { name: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
+    { name: 'Pourquoi Amane+?', href: '/#pourquoi-amane', icon: Star, isAnchor: true },
+    { name: 'Contactez-nous', href: '/contact', icon: Mail },
   ];
 
-  const donDropdownItems = [
-    { name: 'Campagnes', href: '/campagnes', icon: Heart, description: 'Soutenir des causes' },
-    { name: 'Investir', href: '/investir', icon: TrendingUp, description: 'Investissements halal' },
+  const servicesItems = [
+    { name: 'Dons', href: '/campagnes', image: '/icons/don.png' },
+    { name: 'Zakat', href: '/zakat', image: '/icons/profile-2user.png' },
+    { name: 'Takaful', href: '/takaful', image: '/icons/purse(1).png' },
+    { name: 'Investissement', href: '/investir', image: '/icons/status-up.png' },
   ];
 
   const profileDropdownItems = [
-    { name: 'Profil', href: '/profil', icon: User },
-    { name: 'Points', href: '/points', icon: Users },
-    { name: 'Portefeuille', href: '/portefeuille', icon: Wallet },
-    { name: 'Mes Épargnes', href: '/mes-epargnes', icon: Wallet },
-    { name: 'Mes Takafuls', href: '/mes-takafuls', icon: Shield },
+    { name: 'Information Personnelles', href: '/profil', image: '/icons/profile.png' },
+    { name: 'Mes Sadaqah Scores', href: '/profil/scores', image: '/icons/medal-star-g.png' },
+    { name: 'Paramètres', href: '/profil/parametres', image: '/icons/setting-2.png' },
+    { name: 'A propos d\'Amane+', href: '/profil/a-propos', image: '/icons/information.png' },
+    { name: 'Aide & Support', href: '/profil/aide-support', image: '/icons/message-question.png' },
+    { name: 'Termes & Conditions', href: '/profil/termes', image: '/icons/security-safe.png' },
+    { name: 'Inviter des personnes', href: '/profil/inviter', image: '/icons/share.png' },
     { name: 'Déconnexion', href: '/logout', icon: LogOut, isLogout: true },
   ];
 
@@ -62,14 +85,25 @@ export default function Navigation() {
     return pathname.startsWith(href);
   };
 
-  const isDonActive = () => {
-    return pathname.startsWith('/campagnes') || pathname.startsWith('/investir') || pathname.startsWith('/don');
+  const isServicesActive = () => {
+    return pathname.startsWith('/don') || pathname.startsWith('/zakat') || 
+           pathname.startsWith('/takaful') || pathname.startsWith('/investir');
+  };
+
+  const getUserFirstName = () => {
+    if (user?.name) return user.name.split(' ')[0] || user.name;
+    return 'Utilisateur';
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <>
+      <nav className={`shadow-sm border-b sticky top-0 z-50 ${
+        isAuthenticated 
+          ? 'bg-[#080909] border-[#00644D]' 
+          : 'bg-[#080909] border-[#00644D]'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -77,237 +111,357 @@ export default function Navigation() {
             transition={{ duration: 0.5 }}
           >
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-20 h-20 rounded-lg flex items-center justify-center">
+              {isAuthenticated ? (
+                <div className="w-36 h-36 rounded-lg flex items-center justify-center">
                 <Image 
-                  src="/amane-logo.png" 
+                  src="/logo/Background(1).png" 
                   alt="Amane Logo" 
                   width={48} 
                   height={48}
                   className="w-full h-full object-contain"
                 />
               </div>
-              <span className="text-xl font-semibold text-gray-900">Amane+</span>
+              ) : (
+                <div className="w-36 h-36 rounded-lg flex items-center justify-center">
+                  <Image 
+                    src="/logo/Background(1).png" 
+                    alt="Amane Logo" 
+                    width={48} 
+                    height={48}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
             </Link>
           </motion.div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            {/* Accueil */}
-            {navigationItems.map((item) => {
-              const active = isActive(item.href);
-              return (
+            {isAuthenticated ? (
+              <>
+                {/* Accueil (Active) */}
                 <motion.div
-                  key={item.name}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center space-x-2"
+                >
+                  <Home 
+                    size={18} 
+                    className={isActive('/') ? 'text-[#5CD07D]' : 'text-[#A8A9AB]'} 
+                  />
+                  <Link
+                    href="/"
+                    className={`font-medium transition-colors duration-200 ${
+                      isActive('/')
+                        ? 'text-white border-b-2 border-[#5CD07D] pb-1' 
+                        : 'text-[#A8A9AB] hover:text-white'
+                    }`}
+                  >
+                    Accueil
+                  </Link>
+                </motion.div>
+
+                {/* Transactions */}
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center space-x-2"
+                >
+                  <img 
+                    src="/icons/frame.png" 
+                    alt="Transactions"
+                    className={`w-[18px] h-[18px] object-contain transition-all duration-200 ${
+                      isActive('/transactions') ? 'brightness-0 saturate-100' : 'opacity-60'
+                    }`}
+                    style={isActive('/transactions') 
+                      ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
+                      : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
+                    }
+                  />
+                  <Link
+                    href="/transactions"
+                    className={`font-medium transition-colors duration-200 ${
+                      isActive('/transactions')
+                        ? 'text-white border-b-2 border-[#5CD07D] pb-1' 
+                        : 'text-[#A8A9AB] hover:text-white'
+                    }`}
+                  >
+                    Transactions
+                  </Link>
+                </motion.div>
+
+                {/* Communauté */}
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center space-x-2"
+                >
+                  <img 
+                    src="/icons/people.png" 
+                    alt="Communauté"
+                    className="w-[18px] h-[18px] object-contain transition-all duration-200"
+                    style={isActive('/communaute') 
+                      ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
+                      : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
+                    }
+                  />
+                  <Link
+                    href="/communaute"
+                    className={`font-medium transition-colors duration-200 ${
+                      isActive('/communaute')
+                        ? 'text-white border-b-2 border-[#5CD07D] pb-1' 
+                        : 'text-[#A8A9AB] hover:text-white'
+                    }`}
+                  >
+                    Communauté
+                  </Link>
+                </motion.div>
+
+                {/* Services */}
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center space-x-2"
+                >
+                  <img 
+                    src="/icons/category-2.png" 
+                    alt="Services"
+                    className="w-[18px] h-[18px] object-contain transition-all duration-200"
+                    style={isServicesActive() 
+                      ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
+                      : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
+                    }
+                  />
+                  <button
+                    onClick={() => setIsServicesDropdownOpen(!isServicesDropdownOpen)}
+                    className={`font-medium transition-colors duration-200 ${
+                      isServicesActive()
+                        ? 'text-white border-b-2 border-[#5CD07D] pb-1' 
+                        : 'text-[#A8A9AB] hover:text-white'
+                    }`}
+                  >
+                    Services
+                  </button>
+                </motion.div>
+              </>
+            ) : (
+              <>
+                {/* Accueil */}
+                <motion.div
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <Link
-                    href={item.href}
-                    className={`font-medium transition-colors duration-200 flex items-center space-x-1 ${
-                      active 
-                        ? 'text-green-800 border-b-2 border-green-800 pb-1' 
-                        : 'text-gray-700 hover:text-green-800'
+                    href="/"
+                    className={`font-medium transition-colors duration-200 ${
+                      isActive('/')
+                        ? 'text-white border-b-2 border-[#00644D] pb-1' 
+                        : 'text-white/80 hover:text-white'
                     }`}
                   >
-                    <item.icon size={16} />
-                    <span>{item.name}</span>
+                    Accueil
                   </Link>
                 </motion.div>
-              );
-            })}
 
-            {/* Don Dropdown */}
-            <div className="relative">
-              <motion.button
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsDonDropdownOpen(!isDonDropdownOpen)}
-                className={`font-medium transition-colors duration-200 flex items-center space-x-1 ${
-                  isDonActive()
-                    ? 'text-green-800 border-b-2 border-green-800 pb-1' 
-                    : 'text-gray-700 hover:text-green-800'
-                }`}
-              >
-                <Gift size={16} />
-                <span>Don</span>
-                <ChevronDown 
-                  size={14} 
-                  className={`transition-transform duration-200 ${isDonDropdownOpen ? 'rotate-180' : ''}`}
-                />
-              </motion.button>
-
-              {/* Don Dropdown Menu */}
-              <AnimatePresence>
-                {isDonDropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50"
+                {/* Nos Services Dropdown */}
+                <div className="relative">
+                  <motion.button
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsServicesDropdownOpen(!isServicesDropdownOpen)}
+                    className={`font-medium transition-colors duration-200 flex items-center space-x-1 ${
+                      isServicesActive()
+                        ? 'text-white border-b-2 border-[#00644D] pb-1' 
+                        : 'text-white/80 hover:text-white'
+                    }`}
                   >
-                    {donDropdownItems.map((item, index) => {
-                      const active = isActive(item.href);
-                      return (
-                        <motion.div
-                          key={item.name}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.2, delay: index * 0.05 }}
-                        >
-                          <Link
-                            href={item.href}
-                            onClick={() => setIsDonDropdownOpen(false)}
-                            className={`flex items-center space-x-3 px-4 py-3 transition-colors duration-200 ${
-                              active
-                                ? 'text-green-800 bg-green-50'
-                                : 'text-gray-700 hover:text-green-800 hover:bg-green-50'
-                            }`}
-                          >
-                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                              <item.icon size={20} className="text-green-600" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{item.name}</p>
-                              <p className="text-xs text-gray-500">{item.description}</p>
-                            </div>
-                            <ChevronRight size={16} className="text-gray-400" />
-                          </Link>
-                        </motion.div>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Wallet Balance */}
-            {isAuthenticated && (
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg px-3 py-1.5"
-              >
-                <div className="flex items-center space-x-2">
-                  <Wallet size={14} className="text-green-600" />
-                  <div className="text-right">
-                    <p className="text-xs text-gray-600">Solde</p>
-                    <div className="flex items-center space-x-1">
-                      <p className="text-xs font-bold text-green-800">
-                        {showWalletAmount ? formatAmount(walletBalance) : '••••••'}
-                      </p>
-                      <button
-                        onClick={() => setShowWalletAmount(!showWalletAmount)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                        title={showWalletAmount ? "Masquer le montant" : "Afficher le montant"}
-                      >
-                        {showWalletAmount ? <EyeOff size={12} /> : <Eye size={12} />}
-                      </button>
-                    </div>
-                  </div>
+                    <span>Nos services</span>
+                    <ChevronDown 
+                      size={14} 
+                      className={`transition-transform duration-200 ${isServicesDropdownOpen ? 'rotate-180' : ''}`}
+                    />
+                  </motion.button>
                 </div>
-              </motion.div>
-            )}
 
-            {/* Sadaqah Score */}
-            {isAuthenticated && (
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg px-3 py-1.5"
-              >
-                <div className="flex items-center space-x-2">
-                  <Star size={14} className="text-orange-600" />
-                  <div className="text-right">
-                    <p className="text-xs text-gray-600">Sadaqah</p>
-                    <div className="flex items-center space-x-1">
-                      <p className="text-xs font-bold text-orange-800">
-                        {showSadaqahScore ? `${sadaqahScore} pts` : '••••'}
-                      </p>
-                      <button
-                        onClick={() => setShowSadaqahScore(!showSadaqahScore)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                        title={showSadaqahScore ? "Masquer le score" : "Afficher le score"}
-                      >
-                        {showSadaqahScore ? <EyeOff size={12} /> : <Eye size={12} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+                {/* Pourquoi Amane+? */}
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Link
+                    href="/#pourquoi-amane"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const element = document.getElementById('pourquoi-amane');
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      } else {
+                        window.location.href = '/#pourquoi-amane';
+                      }
+                    }}
+                    className="font-medium transition-colors duration-200 text-white/80 hover:text-white"
+                  >
+                    Pourquoi Amane+?
+                  </Link>
+                </motion.div>
+
+                {/* Contactez-nous */}
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Link
+                    href="/contact"
+                    className={`font-medium transition-colors duration-200 ${
+                      isActive('/contact')
+                        ? 'text-white border-b-2 border-[#00644D] pb-1' 
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                  >
+                    Contactez-nous
+                  </Link>
+                </motion.div>
+              </>
             )}
           </div>
 
           {/* User Menu with Dropdown */}
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
-              <div className="relative">
-                <motion.button
+              <>
+                {/* Notification Icon */}
+                <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className={`flex items-center space-x-2 transition-colors duration-200 ${
-                    isActive('/profil') || isActive('/points') || isActive('/portefeuille') || isActive('/mes-epargnes') || isActive('/mes-takafuls')
-                      ? 'text-green-800'
-                      : 'text-gray-700 hover:text-green-800'
-                  }`}
+                  className="relative cursor-pointer"
+                  onClick={() => {
+                    setShowNotificationPopup(!showNotificationPopup);
+                  }}
                 >
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-8 h-8 rounded-full"
+                  <img 
+                    src="/icons/notification-bing.png" 
+                    alt="Notifications"
+                    className="w-5 h-5 object-contain"
                   />
-                  <span className="text-sm font-medium hidden lg:block">{currentUser.name}</span>
-                  <ChevronDown 
-                    size={16} 
-                    className={`transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`}
-                  />
-                </motion.button>
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#FF3B30] rounded-full border-2 border-[#080909]"></span>
+                </motion.div>
 
-                {/* Profile Dropdown */}
-                <AnimatePresence>
-                  {isProfileDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50"
-                    >
-                      {profileDropdownItems.map((item, index) => {
-                        const active = isActive(item.href);
-                        return (
-                          <motion.div
-                            key={item.name}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.2, delay: index * 0.05 }}
+                {/* User Profile */}
+                <div className="relative" ref={profileDropdownRef}>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    className="flex items-center space-x-2 transition-colors duration-200"
+                  >
+                    <div className="relative">
+                      <img
+                        src={user?.profilePicture || '/images/Ellipse 21(1).png'}
+                        alt={user?.name || 'Profil'}
+                        className="w-10 h-10 rounded-full border-2 border-[#5CD07D] object-cover"
+                      />
+                    </div>
+                    <div className="text-left hidden lg:block">
+                      <p className="text-sm font-bold text-white">
+                        Salam, {getUserFirstName()}
+                      </p>
+                      <p className="text-xs text-[#A8A9AB]">
+                        La patience est lumière ✨
+                      </p>
+                    </div>
+                    <ChevronDown 
+                      size={16} 
+                      className={`text-white transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`}
+                    />
+                  </motion.button>
+
+                  {/* Profile Dropdown */}
+                  <AnimatePresence>
+                    {isProfileDropdownOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 mt-3 w-64 bg-[#1A1F1F] rounded-2xl shadow-2xl border border-[#00644D]/30 overflow-hidden z-50"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* Menu Items */}
+                        <div className="py-2 pt-3">
+                          {profileDropdownItems.filter(item => !item.isLogout).map((item, index) => {
+                            const active = isActive(item.href);
+                            return (
+                              <motion.div
+                                key={item.name}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.2, delay: index * 0.05 }}
+                              >
+                                <Link
+                                  href={item.href}
+                                  onClick={() => {
+                                    setIsProfileDropdownOpen(false);
+                                  }}
+                                  className={`flex items-center space-x-3 px-4 py-3 transition-all duration-200 ${
+                                    active
+                                      ? 'bg-[#00644D]/30 text-[#5CD07D] border-l-2 border-[#5CD07D]'
+                                      : 'text-white hover:text-white hover:bg-[#00644D]/20'
+                                  }`}
+                                >
+                                  {item.image ? (
+                                    <img 
+                                      src={item.image} 
+                                      alt={item.name}
+                                      className={`w-[18px] h-[18px] object-contain ${
+                                        active ? 'opacity-100' : 'opacity-70'
+                                      }`}
+                                    />
+                                  ) : (
+                                    item.icon && (
+                                      <item.icon 
+                                        size={18} 
+                                        className={active ? 'text-[#5CD07D]' : 'text-[#A8A9AB]'} 
+                                      />
+                                    )
+                                  )}
+                                  <span className="text-sm font-medium">{item.name}</span>
+                                  {active && (
+                                    <ChevronRight size={16} className="ml-auto text-[#5CD07D]" />
+                                  )}
+                                </Link>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Séparateur */}
+                        <div className="border-t border-[#00644D]/20 my-1"></div>
+
+                        {/* Déconnexion */}
+                        <motion.div
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.2, delay: profileDropdownItems.filter(item => !item.isLogout).length * 0.05 }}
+                        >
+                          <Link
+                            href="/logout"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setIsProfileDropdownOpen(false);
+                              logout();
+                              window.location.href = '/';
+                            }}
+                            className="flex items-center space-x-3 px-4 py-3 text-[#FF6B6B] hover:text-[#FF5252] hover:bg-red-500/10 transition-all duration-200"
                           >
-                            <Link
-                              href={item.href}
-                              onClick={() => {
-                                setIsProfileDropdownOpen(false);
-                                if (item.isLogout) {
-                                  logout();
-                                  window.location.href = '/';
-                                }
-                              }}
-                              className={`flex items-center space-x-3 px-4 py-3 transition-colors duration-200 ${
-                                item.isLogout 
-                                  ? 'text-red-600 hover:text-red-800 hover:bg-red-50' 
-                                  : active
-                                    ? 'text-green-800 bg-green-50'
-                                    : 'text-gray-700 hover:text-green-800 hover:bg-green-50'
-                              }`}
-                            >
-                              <item.icon size={18} />
-                              <span className="text-sm font-medium">{item.name}</span>
-                            </Link>
-                          </motion.div>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                            <LogOut size={18} />
+                            <span className="text-sm font-medium">Déconnexion</span>
+                          </Link>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </>
             ) : (
               <div className="flex items-center space-x-3">
                 <motion.div
@@ -316,9 +470,8 @@ export default function Navigation() {
                 >
                   <Link
                     href="/connexion"
-                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-green-800 transition-colors duration-200"
+                    className="px-4 py-2 text-white hover:text-white/80 transition-colors duration-200 border-b-2 border-[#00644D]"
                   >
-                    <LogIn size={16} />
                     <span className="font-medium">Se connecter</span>
                   </Link>
                 </motion.div>
@@ -328,7 +481,8 @@ export default function Navigation() {
                 >
                   <Link
                     href="/inscription"
-                    className="bg-green-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-900 transition-all duration-200"
+                    className="text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                    style={{ background: 'linear-gradient(to right, #8ECAAB, #38B7B1)' }}
                   >
                     S'inscrire
                   </Link>
@@ -341,7 +495,7 @@ export default function Navigation() {
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
+            className="md:hidden p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors duration-200 text-white"
           >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </motion.button>
@@ -356,140 +510,292 @@ export default function Navigation() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden bg-white border-t border-gray-100"
+            className={`md:hidden border-t ${
+              isAuthenticated 
+                ? 'bg-[#3E4042] border-gray-500/30' 
+                : 'bg-[#00644D] border-white/20'
+            }`}
           >
             <div className="px-4 py-6 space-y-4">
-              {/* Accueil */}
-              {navigationItems.map((item, index) => {
-                const active = isActive(item.href);
-                return (
+              {isAuthenticated ? (
+                <>
+                  {/* Accueil */}
                   <motion.div
-                    key={item.name}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    transition={{ duration: 0.3, delay: 0.05 }}
+                    className="flex items-center space-x-2"
                   >
+                    <Home 
+                      size={18} 
+                      className={isActive('/') ? 'text-[#5CD07D]' : 'text-[#A8A9AB]'} 
+                    />
                     <Link
-                      href={item.href}
+                      href="/"
                       onClick={() => setIsOpen(false)}
-                      className={`flex items-center space-x-3 p-3 rounded-lg transition-colors duration-200 ${
-                        active 
-                          ? 'bg-green-50 text-green-800' 
-                          : 'text-gray-900 hover:bg-gray-50'
+                      className={`flex-1 p-3 rounded-lg transition-colors duration-200 ${
+                        isActive('/')
+                          ? 'bg-white/20 text-white' 
+                          : 'text-[#A8A9AB] hover:bg-white/10'
                       }`}
                     >
-                      <item.icon size={20} className={active ? 'text-green-800' : 'text-gray-600'} />
-                      <span className="font-medium">{item.name}</span>
+                      <span className="font-medium">Accueil</span>
                     </Link>
                   </motion.div>
-                );
-              })}
 
-              {/* Don Section */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-              >
-                <div className="p-3">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center space-x-2">
-                    <Gift size={16} className="text-green-600" />
-                    <span>Don</span>
-                  </h3>
-                  <div className="space-y-1 ml-6">
-                    {donDropdownItems.map((item, index) => {
-                      const active = isActive(item.href);
-                      return (
-                        <Link
-                          key={item.name}
-                          href={item.href}
-                          onClick={() => setIsOpen(false)}
-                          className={`flex items-center space-x-3 p-2 rounded-lg transition-colors duration-200 ${
-                            active 
-                              ? 'bg-green-50 text-green-800' 
-                              : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <item.icon size={16} className={active ? 'text-green-800' : 'text-gray-600'} />
-                          <span className="text-sm">{item.name}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              </motion.div>
+                  {/* Transactions */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    className="flex items-center space-x-2"
+                  >
+                    <img 
+                      src="/icons/frame.png" 
+                      alt="Transactions"
+                      className="w-[18px] h-[18px] object-contain transition-all duration-200"
+                      style={isActive('/transactions') 
+                        ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
+                        : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
+                      }
+                    />
+                    <Link
+                      href="/transactions"
+                      onClick={() => setIsOpen(false)}
+                      className={`flex-1 p-3 rounded-lg transition-colors duration-200 ${
+                        isActive('/transactions')
+                          ? 'bg-white/20 text-white' 
+                          : 'text-[#A8A9AB] hover:bg-white/10'
+                      }`}
+                    >
+                      <span className="font-medium">Transactions</span>
+                    </Link>
+                  </motion.div>
 
-              {/* Wallet and Score for Mobile */}
-              {isAuthenticated && (
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
-                  className="space-y-3"
-                >
-                  {/* Wallet Balance */}
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Wallet size={16} className="text-green-600" />
-                        <span className="text-sm font-medium text-gray-700">Solde</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-bold text-green-800">
-                          {showWalletAmount ? formatAmount(walletBalance) : '••••••'}
-                        </span>
-                        <button
-                          onClick={() => setShowWalletAmount(!showWalletAmount)}
-                          className="text-gray-400 hover:text-gray-600 transition-colors"
-                          title={showWalletAmount ? "Masquer le montant" : "Afficher le montant"}
-                        >
-                          {showWalletAmount ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
+                  {/* Communauté */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.15 }}
+                    className="flex items-center space-x-2"
+                  >
+                    <img 
+                      src="/icons/people.png" 
+                      alt="Communauté"
+                      className="w-[18px] h-[18px] object-contain transition-all duration-200"
+                      style={isActive('/communaute') 
+                        ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
+                        : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
+                      }
+                    />
+                    <Link
+                      href="/communaute"
+                      onClick={() => setIsOpen(false)}
+                      className={`flex-1 p-3 rounded-lg transition-colors duration-200 ${
+                        isActive('/communaute')
+                          ? 'bg-white/20 text-white' 
+                          : 'text-[#A8A9AB] hover:bg-white/10'
+                      }`}
+                    >
+                      <span className="font-medium">Communauté</span>
+                    </Link>
+                  </motion.div>
+
+                  {/* Services */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
+                    className="flex items-center space-x-2"
+                  >
+                    <img 
+                      src="/icons/category-2.png" 
+                      alt="Services"
+                      className="w-[18px] h-[18px] object-contain transition-all duration-200"
+                      style={isServicesActive() 
+                        ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
+                        : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
+                      }
+                    />
+                    <button
+                      onClick={() => {
+                        setIsServicesDropdownOpen(!isServicesDropdownOpen);
+                      }}
+                      className={`flex-1 p-3 rounded-lg transition-colors duration-200 text-left ${
+                        isServicesActive()
+                          ? 'bg-white/20 text-white' 
+                          : 'text-[#A8A9AB] hover:bg-white/10'
+                      }`}
+                    >
+                      <span className="font-medium">Services</span>
+                    </button>
+                  </motion.div>
+                </>
+              ) : (
+                <>
+                  {/* Accueil */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.05 }}
+                  >
+                    <Link
+                      href="/"
+                      onClick={() => setIsOpen(false)}
+                      className={`p-3 rounded-lg transition-colors duration-200 ${
+                        isActive('/')
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/80 hover:bg-white/10'
+                      }`}
+                    >
+                      <span className="font-medium">Accueil</span>
+                    </Link>
+                  </motion.div>
+
+                  {/* Nos Services Section */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                  >
+                    <div className="p-3">
+                      <h3 className="text-sm font-medium text-white mb-2">
+                        Nos services
+                      </h3>
+                      <div className="grid grid-cols-2 gap-2 ml-6">
+                        {servicesItems.map((item, index) => {
+                          const active = isActive(item.href);
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              onClick={() => setIsOpen(false)}
+                              className={`flex items-center space-x-2 p-3 rounded-lg transition-colors duration-200 ${
+                                active 
+                                  ? 'bg-white/20 text-white' 
+                                  : 'text-white/80 hover:bg-white/10'
+                              }`}
+                            >
+                              <img 
+                                src={item.image} 
+                                alt={item.name}
+                                className="w-4 h-4 object-contain"
+                              />
+                              <span className="text-xs">{item.name}</span>
+                            </Link>
+                          );
+                        })}
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
-                  {/* Sadaqah Score */}
-                  <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Star size={16} className="text-orange-600" />
-                        <span className="text-sm font-medium text-gray-700">Score Sadaqah</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-bold text-orange-800">
-                          {showSadaqahScore ? `${sadaqahScore} pts` : '••••'}
-                        </span>
-                        <button
-                          onClick={() => setShowSadaqahScore(!showSadaqahScore)}
-                          className="text-gray-400 hover:text-gray-600 transition-colors"
-                          title={showSadaqahScore ? "Masquer le score" : "Afficher le score"}
-                        >
-                          {showSadaqahScore ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
+                  {/* Dons */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.15 }}
+                  >
+                    <Link
+                      href="/don"
+                      onClick={() => setIsOpen(false)}
+                      className={`p-3 rounded-lg transition-colors duration-200 ${
+                        isActive('/don')
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/80 hover:bg-white/10'
+                      }`}
+                    >
+                      <span className="font-medium">Dons</span>
+                    </Link>
+                  </motion.div>
+
+                  {/* Pourquoi Amane+? */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
+                  >
+                    <Link
+                      href="/#pourquoi-amane"
+                      onClick={(e) => {
+                        setIsOpen(false);
+                        e.preventDefault();
+                        const element = document.getElementById('pourquoi-amane');
+                        if (element) {
+                          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        } else {
+                          window.location.href = '/#pourquoi-amane';
+                        }
+                      }}
+                      className="p-3 rounded-lg transition-colors duration-200 text-white/80 hover:bg-white/10"
+                    >
+                      <span className="font-medium">Pourquoi Amane+?</span>
+                    </Link>
+                  </motion.div>
+
+                  {/* Contactez-nous */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.25 }}
+                  >
+                    <Link
+                      href="/contact"
+                      onClick={() => setIsOpen(false)}
+                      className={`p-3 rounded-lg transition-colors duration-200 ${
+                        isActive('/contact')
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/80 hover:bg-white/10'
+                      }`}
+                    >
+                      <span className="font-medium">Contactez-nous</span>
+                    </Link>
+                  </motion.div>
+                </>
               )}
-              
+
               {/* Profile dropdown items in mobile */}
               {isAuthenticated ? (
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 0.3 }}
-                  className="pt-4 border-t border-gray-100"
+                  className="pt-4 border-t border-gray-500/30"
                 >
-                  <div className="flex items-center space-x-3 p-3 mb-4">
+                  {/* Notification Icon for Mobile */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.35 }}
+                    className="flex items-center justify-between p-3 mb-4"
+                  >
+                    <div 
+                      className="relative cursor-pointer"
+                      onClick={() => {
+                        setShowNotificationPopup(!showNotificationPopup);
+                      }}
+                    >
+                      <img 
+                        src="/icons/notification-bing.png" 
+                        alt="Notifications"
+                        className="w-5 h-5 object-contain"
+                      />
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#FF3B30] rounded-full border-2 border-[#3E4042]"></span>
+                    </div>
+                  </motion.div>
+
+                  <div className="flex items-center space-x-2 p-3 mb-4">
                     <img
-                      src={currentUser.avatar}
-                      alt={currentUser.name}
-                      className="w-10 h-10 rounded-full"
+                      src={user?.profilePicture || '/images/Ellipse 21(1).png'}
+                      alt={user?.name || 'Profil'}
+                      className="w-10 h-10 rounded-full border-2 border-[#5CD07D] object-cover"
                     />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{currentUser.name}</p>
-                      <p className="text-xs text-gray-500">{currentUser.email}</p>
+                      <p className="text-sm font-medium text-white">
+                        Salam, {getUserFirstName()}
+                      </p>
+                      <p className="text-xs text-[#A8A9AB]">
+                        La patience est lumière ✨
+                      </p>
                     </div>
                   </div>
                   
@@ -513,13 +819,23 @@ export default function Navigation() {
                           }}
                           className={`flex items-center space-x-3 p-3 rounded-lg transition-colors duration-200 ${
                             item.isLogout 
-                              ? 'text-red-600 hover:text-red-800 hover:bg-red-50' 
+                              ? 'text-red-400 hover:text-red-300 hover:bg-red-500/20' 
                               : active
-                                ? 'bg-green-50 text-green-800'
-                                : 'text-gray-900 hover:bg-gray-50'
+                                ? 'bg-white/20 text-white'
+                                : 'text-white/80 hover:bg-white/10'
                           }`}
                         >
-                          <item.icon size={20} className={item.isLogout ? 'text-red-600' : active ? 'text-green-800' : 'text-gray-600'} />
+                          {item.image ? (
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="w-5 h-5 object-contain opacity-80"
+                            />
+                          ) : (
+                            item.icon && (
+                              <item.icon size={20} className={item.isLogout ? 'text-red-400' : 'text-white'} />
+                            )
+                          )}
                           <span className="font-medium">{item.name}</span>
                         </Link>
                       </motion.div>
@@ -531,22 +847,21 @@ export default function Navigation() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 0.3 }}
-                  className="pt-4 border-t border-gray-100 space-y-3"
+                  className="pt-4 border-t border-white/20 space-y-3"
                 >
                   <Link
                     href="/connexion"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center space-x-3 p-3 rounded-lg text-gray-900 hover:bg-gray-50 transition-colors duration-200"
+                    className="p-3 rounded-lg text-white hover:bg-white/10 transition-colors duration-200 border-b-2 border-[#00644D]"
                   >
-                    <LogIn size={20} className="text-gray-600" />
                     <span className="font-medium">Se connecter</span>
                   </Link>
                   <Link
                     href="/inscription"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center space-x-3 p-3 rounded-lg bg-green-800 text-white transition-all duration-200"
+                    className="p-3 rounded-lg text-white transition-all duration-200"
+                    style={{ background: 'linear-gradient(to right, #8ECAAB, #38B7B1)' }}
                   >
-                    <User size={20} />
                     <span className="font-medium">S'inscrire</span>
                   </Link>
                 </motion.div>
@@ -556,5 +871,59 @@ export default function Navigation() {
         )}
       </AnimatePresence>
     </nav>
+
+    {/* Services Dropdown Band */}
+    <AnimatePresence>
+      {isServicesDropdownOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white shadow-lg border-b border-gray-200 sticky top-16 z-40"
+          onMouseLeave={() => setIsServicesDropdownOpen(false)}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-center space-x-12 py-4">
+              {servicesItems.map((service, index) => {
+                const active = isActive(service.href);
+                return (
+                  <motion.div
+                    key={service.name}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
+                    <Link
+                      href={service.href}
+                      onClick={() => setIsServicesDropdownOpen(false)}
+                      className={`flex items-center space-x-2 transition-colors duration-200 ${
+                        active
+                          ? 'text-[#00644D]'
+                          : 'text-[#00644D] hover:text-[#20B6B3]'
+                      }`}
+                    >
+                      <img 
+                        src={service.image} 
+                        alt={service.name}
+                        className="w-5 h-5 object-contain"
+                      />
+                      <span className="text-sm font-medium">{service.name}</span>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* Notification Popup */}
+    <NotificationPopup
+      isOpen={showNotificationPopup}
+      onClose={() => setShowNotificationPopup(false)}
+    />
+    </>
   );
 } 
