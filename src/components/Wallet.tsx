@@ -11,7 +11,10 @@ interface WalletProps {
   title?: string;
   depositLink?: string;
   sadaqahScore?: number;
+  /** Label du rang (ex. Argent, Platine) */
   rank?: string;
+  /** URL du badge du rang (ex. /badges/argent.png) */
+  rankBadge?: string;
   donationsCount?: number;
   spentAmount?: number;
   campaignsCount?: number;
@@ -24,10 +27,11 @@ export default function Wallet({
   depositLink = '/portefeuille',
   sadaqahScore = 320,
   rank = 'Argent',
+  rankBadge,
   donationsCount = 12,
   spentAmount = 125000,
   campaignsCount = 15,
-  seeAllLink = '/points'
+  seeAllLink = '/profil/scores'
 }: WalletProps) {
   const [showBalance, setShowBalance] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -96,8 +100,8 @@ export default function Wallet({
         </div>
         <div className="flex items-center space-x-2 bg-white/20 rounded-2xl px-3 py-2">
           <img 
-            src="/icons/Group 1000003179.png" 
-            alt="Rang" 
+            src={rankBadge ?? '/icons/Group 1000003179.png'} 
+            alt={rank} 
             className="w-12 h-12 object-contain"
           />
           <div className="rounded-lg px-3 py-2">

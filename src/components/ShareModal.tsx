@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, Copy, Check, Share2 } from 'lucide-react';
 import Image from 'next/image';
-import { currentUser } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ShareModalProps {
@@ -17,14 +16,9 @@ export default function ShareModal({ isOpen, onClose }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
   const { user } = useAuth();
   
-  // Générer le lien de parrainage basé sur le nom de l'utilisateur
   const getUserName = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName}${user.lastName}`;
-    }
-    // Fallback sur currentUser
-    const name = currentUser.name.split(' ');
-    return name.join('');
+    if (user?.name) return user.name.replace(/\s/g, '');
+    return 'utilisateur';
   };
 
   const referralLink = `Amaneplus.com/${getUserName()}`;

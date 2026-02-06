@@ -14,8 +14,8 @@ import { getActiveCampaigns } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
 import { getActivities, type Activity } from '@/services/activities';
 
-const DEFAULT_ACTIVITY_IMAGE = '/images/no-image.png';
-const DEFAULT_TAKAFUL_IMAGE = '/images/no-image.png';
+const DEFAULT_ACTIVITY_IMAGE = '/images/no-picture.png';
+const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
 
 export default function CommunautePage() {
   const { isAuthenticated } = useAuth();
@@ -295,7 +295,7 @@ export default function CommunautePage() {
                         <div className="bg-white rounded-3xl overflow-hidden relative" style={{ height: '600px' }}>
                         <div className="absolute inset-0">
                             <img 
-                            src={campaign.image} 
+                            src={campaign.image || '/images/no-picture.png'} 
                             alt={campaign.title} 
                             className="w-full h-full object-cover"
                             />
@@ -424,7 +424,7 @@ export default function CommunautePage() {
                   <div className="bg-[#101919] rounded-2xl overflow-hidden shadow-lg">
                     <div className="relative">
                       <img
-                        src={campaign.image}
+                        src={campaign.image || '/images/no-picture.png'}
                         alt={campaign.title}
                         className="w-full h-48 object-cover"
                       />

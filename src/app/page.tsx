@@ -18,15 +18,26 @@ import type { Campaign } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { getActiveCampaigns } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
+import { getActivities, type Activity } from '@/services/activities';
+import { getMyDonations, type Donation } from '@/services/donations';
+import { getMyTransactions, type Transaction } from '@/services/transactions';
+import { getMyZakats, type Zakat } from '@/services/zakat';
+import { getRankForScore } from '@/lib/rankRules';
 
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, accessToken } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentTakafulSlide, setCurrentTakafulSlide] = useState(0);
   const [featuredCampaigns, setFeaturedCampaigns] = useState<Campaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
   const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [activitiesError, setActivitiesError] = useState<string | null>(null);
+  const [myDonations, setMyDonations] = useState<Donation[]>([]);
+  const [myTransactions, setMyTransactions] = useState<Transaction[]>([]);
+  const [myZakats, setMyZakats] = useState<Zakat[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +71,73 @@ export default function Home() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setActivitiesLoading(true);
+    setActivitiesError(null);
+    getActivities()
+      .then((res) => {
+        if (cancelled) return;
+        if (res.success) setActivities(res.data);
+        else setActivitiesError(res.error);
+      })
+      .catch((err) => {
+        if (!cancelled) setActivitiesError(err?.message ?? 'Erreur lors du chargement des activités');
+      })
+      .finally(() => {
+        if (!cancelled) setActivitiesLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setMyDonations([]);
+      return;
+    }
+    let cancelled = false;
+    getMyDonations(accessToken)
+      .then((list) => {
+        if (!cancelled) setMyDonations(list);
+      })
+      .catch(() => {
+        if (!cancelled) setMyDonations([]);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setMyTransactions([]);
+      return;
+    }
+    let cancelled = false;
+    getMyTransactions(accessToken)
+      .then((list) => {
+        if (!cancelled) setMyTransactions(list);
+      })
+      .catch(() => {
+        if (!cancelled) setMyTransactions([]);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setMyZakats([]);
+      return;
+    }
+    let cancelled = false;
+    getMyZakats(accessToken)
+      .then((list) => {
+        if (!cancelled) setMyZakats(list);
+      })
+      .catch(() => {
+        if (!cancelled) setMyZakats([]);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
   // Mapping des images pour les produits Takaful
   const getTakafulImage = (category: string) => {
     const imageMap: Record<string, string> = {
@@ -68,32 +146,43 @@ export default function Home() {
       'habitation': '/images/plants.png',
       'vie': '/images/sadaq.png'
     };
-    return imageMap[category] || '/images/no-image.png';
+    return imageMap[category] || '/images/no-picture.png';
   };
 
-  // Mock data for dashboard
-  const walletBalance = 125000;
-  const sadaqahScore = 320;
-  const donationsCount = 12;
-  const spentAmount = 125000;
-  const campaignsCount = 15;
-  const zakatPaid = 75;
-  const zakatRemaining = 25000;
-  const monthlyProgress = 5;
-  const monthlyTotal = 10;
+  // Données dashboard : user + dons + transactions (spentAmount = somme des amount hors DEPOSIT)
+  const walletBalance = user?.wallet?.balance ?? 0;
+  const sadaqahScore = user?.score?.score ?? 0;
+  const donationsCount = myDonations.length;
+  const spentAmount = myTransactions
+    .filter((t) => t.purpose !== 'DEPOSIT')
+    .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+  const campaignsCount = new Set(myDonations.map((d) => d.campaignId).filter(Boolean)).size;
+  const rankInfo = getRankForScore(sadaqahScore);
 
-  const slides = [
-    {
-      image: '/images/hope.png',
-      title: 'Distribution Alimentaire Pendant Le Ramadan',
-      description: 'Grâce à la générosité des fidèles, des vivres essentiels ont été distribués aux familles les plus modestes durant le Ramadan, apportant espoir et bénédiction à leurs tables.'
-    },
-    {
-      image: '/images/skemoo.png',
-      title: 'Distribution Alimentaire Pendant Le Ramadan',
-      description: 'Grâce à la générosité des fidèles, des vivres essentiels ont été distribués aux familles les plus modestes durant le Ramadan, apportant espoir et bénédiction à leurs tables.'
-    }
-  ];
+  // Activités du mois : 10 derniers dons du mois courant (nouveau mois = compteur à 0)
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const donationsThisMonth = myDonations
+    .filter((d) => {
+      const created = new Date(d.createdAt);
+      return created.getFullYear() === currentYear && created.getMonth() === currentMonth;
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 10);
+  const monthlyDonationsCount = donationsThisMonth.length;
+  const monthlyTotalBars = 10;
+
+  // Dernière zakat (la plus récente = premier de la liste API)
+  const lastZakat = myZakats[0] ?? null;
+  const zakatTotal = lastZakat?.totalAmount ?? 0;
+  const zakatDue = zakatTotal * 0.025; // 2,5 % du totalAmount = montant de zakat à payer
+  const zakatRemaining = lastZakat?.remainingAmount ?? 0;
+  const zakatPaidAmount = zakatDue - zakatRemaining;
+  const zakatPaidPercent = zakatDue > 0 ? Math.round((zakatPaidAmount / zakatDue) * 100) : 0;
+
+  const currentActivityIndex = activities.length > 0 ? Math.min(currentSlide, activities.length - 1) : 0;
+  const currentActivity = activities[currentActivityIndex];
 
   const testimonials = [
     {
@@ -668,7 +757,8 @@ export default function Home() {
               <Wallet 
                 balance={walletBalance}
                 sadaqahScore={sadaqahScore}
-                rank="Argent"
+                rank={rankInfo.label}
+                rankBadge={rankInfo.badge}
                 donationsCount={donationsCount}
                 spentAmount={spentAmount}
                 campaignsCount={campaignsCount}
@@ -680,7 +770,7 @@ export default function Home() {
 
             {/* Colonne de droite - Activités et Zakat */}
             <div className="lg:col-span-1 space-y-6">
-              {/* Activités du mois */}
+              {/* Activités du mois : 10 derniers dons du mois courant, une barre = un don */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -691,18 +781,21 @@ export default function Home() {
                 <h3 className="text-white font-bold text-xl mb-2">Activités du mois</h3>
                 <p className="text-white/70 text-sm mb-4">Vos œuvres accomplies par activité ce mois-ci</p>
                 
-                {/* Barre de progression */}
+                {/* Une barre par don (max 10) */}
                 <div className="flex items-center space-x-2 mb-4">
-                  {Array.from({ length: monthlyTotal }).map((_, index) => (
+                  {Array.from({ length: monthlyTotalBars }).map((_, index) => (
                     <div
                       key={index}
-                      className={`flex-1 h-3 rounded-full ${
-                        index < monthlyProgress ? 'bg-[#5AB678]' : 'bg-white/20'
+                      className={`flex-1 h-3 rounded-full transition-colors ${
+                        index < monthlyDonationsCount ? 'bg-[#5AB678]' : 'bg-white/20'
                       }`}
+                      title={index < donationsThisMonth.length && donationsThisMonth[index]?.campaign?.title
+                        ? `Don: ${donationsThisMonth[index].campaign?.title ?? 'Sans campagne'}`
+                        : undefined}
                     />
                   ))}
                 </div>
-                <p className="text-[#5AB678] font-bold text-sm mb-4">{monthlyProgress}/{monthlyTotal}</p>
+                <p className="text-[#5AB678] font-bold text-sm mb-4">{monthlyDonationsCount}/{monthlyTotalBars}</p>
                 
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -713,7 +806,7 @@ export default function Home() {
                 </motion.button>
               </motion.div>
 
-              {/* Statut Zakat */}
+              {/* Statut Zakat (dernière zakat du user) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -721,16 +814,36 @@ export default function Home() {
                 viewport={{ once: true }}
                 className="bg-[#10191963] rounded-2xl p-6"
               >
-                <p className="text-white font-bold text-lg mb-2">
-                  {zakatPaid}% de votre zakat déjà réglée !
-                </p>
-                <p className="text-white/80 text-sm mb-4 italic">
-                  "Donner, c'est purifier vos biens et votre cœur."
-                </p>
-                <div className="mb-4">
-                  <p className="text-white/70 text-sm mb-1">Reste à payer</p>
-                  <div className="flex items-center justify-between">
-                    <p className="text-[#5AB678] font-bold text-xl">{zakatRemaining.toLocaleString('fr-FR')} F CFA</p>
+                {lastZakat ? (
+                  <>
+                    <p className="text-white font-bold text-lg mb-2">
+                      {zakatPaidPercent}% de votre zakat déjà réglée !
+                    </p>
+                    <p className="text-white/80 text-sm mb-4 italic">
+                      "Donner, c'est purifier vos biens et votre cœur."
+                    </p>
+                    <div className="mb-4">
+                      <p className="text-white/70 text-sm mb-1">Reste à payer</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[#5AB678] font-bold text-xl">{zakatRemaining.toLocaleString('fr-FR')} F CFA</p>
+                        <Link href="/zakat">
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
+                          >
+                            <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
+                            <span>Payer ma zakat</span>
+                          </motion.button>
+                        </Link>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-white/80 text-sm mb-4 italic">
+                      "Donner, c'est purifier vos biens et votre cœur."
+                    </p>
                     <Link href="/zakat">
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -738,11 +851,11 @@ export default function Home() {
                         className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
                       >
                         <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
-                        <span>Payer ma zakat</span>
+                        <span>Calculer ma zakat</span>
                       </motion.button>
                     </Link>
-                  </div>
-                </div>
+                  </>
+                )}
               </motion.div>
 
               {/* Accomplissements */}
@@ -824,7 +937,7 @@ export default function Home() {
                   <div className="bg-[#101919] rounded-2xl overflow-hidden shadow-lg">
                     <div className="relative">
                       <img
-                        src={campaign.image}
+                        src={campaign.image || '/images/no-picture.png'}
                         alt={campaign.title}
                         className="w-full h-48 object-cover"
                       />
@@ -1054,69 +1167,98 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section "Distribution Alimentaire Pendant Le Ramadan" */}
+      {/* Section Activités (données depuis le service activities) */}
       <section className="relative text-white overflow-hidden min-h-[680px] flex items-center m-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentSlide}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="absolute inset-0"
-          >
-            <img
-              src={slides[currentSlide].image}
-              alt="Distribution Alimentaire"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/60" />
-          </motion.div>
-        </AnimatePresence>
-        
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-20 w-full z-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentSlide}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -30 }}
-              transition={{ duration: 0.5 }}
-            >
-              <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-white">
-                <span className="block">Distribution Alimentaire Pendant</span>
-                <span className="block">Le Ramadan</span>
-              </h2>
-              <p className="text-lg text-white mb-8 leading-relaxed max-w-2xl mx-auto">
-                {slides[currentSlide].description}
-              </p>
-              <Link href="/#">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="text-white px-8 py-4 rounded-4xl font-semibold transition-all duration-200 shadow-lg"
-                  style={{ background: 'linear-gradient(to right, #8FC99E, #20B6B3)' }}
-                >
-                  En savoir plus
-                </motion.button>
-              </Link>
-            </motion.div>
-          </AnimatePresence>
-          <div className="flex justify-center mt-8 space-x-2">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`transition-all duration-300 ${
-                  index === currentSlide
-                    ? 'w-2 h-2 bg-white rounded-full'
-                    : 'w-2 h-2 border border-white rounded-full hover:bg-white/50'
-                }`}
-                aria-label={`Aller au slide ${index + 1}`}
-              />
-            ))}
+        {activitiesLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#101919]">
+            <p className="text-white/80">Chargement des actualités…</p>
           </div>
-        </div>
+        ) : activitiesError || activities.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#101919]">
+            <p className="text-white/80">{activitiesError || 'Aucune activité à afficher.'}</p>
+          </div>
+        ) : (
+          <>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentSlide}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0"
+              >
+                {currentActivity.images?.length > 0 ? (
+                  <img
+                    src={currentActivity.images[0]}
+                    alt={currentActivity.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : currentActivity.video ? (
+                  <video
+                    src={currentActivity.video}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                  />
+                ) : (
+                  <div className="w-full h-full bg-[#101919]" />
+                )}
+                <div className="absolute inset-0 bg-black/60" />
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-20 w-full z-10">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -30 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-white">
+                    {currentActivity.title}
+                  </h2>
+                  <p className="text-lg text-white mb-4 leading-relaxed max-w-2xl mx-auto">
+                    {currentActivity.description}
+                  </p>
+                  {currentActivity.result && (
+                    <p className="text-lg text-white/90 mb-8 leading-relaxed max-w-2xl mx-auto">
+                      {currentActivity.result}
+                    </p>
+                  )}
+                  <Link href="/#">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="text-white px-8 py-4 rounded-4xl font-semibold transition-all duration-200 shadow-lg"
+                      style={{ background: 'linear-gradient(to right, #8FC99E, #20B6B3)' }}
+                    >
+                      En savoir plus
+                    </motion.button>
+                  </Link>
+                </motion.div>
+              </AnimatePresence>
+              <div className="flex justify-center mt-8 space-x-2">
+                {activities.map((_, index) => (
+                  <button
+                    key={activities[index].id}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`transition-all duration-300 ${
+                      index === currentSlide
+                        ? 'w-2 h-2 bg-white rounded-full'
+                        : 'w-2 h-2 border border-white rounded-full hover:bg-white/50'
+                    }`}
+                    aria-label={`Aller au slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
       {/* Section "Pourquoi choisir Amane+ ?" */}
@@ -1356,7 +1498,7 @@ export default function Home() {
                   <div className="bg-[#101919] rounded-2xl overflow-hidden shadow-lg">
                     <div className="relative">
                       <img
-                        src={campaign.image}
+                        src={campaign.image || '/images/no-picture.png'}
                         alt={campaign.title}
                         className="w-full h-48 object-cover"
                       />

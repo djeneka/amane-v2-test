@@ -13,7 +13,7 @@ import Image from 'next/image';
 import MakeDonationModal from '@/components/MakeDonationModal';
 import { getTakafulPlans, type TakafulPlan } from '@/services/takaful-plans';
 
-const DEFAULT_TAKAFUL_IMAGE = '/images/no-image.png';
+const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
 
 /** Catégorie affichée à partir des categories API (HEALTH, FAMILY, HOME, etc.) */
 function getDisplayCategory(plan: TakafulPlan): 'sante' | 'automobile' | 'habitation' | 'vie' | 'autres' {

@@ -2,35 +2,82 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Heart } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Heart, Phone } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
 
+/** Codes pays pour le téléphone (concaténés avec le numéro envoyé à l'API) */
+const COUNTRY_CODES = [
+  { code: '+225', label: 'Côte d\'Ivoire', flag: '🇨🇮' },
+  { code: '+221', label: 'Sénégal', flag: '🇸🇳' },
+  { code: '+223', label: 'Mali', flag: '🇲🇱' },
+  { code: '+226', label: 'Burkina Faso', flag: '🇧🇫' },
+  { code: '+228', label: 'Togo', flag: '🇹🇬' },
+  { code: '+229', label: 'Bénin', flag: '🇧🇯' },
+  { code: '+33', label: 'France', flag: '🇫🇷' },
+  { code: '+32', label: 'Belgique', flag: '🇧🇪' },
+  { code: '+39', label: 'Italie', flag: '🇮🇹' },
+  { code: '+1', label: 'Canada', flag: '🇨🇦' },
+  { code: '+1', label: 'USA', flag: '🇺🇸' },
+  { code: '+212', label: 'Maroc', flag: '🇲🇦' },
+  { code: '+213', label: 'Algérie', flag: '🇩🇿' },
+  { code: '+216', label: 'Tunisie', flag: '🇹🇳' },
+  { code: '+237', label: 'Cameroun', flag: '🇨🇲' },
+  { code: '+234', label: 'Nigeria', flag: '🇳🇬' },
+];
+
+function isEmail(value: string): boolean {
+  return value.includes('@') && value.length > 3;
+}
+
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, '');
+}
+
 export default function ConnexionPage() {
   const router = useRouter();
   const { login, isAuthenticated, authReady } = useAuth();
-  const [email, setEmail] = useState("");
+  const [loginValue, setLoginValue] = useState("");
+  const [countryCode, setCountryCode] = useState("+225");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
 
+  const isEmailMode = isEmail(loginValue);
+  const loginPlaceholder = isEmailMode
+    ? "exemple@email.com"
+    : "Numéro de téléphone";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    
+
     try {
-      const success = await login(email, password);
+      const credentials = isEmailMode
+        ? { email: loginValue.trim(), password }
+        : {
+            phoneNumber: countryCode + digitsOnly(loginValue),
+            password,
+          };
+
+      if (!isEmailMode && digitsOnly(loginValue).length < 8) {
+        setError('Veuillez entrer un numéro de téléphone valide.');
+        setIsLoading(false);
+        return;
+      }
+
+      const success = await login(credentials);
       if (success) {
         router.push('/');
       } else {
-        setError('Email ou mot de passe incorrect');
+        setError('Email / numéro ou mot de passe incorrect.');
       }
-    } catch (error) {
+    } catch {
       setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsLoading(false);
@@ -206,22 +253,53 @@ export default function ConnexionPage() {
                 </motion.div>
               </div>
 
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-red-300 text-sm text-center mb-2"
+                >
+                  {error}
+                </motion.p>
+              )}
               <form onSubmit={handleSubmit} className="space-y-5">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500"
-                      placeholder="Votre Email / Numéro de téléphone"
-                      required
-                    />
+                  <div className="flex gap-2">
+                    {!isEmailMode && (
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        className="pl-3 pr-8 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 appearance-none cursor-pointer min-w-[120px]"
+                        aria-label="Code pays"
+                      >
+                        {COUNTRY_CODES.map(({ code, label, flag }) => (
+                          <option key={`${code}-${flag}`} value={code}>
+                            {flag} {code}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <div className="relative flex-1">
+                      {isEmailMode ? (
+                        <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
+                      ) : (
+                        <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
+                      )}
+                      <input
+                        type="text"
+                        inputMode={isEmailMode ? "email" : "tel"}
+                        autoComplete="username"
+                        value={loginValue}
+                        onChange={(e) => setLoginValue(e.target.value)}
+                        className="w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500"
+                        placeholder={loginPlaceholder}
+                        required
+                      />
+                    </div>
                   </div>
                 </motion.div>
 
@@ -298,8 +376,8 @@ export default function ConnexionPage() {
                 </motion.button>
               </form>
 
-              {/* Séparateur */}
-              <motion.div
+              {/* Section "Ou se connecter avec" + boutons Google / Facebook — logique à implémenter plus tard */}
+              {/* <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.7 }}
@@ -310,7 +388,6 @@ export default function ConnexionPage() {
                 <div className="flex-1 h-px bg-white/30"></div>
               </motion.div>
 
-              {/* Boutons de connexion sociale */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -348,13 +425,13 @@ export default function ConnexionPage() {
                   </svg>
                   <span className="text-gray-900 font-medium">Facebook</span>
                 </button>
-              </motion.div>
+              </motion.div> */}
 
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.9 }}
-                className="text-center"
+                className="text-center mt-8"
               >
                 <p className="text-white">
                   Vous n'avez pas encore de compte ?{" "}

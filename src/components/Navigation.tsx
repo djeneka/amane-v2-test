@@ -12,7 +12,6 @@ import {
   ArrowRight, ArrowUpDown, Grid3x3
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { currentUser } from '@/data/mockData';
 import NotificationPopup from '@/components/NotificationPopup';
 
 export default function Navigation() {
@@ -62,12 +61,12 @@ export default function Navigation() {
 
   const profileDropdownItems = [
     { name: 'Information Personnelles', href: '/profil', image: '/icons/profile.png' },
-    { name: 'Mes Sadaqah Scores', href: '/points', image: '/icons/medal-star-g.png' },
-    { name: 'Paramètres', href: '/portefeuille', image: '/icons/setting-2.png' },
-    { name: 'A propos d\'Amane+', href: '/mes-epargnes', image: '/icons/information.png' },
-    { name: 'Aide & Support', href: '/mes-takafuls', image: '/icons/message-question.png' },
-    { name: 'Termes & Conditions', href: '/mes-takafuls', image: '/icons/security-safe.png' },
-    { name: 'Inviter des personnes', href: '/mes-takafuls', image: '/icons/share.png' },
+    { name: 'Mes Sadaqah Scores', href: '/profil/scores', image: '/icons/medal-star-g.png' },
+    { name: 'Paramètres', href: '/profil/parametres', image: '/icons/setting-2.png' },
+    { name: 'A propos d\'Amane+', href: '/profil/a-propos', image: '/icons/information.png' },
+    { name: 'Aide & Support', href: '/profil/aide-support', image: '/icons/message-question.png' },
+    { name: 'Termes & Conditions', href: '/profil/termes', image: '/icons/security-safe.png' },
+    { name: 'Inviter des personnes', href: '/profil/inviter', image: '/icons/share.png' },
     { name: 'Déconnexion', href: '/logout', icon: LogOut, isLogout: true },
   ];
 
@@ -91,10 +90,8 @@ export default function Navigation() {
            pathname.startsWith('/takaful') || pathname.startsWith('/investir');
   };
 
-  // Extract first name from user name
   const getUserFirstName = () => {
-    if (user?.firstName) return user.firstName;
-    if (currentUser?.name) return currentUser.name.split(' ')[0];
+    if (user?.name) return user.name.split(' ')[0] || user.name;
     return 'Utilisateur';
   };
 
@@ -359,9 +356,9 @@ export default function Navigation() {
                   >
                     <div className="relative">
                       <img
-                        src="/images/Ellipse 21(1).png"
-                        alt={user?.firstName || currentUser.name}
-                        className="w-10 h-10 rounded-full border-2 border-[#5CD07D]"
+                        src={user?.profilePicture || '/images/Ellipse 21(1).png'}
+                        alt={user?.name || 'Profil'}
+                        className="w-10 h-10 rounded-full border-2 border-[#5CD07D] object-cover"
                       />
                     </div>
                     <div className="text-left hidden lg:block">
@@ -389,30 +386,8 @@ export default function Navigation() {
                         className="absolute right-0 mt-3 w-64 bg-[#1A1F1F] rounded-2xl shadow-2xl border border-[#00644D]/30 overflow-hidden z-50"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {/* Header avec avatar et infos utilisateur */}
-                        <div className="px-4 py-4 bg-gradient-to-r from-[#00644D]/20 to-[#101919] border-b border-[#00644D]/20">
-                          <div className="flex items-center space-x-3">
-                            <div className="relative">
-                              <img
-                                src="/images/Ellipse 21(1).png"
-                                alt={user?.firstName || currentUser.name}
-                                className="w-12 h-12 rounded-full border-2 border-[#5CD07D]"
-                              />
-                              <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#5CD07D] rounded-full border-2 border-[#1A1F1F]"></div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-white truncate">
-                                {user?.firstName || currentUser.name}
-                              </p>
-                              <p className="text-xs text-[#A8A9AB] truncate">
-                                {user?.email || currentUser.email}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
                         {/* Menu Items */}
-                        <div className="py-2">
+                        <div className="py-2 pt-3">
                           {profileDropdownItems.filter(item => !item.isLogout).map((item, index) => {
                             const active = isActive(item.href);
                             return (
@@ -810,9 +785,9 @@ export default function Navigation() {
 
                   <div className="flex items-center space-x-2 p-3 mb-4">
                     <img
-                      src="/images/Ellipse 21(1).png"
-                      alt={user?.firstName || currentUser.name}
-                      className="w-10 h-10 rounded-full border-2 border-[#5CD07D]"
+                      src={user?.profilePicture || '/images/Ellipse 21(1).png'}
+                      alt={user?.name || 'Profil'}
+                      className="w-10 h-10 rounded-full border-2 border-[#5CD07D] object-cover"
                     />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-white">

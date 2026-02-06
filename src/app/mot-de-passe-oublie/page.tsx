@@ -1,49 +1,122 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Mail, ArrowLeft, Shield, CheckCircle } from "lucide-react";
+import { Mail, ArrowLeft, Phone } from "lucide-react";
 import Link from "next/link";
+import { forgotPassword, resendOtp, type ForgotPasswordBody } from "@/services/auth";
+
+/** Codes pays pour le téléphone */
+const COUNTRY_CODES = [
+  { code: '+225', label: 'Côte d\'Ivoire', flag: '🇨🇮' },
+  { code: '+221', label: 'Sénégal', flag: '🇸🇳' },
+  { code: '+223', label: 'Mali', flag: '🇲🇱' },
+  { code: '+226', label: 'Burkina Faso', flag: '🇧🇫' },
+  { code: '+228', label: 'Togo', flag: '🇹🇬' },
+  { code: '+229', label: 'Bénin', flag: '🇧🇯' },
+  { code: '+33', label: 'France', flag: '🇫🇷' },
+  { code: '+32', label: 'Belgique', flag: '🇧🇪' },
+  { code: '+212', label: 'Maroc', flag: '🇲🇦' },
+  { code: '+237', label: 'Cameroun', flag: '🇨🇲' },
+  { code: '+234', label: 'Nigeria', flag: '🇳🇬' },
+];
+
+function isEmail(value: string): boolean {
+  return value.includes('@') && value.length > 3;
+}
+
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, '');
+}
 
 export default function MotDePasseOubliePage() {
-  const [email, setEmail] = useState("");
+  const [loginValue, setLoginValue] = useState("");
+  const [countryCode, setCountryCode] = useState("+225");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showSuccessContent, setShowSuccessContent] = useState(false);
+  const [sentTo, setSentTo] = useState("");
+  const [resetBody, setResetBody] = useState<ForgotPasswordBody | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!isSubmitted) return;
+    const t = setTimeout(() => setShowSuccessContent(true), 3000);
+    return () => clearTimeout(t);
+  }, [isSubmitted]);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
+
+  const isEmailMode = isEmail(loginValue);
+  const placeholder = isEmailMode ? "exemple@email.com" : "Numéro de téléphone";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email.trim()) {
-      setError("Veuillez saisir votre adresse email");
+    if (!loginValue.trim()) {
+      setError(isEmailMode ? "Veuillez saisir votre adresse email" : "Veuillez saisir votre numéro de téléphone");
       return;
     }
-
-    if (!/\S+@\S+\.\S+/.test(email)) {
+    if (isEmailMode && !/\S+@\S+\.\S+/.test(loginValue)) {
       setError("Format d'email invalide");
+      return;
+    }
+    if (!isEmailMode && digitsOnly(loginValue).length < 8) {
+      setError("Veuillez entrer un numéro de téléphone valide (8 chiffres min.).");
       return;
     }
 
     setIsLoading(true);
     setError("");
-    
-    // Simuler l'envoi d'un email de réinitialisation
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const body = isEmailMode
+        ? { email: loginValue.trim() }
+        : { phoneNumber: countryCode + digitsOnly(loginValue) };
+      const displaySent = isEmailMode ? loginValue.trim() : countryCode + digitsOnly(loginValue);
+      await forgotPassword(body);
+      setSentTo(displaySent);
+      setResetBody(body);
       setIsSubmitted(true);
-    }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue. Veuillez réessayer.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800">
+      <div
+        className="min-h-screen relative flex items-center justify-center p-4"
+        style={{
+          backgroundImage: 'url(/images/bg-s.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative z-10 flex flex-col items-center justify-center">
+          {!showSuccessContent ? (
+            <>
+              <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-6" />
+              <p className="text-white text-lg font-medium">Envoi du code en cours...</p>
+            </>
+          ) : (
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-md mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="bg-white rounded-3xl shadow-2xl p-8 text-center"
+              className="bg-[#00644D]/10 backdrop-blur-sm rounded-3xl shadow-2xl p-8 text-center border border-white/20"
             >
               <motion.div
                 initial={{ scale: 0 }}
@@ -58,25 +131,62 @@ export default function MotDePasseOubliePage() {
                 />
               </motion.div>
               
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">
-                Email envoyé !
+              <h1 className="text-2xl font-bold text-white mb-4">
+                Code envoyé !
               </h1>
               
-              <p className="text-gray-600 mb-6">
-                Nous avons envoyé un lien de réinitialisation à{" "}
-                <span className="font-medium text-gray-900">{email}</span>
+              <p className="text-white/90 mb-6">
+                Si un compte existe avec ces informations, un code OTP a été envoyé à{" "}
+                <span className="font-medium text-white">{sentTo}</span>
               </p>
               
-              <div className="bg-emerald-50 rounded-xl p-4 mb-6">
-                <p className="text-sm text-gray-700">
-                  Vérifiez votre boîte de réception et suivez les instructions 
-                  pour réinitialiser votre mot de passe.
+              <div className="bg-white/15 rounded-xl p-4 mb-4 border border-white/20">
+                <p className="text-sm text-white/90">
+                  Vérifiez votre boîte de réception ou vos SMS.{" "}
+                  <Link
+                    href={resetBody ? `/reinitialiser-mot-de-passe?${"email" in resetBody ? "email=" + encodeURIComponent(resetBody.email) : "phoneNumber=" + encodeURIComponent(resetBody.phoneNumber)}` : "/reinitialiser-mot-de-passe"}
+                    className="text-green-200 hover:text-white font-medium underline"
+                  >
+                    Réinitialiser votre mot de passe
+                  </Link>
                 </p>
               </div>
+
+              <p className="text-sm text-white/80 mb-6">
+                Si vous n&apos;avez pas reçu de code ?{" "}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!resetBody || resendLoading || resendCooldown > 0) return;
+                    setResendLoading(true);
+                    try {
+                      await resendOtp(resetBody);
+                      setResendCooldown(60);
+                    } catch {
+                      // silent or toast
+                    } finally {
+                      setResendLoading(false);
+                    }
+                  }}
+                  disabled={resendLoading || resendCooldown > 0}
+                  className="text-green-200 hover:text-white font-medium underline disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                >
+                  {resendLoading ? (
+                    <>
+                      <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Envoi...
+                    </>
+                  ) : resendCooldown > 0 ? (
+                    <>Renvoyer dans {resendCooldown}s</>
+                  ) : (
+                    "Renvoyer"
+                  )}
+                </button>
+              </p>
               
               <Link
                 href="/connexion"
-                className="inline-flex items-center text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                className="inline-flex items-center text-green-200 hover:text-white font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Retour à la connexion
@@ -84,19 +194,30 @@ export default function MotDePasseOubliePage() {
             </motion.div>
           </div>
         </div>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-50 to-green-800">
-      <div className="container mx-auto px-4 py-8">
+    <div
+      className="min-h-screen relative flex items-center justify-center p-4"
+      style={{
+        backgroundImage: 'url(/images/bg-s.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      <div className="absolute inset-0 bg-black/60" />
+      <div className="container mx-auto px-4 py-8 relative z-10 w-full">
         <div className="max-w-md mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="bg-white rounded-3xl shadow-2xl p-8"
+            className="bg-[#00644D]/10 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20"
           >
             <div className="text-center mb-8">
               <motion.div
@@ -111,11 +232,11 @@ export default function MotDePasseOubliePage() {
                   className="w-full h-full object-contain"
                 />
               </motion.div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-white mb-2">
                 Mot de passe oublié ?
               </h1>
-              <p className="text-gray-600">
-                Entrez votre adresse email pour recevoir un lien de réinitialisation
+              <p className="text-white/90">
+                Entrez votre email ou numéro de téléphone pour recevoir un code OTP
               </p>
             </div>
 
@@ -125,24 +246,45 @@ export default function MotDePasseOubliePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Adresse email
+                <label className="block text-sm font-medium text-white/90 mb-2">
+                  Email ou numéro de téléphone
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 ${
-                      error ? "border-red-500" : "border-gray-300"
-                    }`}
-                    placeholder="votre@email.com"
-                    required
-                  />
+                <div className="flex gap-2">
+                  {!isEmailMode && (
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="pl-3 pr-8 py-3 bg-white/90 border border-white/30 rounded-xl focus:ring-2 focus:ring-[#00C48C] focus:border-transparent text-gray-900 appearance-none cursor-pointer min-w-[120px]"
+                      aria-label="Code pays"
+                    >
+                      {COUNTRY_CODES.map(({ code, label, flag }) => (
+                        <option key={code} value={code}>
+                          {flag} {code}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <div className="relative flex-1">
+                    {isEmailMode ? (
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                    ) : (
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                    )}
+                    <input
+                      type={isEmailMode ? "email" : "tel"}
+                      inputMode={isEmailMode ? "email" : "numeric"}
+                      value={loginValue}
+                      onChange={(e) => setLoginValue(e.target.value)}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#00C48C] focus:border-transparent transition-all duration-200 bg-white/90 text-gray-900 placeholder-gray-500 ${
+                        error ? "border-red-400" : "border-white/30"
+                      }`}
+                      placeholder={placeholder}
+                      required
+                    />
+                  </div>
                 </div>
                 {error && (
-                  <p className="text-red-500 text-sm mt-1">{error}</p>
+                  <p className="text-red-200 text-sm mt-1">{error}</p>
                 )}
               </motion.div>
 
@@ -152,7 +294,7 @@ export default function MotDePasseOubliePage() {
                 transition={{ delay: 0.4 }}
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 px-6 rounded-xl font-medium hover:from-emerald-600 hover:to-teal-600 focus:ring-4 focus:ring-emerald-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white py-3 px-6 rounded-xl font-medium hover:opacity-90 focus:ring-4 focus:ring-white/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {isLoading ? (
                   <motion.div
@@ -161,7 +303,7 @@ export default function MotDePasseOubliePage() {
                     className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                   />
                 ) : (
-                  "Envoyer le lien de réinitialisation"
+                  "Envoyer le code OTP"
                 )}
               </motion.button>
             </form>
@@ -174,7 +316,7 @@ export default function MotDePasseOubliePage() {
             >
               <Link
                 href="/connexion"
-                className="inline-flex items-center text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                className="inline-flex items-center text-green-200 hover:text-white font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Retour à la connexion

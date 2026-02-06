@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronRight, ChevronLeft, Smartphone, Building2, CreditCard, User, Check, CheckCircle } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Smartphone, Building2, CreditCard, User, Check, CheckCircle, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { initiatePayment, checkPaymentStatus, confirmTopUp } from '@/services/payments';
 
 interface MakeDepositModalProps {
   isOpen: boolean;
@@ -13,7 +14,15 @@ interface MakeDepositModalProps {
 }
 
 type PaymentMethod = 'mobile-money' | 'bank-transfer' | 'card-wallet' | null;
-type Operator = 'orange' | 'wave' | 'moov' | null;
+type Operator = 'orange' | 'wave' | 'mtn' | 'moov' | null;
+
+/** serviceCode envoyé à l'API pour chaque opérateur mobile money */
+const OPERATOR_SERVICE_CODE: Record<Exclude<Operator, null>, string> = {
+  orange: 'om',
+  wave: 'wave',
+  mtn: 'mtn',
+  moov: 'moov',
+};
 
 const STEPS = [
   { id: 1, label: "Informations de base", icon: "/icons/image 33(1).png" },
@@ -23,8 +32,11 @@ const STEPS = [
   { id: 5, label: "Confirmation", icon: null },
 ];
 
+const POLL_INTERVAL_MS = 2000;
+const POLL_TIMEOUT_MS = 120000; // 2 min
+
 export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalProps) {
-  const { user } = useAuth();
+  const { user, accessToken, refreshUser } = useAuth();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(null);
@@ -34,16 +46,33 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
   const [useMyNumber, setUseMyNumber] = useState(false);
   const [payFees, setPayFees] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
+  /** OTP requis uniquement pour Orange (serviceCode "om") */
+  const [otp, setOtp] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [unavailableToast, setUnavailableToast] = useState<string | null>(null);
+  /** Après initiation sans payment_url : on poll le statut toutes les 2s pendant 2 min */
+  const [waitingForPayment, setWaitingForPayment] = useState(false);
+  const [pendingTransactionNumber, setPendingTransactionNumber] = useState<string | null>(null);
+  const [pendingAmount, setPendingAmount] = useState<number>(0);
+  /** Modal Wave : iframe avec l’URL de paiement (ouvert pour Wave uniquement) */
+  const [wavePaymentModalOpen, setWavePaymentModalOpen] = useState(false);
+  const [wavePaymentUrl, setWavePaymentUrl] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingStartRef = useRef<number>(0);
+  const pendingTxnRef = useRef<string | null>(null);
+  const pendingAmountRef = useRef<number>(0);
+  const accessTokenRef = useRef<string | null>(null);
   
-  // Numéro par défaut de l'utilisateur
-  const userPhoneNumber = user?.phone || '+225 01 23 45 67 89';
+  const userPhoneNumber = user?.phoneNumber || '+225 01 23 45 67 89';
   
   // Montants prédéfinis
   const defaultAmounts = [10000, 50000, 100000];
   
-  // Calcul des frais (1%)
-  const transactionFee = amount ? Math.round(parseFloat(amount) * 0.01) : 0;
-  const totalAmount = amount ? (payFees ? parseFloat(amount) + transactionFee : parseFloat(amount)) : 0;
+  // Montant et frais en entiers (pas de décimales)
+  const baseAmount = amount ? Math.round(parseFloat(amount)) : 0;
+  const transactionFee = amount ? Math.round(baseAmount * 0.02) : 0;
+  const totalAmount = payFees ? baseAmount + transactionFee : baseAmount;
 
   // Empêcher le scroll du body quand le modal est ouvert
   useEffect(() => {
@@ -68,6 +97,18 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
       setUseMyNumber(false);
       setPayFees(true);
       setIsSuccess(false);
+      setOtp('');
+      setPaymentError(null);
+      setUnavailableToast(null);
+      setWaitingForPayment(false);
+      setPendingTransactionNumber(null);
+      setPendingAmount(0);
+      setWavePaymentModalOpen(false);
+      setWavePaymentUrl(null);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
     }
   }, [isOpen]);
 
@@ -77,6 +118,89 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
       setDepositNumber(userPhoneNumber.replace(/\s/g, '').replace('+225', ''));
     }
   }, [useMyNumber, userPhoneNumber]);
+
+  // Masquer le toast "Service indisponible" après 3 s
+  useEffect(() => {
+    if (!unavailableToast) return;
+    const t = setTimeout(() => setUnavailableToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [unavailableToast]);
+
+  // Polling du statut de paiement toutes les 2s pendant 2 min (quand pas de redirection payment_url)
+  useEffect(() => {
+    if (!waitingForPayment || !pendingTransactionNumber || !accessToken) return;
+    pendingTxnRef.current = pendingTransactionNumber;
+    pendingAmountRef.current = pendingAmount;
+    accessTokenRef.current = accessToken;
+    pollingStartRef.current = Date.now();
+
+    const tick = async () => {
+      const txn = pendingTxnRef.current;
+      const amt = pendingAmountRef.current;
+      const token = accessTokenRef.current;
+      if (!txn || !token) return;
+      if (Date.now() - pollingStartRef.current >= POLL_TIMEOUT_MS) {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setWavePaymentModalOpen(false);
+        setWavePaymentUrl(null);
+        setPaymentError('Paiement échoué');
+        setWaitingForPayment(false);
+        setPendingTransactionNumber(null);
+        setPendingAmount(0);
+        return;
+      }
+      try {
+        const statusRes = await checkPaymentStatus({ transactionNumber: txn }, token);
+        const amane = statusRes.data?.amane;
+        const status = (amane?.data as { status?: string } | undefined)?.status ?? (amane as { status?: string } | undefined)?.status;
+        if (status === 'SUCCEED' || status === 'SUCCESS' || status === 'SUCCESSFUL') {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          setWavePaymentModalOpen(false);
+          setWavePaymentUrl(null);
+          await confirmTopUp({ transactionNumber: txn, amount: amt }, token);
+          await refreshUser();
+          setWaitingForPayment(false);
+          setPendingTransactionNumber(null);
+          setPendingAmount(0);
+          setIsSuccess(true);
+          setTimeout(() => {
+            onClose();
+            router.push('/');
+          }, 1500);
+          return;
+        }
+        if (status === 'FAILED') {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          setWavePaymentModalOpen(false);
+          setWavePaymentUrl(null);
+          setPaymentError('Paiement échoué');
+          setWaitingForPayment(false);
+          setPendingTransactionNumber(null);
+          setPendingAmount(0);
+        }
+      } catch {
+        // PENDING ou erreur réseau : on continue à poller
+      }
+    };
+
+    tick(); // premier check immédiat
+    pollingIntervalRef.current = setInterval(tick, POLL_INTERVAL_MS);
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [waitingForPayment, pendingTransactionNumber, pendingAmount, accessToken, refreshUser, onClose, router]);
 
   const handlePaymentMethodSelect = (method: PaymentMethod) => {
     setSelectedPaymentMethod(method);
@@ -90,8 +214,12 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
 
   const handleOperatorSelect = (operator: Operator) => {
     setSelectedOperator(operator);
+    if (operator !== 'orange') setOtp('');
     setTimeout(() => setCurrentStep(3), 300);
   };
+
+  /** serviceCode pour l’API (om, wave, mtn, moov) */
+  const serviceCode = selectedOperator ? OPERATOR_SERVICE_CODE[selectedOperator] : null;
 
   const handleNext = () => {
     if (currentStep < STEPS.length) {
@@ -105,24 +233,78 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
     }
   };
 
-  const handleSubmit = () => {
-    // Logique de soumission
-    console.log('Dépôt:', {
-      paymentMethod: selectedPaymentMethod,
-      operator: selectedOperator,
-      depositNumber,
-      amount,
-    });
-    // Afficher l'écran de succès
+  const handleSubmit = async () => {
+    setPaymentError(null);
+
+    // Mobile money : appeler l'API de paiement direct
+    if (selectedPaymentMethod === 'mobile-money' && serviceCode && depositNumber.trim() && baseAmount > 0) {
+      if (!accessToken) {
+        setPaymentError('Vous devez être connecté pour effectuer un dépôt.');
+        return;
+      }
+      const phoneNumber = depositNumber.trim().startsWith('0') ? depositNumber.trim() : `0${depositNumber.trim()}`;
+      const amountNum = baseAmount;
+      setPaymentLoading(true);
+      try {
+        const res = await initiatePayment(
+          {
+            amount: amountNum,
+            serviceCode,
+            phoneNumber,
+            otp: serviceCode === 'om' ? otp : '',
+          },
+          accessToken
+        );
+        const paymentUrl = res?.data?.data?.data?.payment_url;
+        if (paymentUrl) {
+          setWavePaymentUrl(paymentUrl);
+          setWavePaymentModalOpen(true);
+          pendingTxnRef.current = res.data.transactionNumber;
+          pendingAmountRef.current = amountNum;
+          setPendingTransactionNumber(res.data.transactionNumber);
+          setPendingAmount(amountNum);
+          setWaitingForPayment(true);
+          return;
+        }
+        pendingTxnRef.current = res.data.transactionNumber;
+        pendingAmountRef.current = amountNum;
+        setPendingTransactionNumber(res.data.transactionNumber);
+        setPendingAmount(amountNum);
+        setWaitingForPayment(true);
+      } catch (err) {
+        const rawMessage = err instanceof Error ? err.message : 'Erreur lors de l\'initiation du paiement.';
+        const isDirectPaymentCatch =
+          rawMessage.includes('Direct payment initiated with catch error') ||
+          rawMessage.includes('"statusCode":400');
+        setPaymentError(isDirectPaymentCatch ? 'Paiement echoué, verifier votre solde' : rawMessage);
+      } finally {
+        setPaymentLoading(false);
+      }
+      return;
+    }
+
+    // Autres modes (virement, carte) : non connectés à l'API pour l'instant
     setIsSuccess(true);
   };
 
   const handleViewHistory = () => {
-    // Rediriger vers l'historique des transactions
-    // Pour l'instant, on ferme juste le modal
     onClose();
-    // TODO: Rediriger vers la page d'historique
     router.push('/transactions');
+  };
+
+  const showUnavailableToast = () => setUnavailableToast('Service indisponible');
+
+  const handleCloseWaveModal = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    setWavePaymentModalOpen(false);
+    setWavePaymentUrl(null);
+    setWaitingForPayment(false);
+    setPendingTransactionNumber(null);
+    setPendingAmount(0);
+    setPaymentError('Paiement annulé');
   };
 
   const renderStepContent = () => {
@@ -135,6 +317,12 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
               <h3 className="text-white text-lg mb-2">Mode de paiement</h3>
               <p className="text-white/60 text-sm">Veuillez sélectionner un mode de paiement.</p>
             </div>
+
+            {unavailableToast && (
+              <div className="bg-amber-500/20 border border-amber-500/50 text-amber-200 text-sm text-center rounded-xl px-4 py-3">
+                {unavailableToast}
+              </div>
+            )}
             
             <div className="space-y-3 bg-[#101919] rounded-xl p-4">
               {/* Mobile Money */}
@@ -146,7 +334,6 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
               >
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 rounded-full bg-[#0F1F1F] flex items-center justify-center">
-                    {/* <Smartphone className="text-[#5AB678]" size={24} /> */}
                     <Image src="/icons/mobile-coin(1).png" alt="Mobile money" width={24} height={24} />
                   </div>
                   <span className="text-white font-medium">Mobile money</span>
@@ -154,39 +341,35 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
                 <ChevronRight className="text-[#5AB678]" size={20} />
               </motion.button>
 
-              {/* Virement bancaire */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handlePaymentMethodSelect('bank-transfer')}
-                className="w-full bg-[#101919] hover:bg-[#101919]/80 rounded-xl p-4 flex items-center justify-between transition-colors border border-transparent hover:border-[#5AB678]/30"
+              {/* Virement bancaire - désactivé */}
+              <button
+                type="button"
+                onClick={showUnavailableToast}
+                className="w-full bg-[#101919]/60 rounded-xl p-4 flex items-center justify-between border border-white/10 opacity-60 cursor-not-allowed"
               >
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-full bg-[#0F1F1F] flex items-center justify-center">
-                    {/* <Building2 className="text-[#5AB678]" size={24} /> */}
-                    <Image src="/icons/bank.png" alt="Virement bancaire" width={24} height={24} />
+                  <div className="w-12 h-12 rounded-full bg-[#0F1F1F] flex items-center justify-center opacity-80">
+                    <Image src="/icons/bank.png" alt="Virement bancaire" width={24} height={24} className="opacity-70" />
                   </div>
-                  <span className="text-white font-medium">Virement bancaire</span>
+                  <span className="text-white/70 font-medium">Virement bancaire</span>
                 </div>
-                <ChevronRight className="text-[#5AB678]" size={20} />
-              </motion.button>
+                <ChevronRight className="text-white/40" size={20} />
+              </button>
 
-              {/* Carte de débit ou wallet */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handlePaymentMethodSelect('card-wallet')}
-                className="w-full bg-[#101919] hover:bg-[#101919]/80 rounded-xl p-4 flex items-center justify-between transition-colors border border-transparent hover:border-[#5AB678]/30"
+              {/* Carte de débit ou wallet - désactivé */}
+              <button
+                type="button"
+                onClick={showUnavailableToast}
+                className="w-full bg-[#101919]/60 rounded-xl p-4 flex items-center justify-between border border-white/10 opacity-60 cursor-not-allowed"
               >
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-full bg-[#0F1F1F] flex items-center justify-center">
-                    {/* <CreditCard className="text-[#5AB678]" size={24} /> */}
-                    <Image src="/icons/credit-card-g.png" alt="Carte de débit ou wallet" width={24} height={24} />
+                  <div className="w-12 h-12 rounded-full bg-[#0F1F1F] flex items-center justify-center opacity-80">
+                    <Image src="/icons/credit-card-g.png" alt="Carte de débit ou wallet" width={24} height={24} className="opacity-70" />
                   </div>
-                  <span className="text-white font-medium">Carte de débit ou wallet</span>
+                  <span className="text-white/70 font-medium">Carte de débit ou wallet</span>
                 </div>
-                <ChevronRight className="text-[#5AB678]" size={20} />
-              </motion.button>
+                <ChevronRight className="text-white/40" size={20} />
+              </button>
             </div>
           </div>
         );
@@ -251,6 +434,8 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
           ? { name: 'Orange', icon: '/icons/image 33(1).png' }
           : selectedOperator === 'wave'
           ? { name: 'Wave', icon: '/icons/image 34.png' }
+          : selectedOperator === 'mtn'
+          ? { name: 'MTN', icon: '/icons/image 35(1).png' }
           : selectedOperator === 'moov'
           ? { name: 'Moov', icon: '/icons/image 36.png' }
           : { name: '', icon: '' };
@@ -336,6 +521,28 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
               </div>
             </div>
 
+            {/* Champ OTP pour Orange uniquement */}
+            {selectedOperator === 'orange' && (
+              <div>
+                <label className="block text-white/60 text-sm mb-2">
+                  Composer le #144*82# pour générer le code de paiement
+                </label>
+                <div className="relative">
+                  <div className="flex items-center bg-[#101919] border border-white/10 rounded-xl p-4 focus-within:border-[#5AB678] transition-colors">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                      placeholder="Code OTP"
+                      className="flex-1 bg-transparent text-white placeholder-white/40 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Boutons de navigation */}
             <div className="flex space-x-3 pt-4">
               <motion.button
@@ -351,7 +558,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleNext}
-                disabled={!depositNumber.trim()}
+                disabled={!depositNumber.trim() || (selectedOperator === 'orange' && !otp.trim())}
                 className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base"
               >
                 <span>Suivant</span>
@@ -367,6 +574,8 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
           ? { name: 'Orange', icon: '/icons/image 33(1).png' }
           : selectedOperator === 'wave'
           ? { name: 'Wave', icon: '/icons/image 34.png' }
+          : selectedOperator === 'mtn'
+          ? { name: 'MTN', icon: '/icons/image 35(1).png' }
           : selectedOperator === 'moov'
           ? { name: 'Moov', icon: '/icons/image 36.png' }
           : { name: '', icon: '' };
@@ -402,7 +611,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
               <div className="mb-4 relative">
                 <div className="text-white text-2xl md:text-4xl font-bold min-h-[48px] flex items-center justify-center mb-2">
                   {amount ? (
-                    <span>{parseFloat(amount).toLocaleString('fr-FR')} F CFA</span>
+                    <span>{baseAmount.toLocaleString('fr-FR')} F CFA</span>
                   ) : (
                     <span className="text-white/40">0 F CFA</span>
                   )}
@@ -446,7 +655,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
             {/* Résumé de la transaction */}
             <div className="bg-[#101919] rounded-xl p-4 md:p-6 mx-4 md:mx-12">
               <div className="flex justify-between items-center">
-                <span className="text-white/60">Frais d'opération (1%):</span>
+                <span className="text-white/60">Frais d'opération (2 %) :</span>
                 <span className="text-white font-semibold">
                   {transactionFee > 0 ? `${transactionFee.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
                 </span>
@@ -493,7 +702,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleNext}
-                disabled={!amount || parseFloat(amount) <= 0}
+                disabled={!amount || baseAmount <= 0}
                 className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base"
               >
                 <span>Suivant</span>
@@ -568,10 +777,10 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
               </div>
               <div className="flex justify-between">
                 <span className="text-white/60">Montant:</span>
-                <span className="text-white font-medium">{parseFloat(amount).toLocaleString('fr-FR')} F CFA</span>
+                <span className="text-white font-medium">{baseAmount.toLocaleString('fr-FR')} F CFA</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/60">Frais d'opération (1%):</span>
+                <span className="text-white/60">Frais d'opération (2 %) :</span>
                 <span className="text-white font-semibold">
                   {transactionFee > 0 ? `${transactionFee.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
                 </span>
@@ -586,26 +795,42 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleBack}
-                className="flex-1 bg-[#101919] text-white rounded-xl p-3 md:p-4 font-semibold hover:bg-[#1a2a2a]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2 text-sm md:text-base"
-              >
-                <ChevronLeft size={18} className="md:w-5 md:h-5" />
-                <span>Précédent</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleSubmit}
-                className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base"
-              >
-                <span>Confirmer</span>
-                <ChevronRight size={18} className="md:w-5 md:h-5" />
-              </motion.button>
-            </div>
+            {paymentError && (
+              <p className="text-red-400 text-sm text-center bg-red-400/10 rounded-xl p-3">
+                {paymentError}
+              </p>
+            )}
+
+            {waitingForPayment ? (
+              <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                <Loader2 className="text-[#5AB678] w-10 h-10 animate-spin" />
+                <p className="text-white text-center">En attente de la confirmation du paiement...</p>
+                <p className="text-white/60 text-sm text-center">Vous avez 2min pour confirmer le paiement</p>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleBack}
+                  disabled={paymentLoading}
+                  className="flex-1 bg-[#101919] text-white rounded-xl p-3 md:p-4 font-semibold hover:bg-[#1a2a2a]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={18} className="md:w-5 md:h-5" />
+                  <span>Précédent</span>
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSubmit}
+                  disabled={paymentLoading}
+                  className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>{paymentLoading ? 'En cours...' : 'Confirmer'}</span>
+                  {!paymentLoading && <ChevronRight size={18} className="md:w-5 md:h-5" />}
+                </motion.button>
+              </div>
+            )}
           </div>
         );
 
@@ -795,6 +1020,38 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
               </div>
             </motion.div>
           </motion.div>
+
+          {/* Modal Wave : iframe de paiement (au-dessus du modal de dépôt) */}
+          <AnimatePresence>
+            {wavePaymentModalOpen && wavePaymentUrl && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[60] flex flex-col bg-[#0A1515]"
+              >
+                <div className="flex items-center justify-between shrink-0 px-4 py-3 bg-[#101919] border-b border-white/10">
+                  <h3 className="text-white font-semibold">Finalisez votre paiement Wave</h3>
+                  <button
+                    type="button"
+                    onClick={handleCloseWaveModal}
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                    aria-label="Fermer"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 w-full">
+                  <iframe
+                    src={wavePaymentUrl}
+                    title="Paiement Wave"
+                    className="w-full h-full border-0"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>

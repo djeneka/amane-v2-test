@@ -18,7 +18,7 @@ interface ServiceCard {
 
 const services: ServiceCard[] = [
   {
-    href: '/don',
+    href: '/campagnes',
     image: '/images/Image(5).png',
     alt: 'Dons',
     label: 'Dons',

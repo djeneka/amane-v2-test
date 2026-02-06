@@ -56,14 +56,14 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
               src={campaign.video}
               className="w-full h-full object-cover"
               controls
-              poster={campaign.image}
+              poster={campaign.image || '/images/no-picture.png'}
             />
             <div className="absolute inset-0 bg-black/20" />
           </div>
         ) : (
           <div className="relative w-full h-full">
             <img
-              src={campaign.image}
+              src={campaign.image || '/images/no-picture.png'}
               alt={campaign.title}
               className="w-full h-full object-cover"
             />

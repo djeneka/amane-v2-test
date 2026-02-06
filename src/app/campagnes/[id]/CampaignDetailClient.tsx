@@ -132,7 +132,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 />
               ) : (
                 <img
-                  src={campaign.images?.[selectedImage] || campaign.image}
+                  src={campaign.images?.[selectedImage] || campaign.image || '/images/no-picture.png'}
                   alt={campaign.title}
                   className="w-full h-full object-cover"
                 />

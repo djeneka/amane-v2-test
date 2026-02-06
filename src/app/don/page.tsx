@@ -275,7 +275,7 @@ export default function DonPage() {
                         >
                           <div className="flex items-center space-x-4">
                             <img
-                              src={campaign.image}
+                              src={campaign.image || '/images/no-picture.png'}
                               alt={campaign.title}
                               className="w-16 h-16 object-cover rounded-xl"
                             />

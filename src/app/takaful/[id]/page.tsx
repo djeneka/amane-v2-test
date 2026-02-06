@@ -11,7 +11,7 @@ import { useParams } from 'next/navigation';
 import MakeDonationModal from '@/components/MakeDonationModal';
 import { getTakafulPlanById, type TakafulPlan } from '@/services/takaful-plans';
 
-const DEFAULT_TAKAFUL_IMAGE = '/images/no-image.png';
+const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
 
 function getDisplayCategory(plan: TakafulPlan): string {
   const c = plan.categories || [];

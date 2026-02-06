@@ -101,17 +101,12 @@ export default function InvestirPage() {
     }));
   };
 
-  // Fonction pour obtenir l'image actuelle (fallback catégories si pas d'image API)
-  const getCurrentImage = (productId: string, category: string) => {
-    const images = categoryImages[category as keyof typeof categoryImages] || [];
-    const currentIndex = currentImageIndex[productId] || 0;
-    return images[currentIndex] || 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
-  };
+  const DEFAULT_PRODUCT_IMAGE = '/images/no-picture.png';
 
   const getProductImage = (product: InvestmentProductDisplay) =>
-    product.picture || getCurrentImage(product.id, product.category);
+    product.picture || DEFAULT_PRODUCT_IMAGE;
 
-  const hasMultipleImages = (product: InvestmentProductDisplay) => !product.picture;
+  const hasMultipleImages = (_product: InvestmentProductDisplay) => false;
 
   /** Filtres : "Toutes" + catégories API des investissements, dédupliquées et ordonnées */
   const categories = useMemo(() => {
@@ -673,7 +668,7 @@ export default function InvestirPage() {
                               transition={{ duration: 0.5, ease: "easeInOut" }}
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                                target.src = DEFAULT_PRODUCT_IMAGE;
                               }}
                             />
                           </AnimatePresence>
@@ -818,7 +813,7 @@ export default function InvestirPage() {
                                 transition={{ duration: 0.5, ease: "easeInOut" }}
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
-                                  target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                                  target.src = DEFAULT_PRODUCT_IMAGE;
                                 }}
                               />
                             </AnimatePresence>

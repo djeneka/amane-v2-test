@@ -670,7 +670,7 @@ export default function TransactionsPage() {
                   <div className="bg-[#101919] rounded-2xl overflow-hidden shadow-lg">
                     <div className="relative">
                       <img
-                        src={campaign.image}
+                        src={campaign.image || '/images/no-picture.png'}
                         alt={campaign.title}
                         className="w-full h-48 object-cover"
                       />

@@ -492,7 +492,7 @@ export default function CampagnesPage() {
                     <div className="bg-[#101919] rounded-2xl overflow-hidden shadow-lg">
                       <div className="relative">
                         <img
-                          src={campaign.image}
+                          src={campaign.image || '/images/no-picture.png'}
                           alt={campaign.title}
                           className="w-full h-48 object-cover"
                         />
@@ -583,7 +583,7 @@ export default function CampagnesPage() {
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                         <div className="relative w-full sm:w-32 h-48 sm:h-32 flex-shrink-0">
                           <img
-                            src={campaign.image}
+                            src={campaign.image || '/images/no-picture.png'}
                             alt={campaign.title}
                             className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
                           />

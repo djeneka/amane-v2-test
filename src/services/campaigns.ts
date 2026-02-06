@@ -29,7 +29,7 @@ const API_CATEGORY_TO_FRONT: Record<string, Campaign['category']> = {
   REFUGIES: 'refugies',
 };
 
-const DEFAULT_CAMPAIGN_IMAGE = '/images/no-image.png';
+const DEFAULT_CAMPAIGN_IMAGE = '/images/no-picture.png';
 
 function mapApiCampaignToCampaign(api: ApiCampaign): Campaign {
   const category =

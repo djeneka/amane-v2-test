@@ -65,9 +65,10 @@ export default function InvestirDetailPage() {
     ]
   };
 
+  const DEFAULT_PRODUCT_IMAGE = '/images/no-picture.png';
   const images = product?.picture
     ? [product.picture]
-    : (product ? (categoryImages[product.category as keyof typeof categoryImages] || []) : []);
+    : (product ? [DEFAULT_PRODUCT_IMAGE] : []);
 
   // Effet pour le défilement automatique du carrousel
   useEffect(() => {
@@ -222,7 +223,7 @@ export default function InvestirDetailPage() {
                 <AnimatePresence mode="wait">
                   <motion.img
                     key={currentImageIndex}
-                    src={images[currentImageIndex] || 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop'}
+                    src={images[currentImageIndex] || DEFAULT_PRODUCT_IMAGE}
                     alt={`${product.name} - Image ${currentImageIndex + 1}`}
                     className="w-full h-full object-cover absolute inset-0"
                     initial={{ x: 300, opacity: 0 }}
@@ -231,7 +232,7 @@ export default function InvestirDetailPage() {
                     transition={{ duration: 0.5, ease: "easeInOut" }}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                      target.src = DEFAULT_PRODUCT_IMAGE;
                     }}
                   />
                 </AnimatePresence>

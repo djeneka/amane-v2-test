@@ -8,28 +8,21 @@ export default function Footer() {
   const footerLinks = {
     services: [
       { name: 'Zakat', href: '/zakat' },
-      { name: 'Dons', href: '/don' },
-      { name: 'Campagnes', href: '/campagnes' },
-      { name: 'Points & Récompenses', href: '/points' },
+      { name: 'Dons', href: '/campagnes' },
+      { name: 'Takaful', href: '/takaful' },
+      { name: 'Investissement', href: '/investir' },
     ],
     produits: [
       { name: 'Takaful', href: '/takaful' },
       { name: 'Investissements', href: '/investir' },
-      { name: 'Épargne', href: '/epargne' },
-      { name: 'Portefeuille', href: '/portefeuille' },
     ],
-    entreprise: [
-      { name: 'À propos', href: '/about' },
-      { name: 'Contact', href: '/contact' },
-      { name: 'Carrières', href: '/careers' },
-      { name: 'Presse', href: '/press' },
-    ],
-    aide: [
-      { name: 'Centre d\'aide', href: '/help' },
+    aides: [
+      { name: 'Centre d\'aide', href: '/aide' },
       { name: 'FAQ', href: '/faq' },
-      { name: 'Support', href: '/support' },
-      { name: 'Confidentialité', href: '/privacy' },
-    ],
+      { name: 'Support', href: '/contact' },
+      { name: 'Confidentialité', href: '/confidentialite' },
+      { name: 'Termes et conditions', href: '/termes-conditions' },
+    ]
   };
 
   const socialLinks = [
@@ -135,9 +128,9 @@ export default function Footer() {
             transition={{ duration: 0.6, delay: 0.3 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-lg font-semibold mb-4">Entreprise</h3>
+            <h3 className="text-lg font-semibold mb-4">Aide</h3>
             <ul className="space-y-2">
-              {footerLinks.entreprise.map((link) => (
+              {footerLinks.aides.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}

@@ -6,13 +6,27 @@ import Image from 'next/image';
 import { 
   Edit, Lock, Trash2, User, Mail, Phone, X, Save, CheckCircle, Eye, EyeOff, ArrowRight, AlertTriangle
 } from 'lucide-react';
-import { currentUser } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { updateUser } from '@/services/user';
+import { uploadProfileImage, dataUrlToFile } from '@/lib/upload';
+import { changePassword } from '@/services/auth';
+
+const defaultUserData = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+};
 
 export default function ProfilPage() {
+  const { user, logout, refreshUser, accessToken } = useAuth();
+  const router = useRouter();
+  const [userLoading, setUserLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [avatar, setAvatar] = useState(currentUser.avatar);
+  const [avatar, setAvatar] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -35,15 +49,45 @@ export default function ProfilPage() {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showAccountDeletedModal, setShowAccountDeletedModal] = useState(false);
-  const [userData, setUserData] = useState({
-    firstName: currentUser.name.split(' ')[0] || 'Mariam',
-    lastName: currentUser.name.split(' ').slice(1).join(' ') || 'Cissé',
-    email: currentUser.email,
-    phone: '+225 01 23 45 67 89',
-  });
-  const [originalData, setOriginalData] = useState(userData);
-  const { logout } = useAuth();
-  const router = useRouter();
+  const [userData, setUserData] = useState(defaultUserData);
+  const [originalData, setOriginalData] = useState(defaultUserData);
+  const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+
+  // Charger les infos à jour via le service user (GET /api/users/me)
+  useEffect(() => {
+    if (!user) {
+      setUserLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setUserLoading(true);
+    refreshUser()
+      .then(() => {
+        if (!cancelled) setUserLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setUserLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Afficher les infos du user connecté (source: service user / API)
+  useEffect(() => {
+    if (!user) return;
+    const parts = (user.name || '').trim().split(/\s+/);
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
+    const data = {
+      firstName,
+      lastName,
+      email: user.email || '',
+      phone: user.phoneNumber || '',
+    };
+    setUserData(data);
+    setOriginalData(data);
+    setAvatar(user.profilePicture || '');
+  }, [user]);
 
   const handleEditPhoto = () => {
     const input = document.createElement('input');
@@ -89,31 +133,32 @@ export default function ProfilPage() {
     setResendTimer(59);
     setCanResend(false);
     setShowSuccessScreen(false);
+    setChangePasswordError(null);
+    setChangePasswordLoading(false);
   };
 
-  const handleNextStep = () => {
-    if (currentStep === 1) {
-      // Validation des champs de mot de passe
-      if (!passwordData.current || !passwordData.new || !passwordData.confirm) {
-        return;
-      }
-      if (passwordData.new !== passwordData.confirm) {
-        return;
-      }
+  const handleNextStep = async () => {
+    if (currentStep !== 1 || !accessToken) return;
+    if (!passwordData.current || !passwordData.new || !passwordData.confirm) return;
+    if (passwordData.new !== passwordData.confirm) return;
+
+    setChangePasswordError(null);
+    setChangePasswordLoading(true);
+    try {
+      await changePassword(
+        {
+          oldPassword: passwordData.current,
+          newPassword: passwordData.new,
+          confirmPassword: passwordData.confirm,
+        },
+        accessToken
+      );
       setCurrentStep(2);
-      setResendTimer(59);
-      setCanResend(false);
-      // Démarrer le timer
-      const interval = setInterval(() => {
-        setResendTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            setCanResend(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      setShowSuccessScreen(true);
+    } catch (err) {
+      setChangePasswordError(err instanceof Error ? err.message : 'Une erreur est survenue');
+    } finally {
+      setChangePasswordLoading(false);
     }
   };
 
@@ -182,52 +227,54 @@ export default function ProfilPage() {
   };
 
   const handleEdit = () => {
+    setSaveError(null);
     setOriginalData(userData);
     setIsEditing(true);
   };
 
   const handleSave = async () => {
+    if (!user || !accessToken) return;
+    setSaveError(null);
+    setSaving(true);
     try {
-      // Sauvegarder dans localStorage (équivalent web d'AsyncStorage)
-      const dataToSave = {
-        ...userData,
-        avatar,
+      let profilePictureUrl = avatar;
+      if (avatar.startsWith('data:')) {
+        const file = dataUrlToFile(avatar, 'avatar.jpg');
+        profilePictureUrl = await uploadProfileImage(file);
+      }
+      const payload = {
+        name: `${userData.firstName} ${userData.lastName}`.trim() || user.name,
+        email: userData.email || user.email,
+        phoneNumber: userData.phone || user.phoneNumber || '',
+        profilePicture: profilePictureUrl || user.profilePicture || '',
       };
-      localStorage.setItem('userProfile', JSON.stringify(dataToSave));
-      
+      await updateUser(user.id, payload, accessToken);
+      await refreshUser();
+      setAvatar(profilePictureUrl);
       setIsEditing(false);
       setShowToast(true);
-      
-      // Masquer le toast après 3 secondes
-      setTimeout(() => {
-        setShowToast(false);
-      }, 3000);
+      setTimeout(() => setShowToast(false), 3000);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
+      setSaveError(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleCancel = () => {
+    setSaveError(null);
     setUserData(originalData);
     setIsEditing(false);
   };
 
-  // Charger les données sauvegardées au montage
-  useEffect(() => {
-    const savedData = localStorage.getItem('userProfile');
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        if (parsed.firstName) setUserData(prev => ({ ...prev, firstName: parsed.firstName }));
-        if (parsed.lastName) setUserData(prev => ({ ...prev, lastName: parsed.lastName }));
-        if (parsed.email) setUserData(prev => ({ ...prev, email: parsed.email }));
-        if (parsed.phone) setUserData(prev => ({ ...prev, phone: parsed.phone }));
-        if (parsed.avatar) setAvatar(parsed.avatar);
-      } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-      }
-    }
-  }, []);
+  if (userLoading && user) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#00644D] border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -236,8 +283,8 @@ export default function ProfilPage() {
               <div className="flex items-start space-x-4 sm:space-x-6 mb-6 flex-wrap sm:flex-nowrap">
                 <div className="relative flex-shrink-0">
                   <img
-                    src={avatar}
-                    alt={currentUser.name}
+                    src={avatar || '/images/no-image.png'}
+                    alt={user?.name || 'Profil'}
                     className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-[#00644D]"
                   />
                   <button 
@@ -328,6 +375,13 @@ export default function ProfilPage() {
               </div>
             </div>
 
+              {saveError && (
+                <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-200 text-sm">
+                  <AlertTriangle size={18} className="flex-shrink-0" />
+                  <span>{saveError}</span>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-between items-start sm:items-center">
                 <div className="flex gap-4">
@@ -347,10 +401,15 @@ export default function ProfilPage() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleSave}
-                        className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl hover:opacity-90 transition-colors text-sm sm:text-base"
+                        disabled={saving}
+                        className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl hover:opacity-90 transition-colors text-sm sm:text-base disabled:opacity-70 disabled:cursor-not-allowed"
                       >
-                        <Save size={20} />
-                        <span>Sauvegarder</span>
+                        {saving ? (
+                          <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Save size={20} />
+                        )}
+                        <span>{saving ? 'Enregistrement...' : 'Sauvegarder'}</span>
                       </motion.button>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -563,25 +622,42 @@ export default function ProfilPage() {
                         </div>
                       </div>
 
+                      {changePasswordError && (
+                        <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-200 text-sm">
+                          <AlertTriangle size={18} className="flex-shrink-0" />
+                          <span>{changePasswordError}</span>
+                        </div>
+                      )}
+
                       {/* Action Buttons */}
                       <div className="flex space-x-4 pt-4">
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={handleClosePasswordModal}
-                          className="flex-1 px-6 py-3 bg-[#00644d]/10 text-[#20b6b3] rounded-3xl hover:bg-[#00644d]/20 transition-colors border border-white/10"
+                          disabled={changePasswordLoading}
+                          className="flex-1 px-6 py-3 bg-[#00644d]/10 text-[#20b6b3] rounded-3xl hover:bg-[#00644d]/20 transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Quitter
                         </motion.button>
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          onClick={handleNextStep}
-                          disabled={!passwordData.current || !passwordData.new || !passwordData.confirm || passwordData.new !== passwordData.confirm}
+                          onClick={() => void handleNextStep()}
+                          disabled={!passwordData.current || !passwordData.new || !passwordData.confirm || passwordData.new !== passwordData.confirm || changePasswordLoading}
                           className="flex-1 px-6 py-3 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                         >
-                          <span>Suivant</span>
-                          <ArrowRight size={20} />
+                          {changePasswordLoading ? (
+                            <>
+                              <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Enregistrement...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Suivant</span>
+                              <ArrowRight size={20} />
+                            </>
+                          )}
                         </motion.button>
                       </div>
                     </div>
