@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Calculator, Info, Trash2, HandCoins, Apple, Play } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Calculator, HandCoins, Apple, Play, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import Image from 'next/image';
-import ZakatCalculatorModal, { SavedZakat } from '@/components/ZakatCalculatorModal';
+import ZakatCalculatorModal from '@/components/ZakatCalculatorModal';
 import PayZakatModal from '@/components/PayZakatModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { getMyZakats, deleteZakat, type Zakat } from '@/services/zakat';
 
 // Composant pour l'icône personnalisée de la main tenant une bourse avec "2,5"
 const ZakatIcon = () => {
@@ -77,50 +79,86 @@ const ZakatIcon = () => {
 };
 
 export default function ZakatPage() {
+  const { accessToken, isAuthenticated } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [savedZakats, setSavedZakats] = useState<SavedZakat[]>([]);
+  const [myZakats, setMyZakats] = useState<Zakat[]>([]);
+  const [zakatsLoading, setZakatsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [zakatAmountToPay, setZakatAmountToPay] = useState<number | undefined>(undefined);
+  const [zakatIdToPay, setZakatIdToPay] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [zakatToDeleteId, setZakatToDeleteId] = useState<string | null>(null);
+  const [expandedZakatIds, setExpandedZakatIds] = useState<Set<string>>(new Set());
 
-  // Charger les zakat sauvegardées
+  const toggleZakatExpand = (id: string) => {
+    setExpandedZakatIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem('savedZakats');
-    if (saved) {
-      try {
-        setSavedZakats(JSON.parse(saved));
-      } catch (error) {
-        console.error('Erreur lors du chargement des zakat:', error);
-      }
-    }
   }, []);
 
-  // Recharger les zakat après sauvegarde
-  const handleZakatSaved = () => {
-    const saved = localStorage.getItem('savedZakats');
-    if (saved) {
-      try {
-        setSavedZakats(JSON.parse(saved));
-      } catch (error) {
-        console.error('Erreur lors du chargement des zakat:', error);
-      }
+  useEffect(() => {
+    if (!accessToken) {
+      setMyZakats([]);
+      setZakatsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setZakatsLoading(true);
+    getMyZakats(accessToken)
+      .then((list) => { if (!cancelled) setMyZakats(list); })
+      .catch(() => { if (!cancelled) setMyZakats([]); })
+      .finally(() => { if (!cancelled) setZakatsLoading(false); });
+    return () => { cancelled = true; };
+  }, [accessToken]);
+
+  const refetchZakats = () => {
+    if (!accessToken) return;
+    getMyZakats(accessToken).then(setMyZakats).catch(() => {});
+  };
+
+  const handleZakatCreated = () => {
+    setToastMessage('Zakat créée avec succès');
+    refetchZakats();
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleConfirmDeleteZakat = async () => {
+    if (!accessToken || !zakatToDeleteId) return;
+    const id = zakatToDeleteId;
+    setZakatToDeleteId(null);
+    setDeletingId(id);
+    try {
+      await deleteZakat(accessToken, id);
+      setToastMessage('Zakat supprimée');
+      refetchZakats();
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch {
+      setToastMessage('Impossible de supprimer la zakat');
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  // Supprimer une zakat
-  const handleDeleteZakat = (id: string) => {
-    const updated = savedZakats.filter(z => z.id !== id);
-    setSavedZakats(updated);
-    localStorage.setItem('savedZakats', JSON.stringify(updated));
-  };
-
-  // Formater les montants
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const formatCalculationDate = (isoDate: string) => {
+    const d = new Date(isoDate);
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   return (
@@ -176,7 +214,14 @@ export default function ZakatPage() {
           transition={{ duration: 0.6, delay: 0.4 }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            if (!isAuthenticated) {
+              setToastMessage('Connectez-vous pour accéder au calculateur de zakat.');
+              setTimeout(() => setToastMessage(null), 3000);
+              return;
+            }
+            setIsModalOpen(true);
+          }}
           className="w-full max-w-md mx-auto py-4 px-8 rounded-2xl text-white font-bold text-lg md:text-xl flex items-center justify-center space-x-3 shadow-xl"
           style={{
             background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)'
@@ -186,6 +231,19 @@ export default function ZakatPage() {
           <span>Calculer Ma Zakat</span>
         </motion.button>
 
+        {/* Toast */}
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+
         {/* Section Liste des zakat ou Aucune archive */}
         {mounted && (
           <motion.div
@@ -194,106 +252,108 @@ export default function ZakatPage() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="mt-12 w-full max-w-2xl mx-auto"
           >
-            {savedZakats.length > 0 ? (
+            {zakatsLoading ? (
+              <p className="text-white/80 text-center py-8">Chargement de vos zakats...</p>
+            ) : myZakats.length > 0 ? (
               <div className="space-y-6">
-                {/* Titre */}
-                <h2 
-                  className="text-xl font-bold mb-6 text-white text-left"
-                >
+                <h2 className="text-xl font-bold mb-6 text-white text-left">
                   Liste de mes calculs de zakat
                 </h2>
-
-                {/* Liste des zakat */}
                 <div className="space-y-4">
-                  {savedZakats.map((zakat) => (
-                    <motion.div
-                      key={zakat.id}
-                      className="bg-[#1A2A28] rounded-2xl p-6 space-y-4"
-                    >
-                      {/* Header avec icône et date */}
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center">
-                          <Calculator size={20} className="text-gray-300" />
-                        </div>
-                        <span className="text-white font-medium">
-                          Calcul du {zakat.date}
-                        </span>
-                      </div>
-
-                      {/* Détails */}
-                      <div className="space-y-3">
-                        {/* Montant total des biens */}
-                        <div className="flex justify-between items-center">
-                          <span className="text-white">Montant total des biens :</span>
-                          <span className="text-white font-bold">
-                            {formatAmount(zakat.totalAssets)} F CFA
-                          </span>
-                        </div>
-
-                        {/* Zakat à payer */}
-                        <div className="flex justify-between items-center">
-                          <span className="text-white">Zakat à payer :</span>
-                          <span 
-                            className="font-bold"
-                            style={{ color: '#8DD17F' }}
-                          >
-                            {formatAmount(zakat.zakatAmount)} F CFA
-                          </span>
-                        </div>
-
-                        {/* Reste à payer */}
-                        <div className="flex justify-between items-center">
-                          <span className="text-white">Reste à payer :</span>
-                          <span 
-                            className="font-bold"
-                            style={{ color: '#F59E0B' }}
-                          >
-                            {formatAmount(zakat.remainingToPay)} F CFA
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Boutons d'action */}
-                      <div className="flex gap-4 pt-4 border-t border-white/10">
+                  {myZakats.map((zakat) => {
+                    const zakatDue = zakat.totalAmount * 0.025;
+                    const isExpanded = expandedZakatIds.has(zakat.id);
+                    return (
+                      <motion.div
+                        key={zakat.id}
+                        className="bg-[#1A2A28] rounded-2xl overflow-hidden"
+                      >
                         <button
-                          onClick={() => handleDeleteZakat(zakat.id)}
-                          className="flex-1 py-3 px-6 rounded-3xl border-2 text-white font-medium transition-colors flex items-center justify-center space-x-2"
-                          style={{ 
-                            borderColor: '#E74C3C',
-                            backgroundColor: 'transparent'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#E74C3C20';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }}
+                          type="button"
+                          onClick={() => toggleZakatExpand(zakat.id)}
+                          className="w-full flex items-center justify-between gap-3 p-6 text-left hover:bg-white/5 transition-colors"
                         >
-                          <Trash2 size={20} style={{ color: '#E74C3C' }} />
-                          <span>Supprimer</span>
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0">
+                              <Calculator size={20} className="text-gray-300" />
+                            </div>
+                            <span className="text-white font-medium">
+                              Calcul du {formatCalculationDate(zakat.createdAt)}
+                            </span>
+                          </div>
+                          {isExpanded ? (
+                            <ChevronUp size={24} className="text-white/80 flex-shrink-0" />
+                          ) : (
+                            <ChevronDown size={24} className="text-white/80 flex-shrink-0" />
+                          )}
                         </button>
-                        <button
-                          onClick={() => {
-                            setZakatAmountToPay(zakat.zakatAmount);
-                            setIsDonationModalOpen(true);
-                          }}
-                          className="flex-1 py-3 px-6 rounded-3xl text-white font-medium transition-colors flex items-center justify-center space-x-2"
-                          style={{
-                            background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(90deg, #7BC16F 0%, #2FB3A5 100%)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)';
-                          }}
-                        >
-                          <HandCoins size={20} />
-                          <span>Verser ma zakat</span>
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
+                        {isExpanded && (
+                          <div className="px-6 pb-6 pt-0 space-y-3 border-t border-white/10">
+                            <p className="text-white/70 text-sm pt-4">
+                              Zakat pour l'année : {zakat.year}
+                            </p>
+                            <div className="flex justify-between items-center">
+                              <span className="text-white">Montant total des biens :</span>
+                              <span className="text-white font-bold">
+                                {formatAmount(zakat.totalAmount)} F CFA
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-white">Zakat à payer :</span>
+                              <span className="font-bold" style={{ color: '#8DD17F' }}>
+                                {formatAmount(zakatDue)} F CFA
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-white">Reste à payer :</span>
+                              <span className="font-bold" style={{ color: '#F59E0B' }}>
+                                {formatAmount(zakat.remainingAmount)} F CFA
+                              </span>
+                            </div>
+                            {zakat.remainingAmount > 0 && (
+                              <div className="flex gap-4 pt-4">
+                                <button
+                                  onClick={() => setZakatToDeleteId(zakat.id)}
+                                  disabled={deletingId === zakat.id}
+                                  className="flex-1 py-3 px-6 rounded-3xl border-2 border-[#E74C3C] text-white font-medium transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
+                                  style={{ backgroundColor: 'transparent' }}
+                                  onMouseEnter={(e) => {
+                                    if (deletingId !== zakat.id) e.currentTarget.style.backgroundColor = '#E74C3C20';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                  }}
+                                >
+                                  <Trash2 size={20} style={{ color: '#E74C3C' }} />
+                                  <span>{deletingId === zakat.id ? 'Suppression...' : 'Supprimer ma zakat'}</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setZakatIdToPay(zakat.id);
+                                    setZakatAmountToPay(zakat.remainingAmount);
+                                    setIsDonationModalOpen(true);
+                                  }}
+                                  className="flex-1 py-3 px-6 rounded-3xl text-white font-medium transition-colors flex items-center justify-center space-x-2"
+                                  style={{
+                                    background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #7BC16F 0%, #2FB3A5 100%)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)';
+                                  }}
+                                >
+                                  <HandCoins size={20} />
+                                  <span>Verser ma zakat</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -324,6 +384,39 @@ export default function ZakatPage() {
         )}
         </div>
       </div>
+
+      {/* Modal de confirmation de suppression */}
+      {zakatToDeleteId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1A2A28] rounded-2xl p-6 max-w-md w-full shadow-xl border border-white/10">
+            <h3 className="text-white font-bold text-lg mb-2">Confirmer la suppression</h3>
+            <p className="text-white/80 text-sm mb-6">
+              Êtes-vous sûr de vouloir supprimer cette zakat ? Cette action est irréversible.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setZakatToDeleteId(null)}
+                className="flex-1 py-3 px-4 rounded-xl bg-[#2A3A38] text-white font-medium hover:bg-[#3A4A48] transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteZakat}
+                className="flex-1 py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                style={{
+                  background: 'linear-gradient(90deg, #E74C3C 0%, #C0392B 100%)',
+                  color: 'white'
+                }}
+              >
+                <Trash2 size={18} />
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Section "Emportez Amane+ partout avec vous" */}
       <section className="py-20 w-full" style={{ background: 'linear-gradient(to top, #d6fcf6, #229693)' }}>
@@ -377,7 +470,9 @@ export default function ZakatPage() {
       <ZakatCalculatorModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
-        onSave={handleZakatSaved}
+        onSave={refetchZakats}
+        accessToken={accessToken}
+        onSuccess={handleZakatCreated}
       />
 
       {/* Modal de versement de zakat */}
@@ -386,8 +481,12 @@ export default function ZakatPage() {
         onClose={() => {
           setIsDonationModalOpen(false);
           setZakatAmountToPay(undefined);
+          setZakatIdToPay(null);
         }}
         initialAmount={zakatAmountToPay}
+        zakatId={zakatIdToPay}
+        accessToken={accessToken ?? undefined}
+        onSuccess={refetchZakats}
       />
     </>
   );

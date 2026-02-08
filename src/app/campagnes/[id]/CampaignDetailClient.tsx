@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -9,7 +9,10 @@ import {
   Droplets, BookOpen, UtensilsCrossed, CheckCircle2, Apple
 } from 'lucide-react';
 import MakeDonationModal from '@/components/MakeDonationModal';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Campaign } from '@/data/mockData';
+
+const TOAST_DURATION_MS = 4000;
 
 interface CampaignDetailClientProps {
   campaign: Campaign;
@@ -18,11 +21,13 @@ interface CampaignDetailClientProps {
 }
 
 export default function CampaignDetailClient({ campaign, donorCount = 0 }: CampaignDetailClientProps) {
+  const { user, accessToken, isAuthenticated } = useAuth();
   const [selectedImage, setSelectedImage] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const walletBalance = 610473;
+  const walletBalance = user?.wallet?.balance ?? 610473;
   const progress = campaign.targetAmount > 0 ? (campaign.currentAmount / campaign.targetAmount) * 100 : 0;
 
   const formatAmount = (amount: number) => {
@@ -44,6 +49,11 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   const presetAmounts = [1000, 2500, 5000, 10000, 25000, 50000];
 
   const handleDonateClick = () => {
+    if (!isAuthenticated || !user) {
+      setToastMessage('Veuillez vous connecter pour faire un don.');
+      setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+      return;
+    }
     setShowDonationModal(true);
   };
 
@@ -336,11 +346,29 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
         </div>
       </section>
 
+      {/* Toast : utilisateur non connecté */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Modal de don */}
-      <MakeDonationModal 
-        isOpen={showDonationModal} 
+      <MakeDonationModal
+        isOpen={showDonationModal}
         onClose={() => setShowDonationModal(false)}
         balance={walletBalance}
+        campaignId={campaign.id}
+        accessToken={accessToken ?? undefined}
+        donorName={user?.name ?? null}
       />
     </div>
   );

@@ -10,7 +10,8 @@ import {
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { getInvestmentProductById, mapInvestmentToDisplay, type InvestmentProductDisplay } from '@/services/investments';
-import MakeDonationModal from '@/components/MakeDonationModal';
+import MakeInvestmentModal from '@/components/MakeInvestmentModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function InvestirDetailPage() {
   const params = useParams();
@@ -18,8 +19,10 @@ export default function InvestirDetailPage() {
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [product, setProduct] = useState<InvestmentProductDisplay | null>(null);
   const [loading, setLoading] = useState(true);
+  const { accessToken, user } = useAuth();
 
   useEffect(() => {
     if (!id) {
@@ -162,6 +165,11 @@ export default function InvestirDetailPage() {
   };
 
   const handleInvest = () => {
+    if (!accessToken) {
+      setToastMessage('Veuillez vous connecter pour investir.');
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
     setShowInvestmentModal(true);
   };
 
@@ -414,22 +422,40 @@ export default function InvestirDetailPage() {
       </div>
 
       {/* Investment Modal */}
-      <MakeDonationModal
-        isOpen={showInvestmentModal}
-        onClose={() => setShowInvestmentModal(false)}
-        title="Investissement"
-        subtitle="Montant de l'investissement"
-        description="Veuillez saisir le montant de l'investissement."
-        amountSectionTitle="Montant de l'investissement"
-        confirmationTitle="Veuillez confirmer votre transaction"
-        confirmationDescription="Vérifiez les informations avant de confirmer votre investissement."
-        recapTitle="Vous allez investir la somme de"
-        recapMessage="Amane+ s'engage à utiliser votre argent, identifiés par nos partenaires de confiance."
-        successTitle="Investissement confirmé !"
-        successMessage="Votre investissement a été effectué avec succès."
-        historyButtonText="Consulter l'historique"
-        historyButtonLink="/transactions"
-      />
+      {product && (
+        <MakeInvestmentModal
+          isOpen={showInvestmentModal}
+          onClose={() => setShowInvestmentModal(false)}
+          balance={user?.wallet?.balance ?? 0}
+          accessToken={accessToken ?? null}
+          investmentProductId={product.id}
+          investmentProduct={product}
+          onSuccess={() => setShowInvestmentModal(false)}
+          onToast={(msg) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 4000);
+          }}
+          successTitle="Investissement confirmé !"
+          successMessage="Votre investissement a été effectué avec succès."
+          historyButtonText="Consulter l'historique"
+          historyButtonLink="/transactions"
+        />
+      )}
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
             {/* Section "Emportez Amane+ partout avec vous" */}
       <section className="py-20" style={{ background: 'linear-gradient(to top, #d6fcf6, #229693)' }}>

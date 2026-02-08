@@ -1,39 +1,71 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, Eye, EyeOff, Heart, Calendar } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { payZakat } from '@/services/zakat';
+import { getCurrentUser } from '@/services/user';
 
 interface PayZakatModalProps {
   isOpen: boolean;
   onClose: () => void;
   balance?: number;
   initialAmount?: number; // Montant initial à pré-remplir
+  /** ID de la zakat à payer (obligatoire pour envoyer le paiement) */
+  zakatId?: string | null;
+  /** JWT pour l’API (obligatoire pour envoyer le paiement) */
+  accessToken?: string | null;
+  /** Appelé après un paiement réussi (ex. pour rafraîchir la liste des zakats) */
+  onSuccess?: () => void;
 }
 
 const STEPS = [
   { id: 1, label: 'Montant' },
   { id: 2, label: 'Confirmation' },
+  { id: 3, label: 'Code de sécurité' },
 ];
 
 type PaymentFrequency = 'monthly' | 'bimonthly' | 'quarterly';
 
+function parseApiErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  try {
+    const parsed = JSON.parse(msg) as { message?: string };
+    if (typeof parsed?.message === 'string') return parsed.message;
+  } catch {
+    // pas du JSON
+  }
+  return msg || 'Une erreur est survenue.';
+}
+
 export default function PayZakatModal({ 
   isOpen, 
   onClose,
-  balance = 610473,
+  balance = 0,
   initialAmount,
+  zakatId = null,
+  accessToken = null,
+  onSuccess,
 }: PayZakatModalProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [amount, setAmount] = useState('');
+  const [securityCode, setSecurityCode] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
   const [isPaymentPlanned, setIsPaymentPlanned] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [frequency, setFrequency] = useState<PaymentFrequency>('monthly');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [walletBalanceFromApi, setWalletBalanceFromApi] = useState<number | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
+  const securityCodeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  /** Solde affiché : API si dispo, sinon prop balance */
+  const effectiveBalance = walletBalanceFromApi ?? balance;
 
   // Empêcher le scroll du body quand le modal est ouvert
   useEffect(() => {
@@ -52,16 +84,45 @@ export default function PayZakatModal({
     if (!isOpen) {
       setCurrentStep(1);
       setAmount('');
+      setSecurityCode('');
       setIsSuccess(false);
       setShowBalance(true);
       setIsPaymentPlanned(false);
       setStartDate('');
       setFrequency('monthly');
+      setSubmitError(null);
+      setIsSubmitting(false);
+      setWalletBalanceFromApi(null);
     } else if (initialAmount) {
-      // Pré-remplir le montant si initialAmount est fourni
       setAmount(initialAmount.toString());
     }
   }, [isOpen, initialAmount]);
+
+  // Récupérer le solde du wallet à l'ouverture du modal
+  useEffect(() => {
+    if (!isOpen || !accessToken) return;
+    let cancelled = false;
+    setLoadingBalance(true);
+    getCurrentUser(accessToken)
+      .then((user) => {
+        if (!cancelled) {
+          setWalletBalanceFromApi(user?.wallet?.balance ?? 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWalletBalanceFromApi(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingBalance(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, accessToken]);
 
   // Initialiser la date de début à aujourd'hui si vide
   useEffect(() => {
@@ -76,38 +137,73 @@ export default function PayZakatModal({
 
   const handleNext = () => {
     if (currentStep < STEPS.length && amount && parseFloat(amount) > 0) {
-      // Validation pour la planification
-      if (isPaymentPlanned && !startDate) {
-        return; // Ne pas avancer si planification activée sans date
-      }
+      if (isPaymentPlanned && !startDate) return;
       setCurrentStep(currentStep + 1);
     }
   };
 
   const handleBack = () => {
     if (currentStep > 1) {
+      setSubmitError(null);
       setCurrentStep(currentStep - 1);
     }
   };
 
-  const handleSubmit = () => {
-    // Logique de soumission du versement de zakat
-    console.log('Versement Zakat:', {
-      amount: parseFloat(amount),
-      isPaymentPlanned,
-      startDate,
-      frequency,
-    });
-    // Afficher l'écran de succès
-    setIsSuccess(true);
+  const handleSubmit = async () => {
+    if (!accessToken || !zakatId) {
+      setSubmitError('Session expirée ou zakat non sélectionnée. Veuillez fermer et réessayer.');
+      return;
+    }
+    const numAmount = parseFloat(amount);
+    if (!Number.isFinite(numAmount) || numAmount <= 0) {
+      setSubmitError('Montant invalide.');
+      return;
+    }
+    if (securityCode.length !== 4) {
+      setSubmitError('Veuillez saisir le code à 4 chiffres.');
+      return;
+    }
+    // Montant à envoyer : paiement planifié → montant par échéance, sinon montant total
+    const paymentPlan = calculatePaymentPlan();
+    const amountToSend =
+      isPaymentPlanned && paymentPlan
+        ? Math.round(paymentPlan.amountPerPayment)
+        : Math.round(numAmount);
+
+    if (amountToSend <= 0) {
+      setSubmitError('Montant invalide.');
+      return;
+    }
+    setSubmitError(null);
+    setIsSubmitting(true);
+    const startTime = Date.now();
+    try {
+      await payZakat(accessToken, {
+        walletCode: securityCode,
+        zakatId,
+        amount: amountToSend,
+        paymentDate: new Date().toISOString(),
+      });
+      // Affichage du bouton "Envoi en cours..." au moins 2 secondes
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 2000) {
+        await new Promise((r) => setTimeout(r, 2000 - elapsed));
+      }
+      onSuccess?.();
+      setIsSuccess(true);
+    } catch (err) {
+      setSubmitError(parseApiErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
     if (isSuccess) {
-      // Réinitialiser et fermer
       setIsSuccess(false);
       setCurrentStep(1);
       setAmount('');
+      setSecurityCode('');
       setIsPaymentPlanned(false);
       setStartDate('');
       setFrequency('monthly');
@@ -116,10 +212,10 @@ export default function PayZakatModal({
   };
 
   const handleViewHistory = () => {
-    // Réinitialiser et fermer, puis rediriger vers l'historique
     setIsSuccess(false);
     setCurrentStep(1);
     setAmount('');
+    setSecurityCode('');
     setIsPaymentPlanned(false);
     setStartDate('');
     setFrequency('monthly');
@@ -185,6 +281,35 @@ export default function PayZakatModal({
   };
 
   const renderStepContent = () => {
+    // Écran de succès (après validation du code de sécurité)
+    if (isSuccess) {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 sm:py-12 space-y-6">
+          <div className="rounded-full bg-[#3AE1B4]/20 flex items-center justify-center">
+            <Image src="/icons/valid-circle.png" alt="Succès" width={48} height={48} className="object-contain" />
+          </div>
+          <div className="flex items-center justify-center space-x-2">
+            <Heart size={24} className="text-white fill-[#101919]" />
+            <h2 className="text-white text-xl sm:text-2xl font-bold text-center">
+              Zakat versée avec succès !
+            </h2>
+          </div>
+          <p className="text-white text-base sm:text-lg text-center max-w-md">
+            Votre Zakat a été versée. Qu'Allah accepte votre aumône.
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleViewHistory}
+            className="rounded-3xl px-6 sm:px-8 py-3 sm:py-4 font-semibold text-white hover:opacity-90 transition-opacity mt-4 text-sm sm:text-base"
+            style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
+          >
+            Consulter l'historique
+          </motion.button>
+        </div>
+      );
+    }
+
     switch (currentStep) {
       case 1: {
         const paymentPlan = calculatePaymentPlan();
@@ -216,9 +341,11 @@ export default function PayZakatModal({
                 <div className="flex flex-col sm:flex-row sm:space-x-2">
                   <p className="text-white text-sm sm:text-xl font-bold">Votre Solde</p>
                   <p className="text-white font-bold text-sm sm:text-xl">
-                    {showBalance 
-                      ? `${balance.toLocaleString('fr-FR').replace(/\s/g, ' ')} F`
-                      : '* * * * * *'
+                    {loadingBalance
+                      ? 'Chargement...'
+                      : showBalance
+                        ? `${effectiveBalance.toLocaleString('fr-FR').replace(/\s/g, ' ')} F`
+                        : '* * * * * *'
                     }
                   </p>
                 </div>
@@ -420,45 +547,6 @@ export default function PayZakatModal({
       }
 
       case 2: {
-        // Afficher l'écran de succès si la confirmation a été effectuée
-        if (isSuccess) {
-          return (
-            <div className="flex flex-col items-center justify-center py-8 sm:py-12 space-y-6">
-              {/* Icône de succès */}
-              <div className="rounded-full bg-[#3AE1B4]/20 flex items-center justify-center">
-                <Image src="/icons/valid-circle.png" alt="Succès" width={48} height={48} className="object-contain" />
-              </div>
-
-              {/* Titre avec icône de cœur */}
-              <div className="flex items-center justify-center space-x-2">
-                <Heart size={24} className="text-white fill-[#101919]" />
-                <h2 className="text-white text-xl sm:text-2xl font-bold text-center">
-                  Zakat versée avec succès !
-                </h2>
-              </div>
-
-              {/* Message secondaire */}
-              <p className="text-white text-base sm:text-lg text-center max-w-md">
-                Votre Zakat a été versée. Qu'Allah accepte votre aumône.
-              </p>
-
-              {/* Bouton Consulter l'historique */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleViewHistory}
-                className="rounded-3xl px-6 sm:px-8 py-3 sm:py-4 font-semibold text-white hover:opacity-90 transition-opacity mt-4 text-sm sm:text-base"
-                style={{ 
-                  background: 'linear-gradient(to right, #3AE1B4, #13A98B)'
-                }}
-              >
-                Consulter l'historique
-              </motion.button>
-            </div>
-          );
-        }
-
-        // Sinon, afficher le formulaire de confirmation
         const paymentPlan = calculatePaymentPlan();
         return (
           <div className="space-y-4 sm:space-y-6">
@@ -513,12 +601,105 @@ export default function PayZakatModal({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={handleSubmit}
-                disabled={parseFloat(amount) > balance}
+                onClick={() => setCurrentStep(3)}
+                disabled={parseFloat(amount) > effectiveBalance}
                 className="flex-1 bg-[#3AE1B4] text-[#101919] rounded-3xl p-3 sm:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm sm:text-base"
               >
-                <span>Confirmer</span>
+                <span>Suivant</span>
                 <ChevronRight size={18} className="sm:w-5 sm:h-5" />
+              </motion.button>
+            </div>
+          </div>
+        );
+      }
+
+      case 3: {
+        const digits = securityCode.split('').concat(Array(4).fill('')).slice(0, 4);
+        const handleCodeChange = (index: number, value: string) => {
+          const digit = value.replace(/\D/g, '').slice(-1);
+          const next = digits.map((d, i) => (i === index ? digit : d)).join('').slice(0, 4);
+          setSecurityCode(next);
+          if (digit && index < 3) securityCodeInputRefs.current[index + 1]?.focus();
+        };
+        const handleCodeKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+          if (e.key === 'Backspace' && !digits[index] && index > 0) {
+            setSecurityCode((prev) => prev.slice(0, index));
+            securityCodeInputRefs.current[index - 1]?.focus();
+          }
+        };
+        const handleCodePaste = (e: React.ClipboardEvent) => {
+          e.preventDefault();
+          const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+          setSecurityCode(pasted);
+          const nextIndex = Math.min(pasted.length, 3);
+          securityCodeInputRefs.current[nextIndex]?.focus();
+        };
+        return (
+          <div className="space-y-4 sm:space-y-6">
+            <div>
+              <h3 className="text-white text-base sm:text-lg mb-2 font-bold">Code de sécurité</h3>
+              <p className="text-white/60 text-xs sm:text-sm">
+                Saisissez le code de sécurité à 4 chiffres de votre portefeuille.
+              </p>
+            </div>
+
+            <div className="mx-0 sm:mx-12 space-y-2">
+              <label className="text-white text-sm font-medium block mb-3">
+                Code de sécurité
+              </label>
+              <div className="flex justify-center gap-2 sm:gap-3">
+                {[0, 1, 2, 3].map((index) => (
+                  <input
+                    key={index}
+                    ref={(el) => { securityCodeInputRefs.current[index] = el; }}
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digits[index]}
+                    onChange={(e) => handleCodeChange(index, e.target.value)}
+                    onKeyDown={(e) => handleCodeKeyDown(index, e)}
+                    onPaste={index === 0 ? handleCodePaste : undefined}
+                    autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                    aria-label={`Chiffre ${index + 1} du code`}
+                    className="w-14 h-14 sm:w-16 sm:h-16 bg-[#0F1F1F] text-white text-center text-xl sm:text-2xl font-mono font-bold rounded-xl border border-white/10 focus:outline-none focus:border-[#5AB678] transition-colors"
+                  />
+                ))}
+              </div>
+              <p className="text-white/50 text-xs text-center mt-2">Code à 4 chiffres</p>
+            </div>
+
+            {submitError && (
+              <div className="mx-0 sm:mx-12 rounded-xl bg-red-500/20 border border-red-400/40 p-3">
+                <p className="text-red-300 text-sm text-center">{submitError}</p>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-4 pb-2 mx-0 sm:mx-12">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleBack}
+                disabled={isSubmitting}
+                className="flex-1 bg-[#0F1F1F] text-[#3AE1B4] rounded-3xl p-3 sm:p-4 font-semibold hover:bg-[#0F1F1F]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
+                <span>Précédent</span>
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleSubmit}
+                disabled={securityCode.length < 4 || isSubmitting}
+                className="flex-1 bg-[#3AE1B4] text-[#101919] rounded-3xl p-3 sm:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm sm:text-base"
+              >
+                {isSubmitting ? (
+                  <span>Envoi en cours...</span>
+                ) : (
+                  <>
+                    <span>Valider</span>
+                    <ChevronRight size={18} className="sm:w-5 sm:h-5" />
+                  </>
+                )}
               </motion.button>
             </div>
           </div>

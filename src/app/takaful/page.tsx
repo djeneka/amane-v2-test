@@ -10,8 +10,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import MakeDonationModal from '@/components/MakeDonationModal';
-import { getTakafulPlans, type TakafulPlan } from '@/services/takaful-plans';
+import MakeTakafulModal from '@/components/MakeTakafulModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { getTakafulPlans, getMyTakafulSubscriptions, type TakafulPlan, type MyTakafulSubscription } from '@/services/takaful-plans';
 
 const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
 
@@ -33,19 +34,62 @@ const CATEGORY_LABELS: Record<string, string> = {
   autres: 'Autre',
 };
 
+/** Catégorie affichée à partir du titre du plan (pour filtrage souscriptions) */
+function getDisplayCategoryFromTitle(title: string): 'sante' | 'automobile' | 'habitation' | 'vie' | 'autres' {
+  const t = title.toLowerCase();
+  if (t.includes('santé') || t.includes('sante') || t.includes('health')) return 'sante';
+  if (t.includes('habitation') || t.includes('home')) return 'habitation';
+  if (t.includes('vie') || t.includes('life')) return 'vie';
+  if (t.includes('auto') || t.includes('moto')) return 'automobile';
+  return 'autres';
+}
+
+/** Icône selon le titre du plan (Santé, Habitation, etc.) */
+function getSubscriptionIcon(title: string) {
+  const t = (title || '').toLowerCase();
+  if (t.includes('santé') || t.includes('sante') || t.includes('health')) return Heart;
+  if (t.includes('habitation') || t.includes('home')) return Home;
+  if (t.includes('vie') || t.includes('life')) return User;
+  if (t.includes('auto') || t.includes('moto')) return Car;
+  return Shield;
+}
+
+function formatSubscriptionDate(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export default function TakafulPage() {
+  const { accessToken, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('popular');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [expandedFilters, setExpandedFilters] = useState(false);
   const [showTakafulModal, setShowTakafulModal] = useState(false);
+  const [takafulModalConfig, setTakafulModalConfig] = useState<
+    | { mode: 'new'; plan: TakafulPlan }
+    | { mode: 'payment'; subscription: MyTakafulSubscription }
+    | null
+  >(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'solutions' | 'subscriptions'>('solutions');
   const [showSubscriptionDetails, setShowSubscriptionDetails] = useState(false);
-  const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<MyTakafulSubscription | null>(null);
   const [plans, setPlans] = useState<TakafulPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [plansError, setPlansError] = useState<string | null>(null);
+  const [subscriptions, setSubscriptions] = useState<MyTakafulSubscription[]>([]);
+  const [subscriptionsLoading, setSubscriptionsLoading] = useState(false);
+  const [subscriptionsError, setSubscriptionsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +106,26 @@ export default function TakafulPage() {
       .finally(() => { if (!cancelled) setPlansLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'subscriptions' || !accessToken) {
+      if (!accessToken) setSubscriptions([]);
+      return;
+    }
+    let cancelled = false;
+    setSubscriptionsLoading(true);
+    setSubscriptionsError(null);
+    getMyTakafulSubscriptions(accessToken)
+      .then((list) => { if (!cancelled) setSubscriptions(list); })
+      .catch((err) => {
+        if (!cancelled) {
+          setSubscriptionsError(err?.message ?? 'Erreur chargement des souscriptions');
+          setSubscriptions([]);
+        }
+      })
+      .finally(() => { if (!cancelled) setSubscriptionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, accessToken]);
 
   const categoryIcons: Record<string, typeof Heart> = {
     sante: Heart,
@@ -141,8 +205,39 @@ export default function TakafulPage() {
     }
   };
 
-  const handleSubscribe = () => {
+  const handleSubscribe = (plan: TakafulPlan) => {
+    if (!accessToken) {
+      setToastMessage('Veuillez vous connecter pour souscrire.');
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+    setTakafulModalConfig({ mode: 'new', plan });
     setShowTakafulModal(true);
+  };
+
+  const handlePay = (subscription: MyTakafulSubscription) => {
+    if (!accessToken) {
+      setToastMessage('Veuillez vous connecter pour effectuer un paiement.');
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+    setTakafulModalConfig({ mode: 'payment', subscription });
+    setShowSubscriptionDetails(false);
+    setShowTakafulModal(true);
+  };
+
+  const handleTakafulModalClose = () => {
+    setShowTakafulModal(false);
+    setTakafulModalConfig(null);
+  };
+
+  const handleTakafulSuccess = () => {
+    handleTakafulModalClose();
+    if (activeTab === 'subscriptions' && accessToken) {
+      getMyTakafulSubscriptions(accessToken)
+        .then((list) => setSubscriptions(list))
+        .catch(() => {});
+    }
   };
 
   const statsData = [
@@ -184,101 +279,34 @@ export default function TakafulPage() {
     },
   ];
 
-  // Données des souscriptions Takaful
-  const mySubscriptions = [
-    {
-      id: '1',
-      icon: Heart,
-      name: 'Takaful Santé',
-      shortName: 'Santé',
-      category: 'sante',
-      monthlyPremium: '8 000 F/mois',
-      monthlyPremiumValue: 8000,
-      status: 'Actif',
-      dueDate: '7 Septembre, 2024',
-      dueDateValue: new Date('2024-09-07'),
-      description: 'Protection santé complète pour toute la famille.',
-      guarantees: [
-        'Frais médicaux',
-        'Hospitalisation',
-        'Assistance 24/7',
-      ],
-    },
-    {
-      id: '2',
-      icon: Car,
-      name: 'Takaful Automobile',
-      shortName: 'Automobile',
-      category: 'automobile',
-      monthlyPremium: '15 000 F/mois',
-      monthlyPremiumValue: 15000,
-      status: 'Actif',
-      dueDate: '12 Octobre, 2024',
-      dueDateValue: new Date('2024-10-12'),
-      description: 'Protection complète pour votre véhicule et votre famille.',
-      guarantees: [
-        'Dommages collision',
-        'Vol et vandalisme',
-        'Assistance dépannage',
-      ],
-    },
-    {
-      id: '3',
-      icon: Home,
-      name: 'Takaful Habitation',
-      shortName: 'Habitation',
-      category: 'habitation',
-      monthlyPremium: '12 000 F/mois',
-      monthlyPremiumValue: 12000,
-      status: 'Actif',
-      dueDate: '20 Octobre, 2024',
-      dueDateValue: new Date('2024-10-20'),
-      description: 'Protection complète pour votre domicile et vos biens.',
-      guarantees: [
-        'Incendie et dégâts des eaux',
-        'Vol et vandalisme',
-        'Responsabilité civile',
-      ],
-    },
-    {
-      id: '4',
-      icon: User,
-      name: 'Takaful Vie',
-      shortName: 'Vie',
-      category: 'vie',
-      monthlyPremium: '10 000 F/mois',
-      monthlyPremiumValue: 10000,
-      status: 'Actif',
-      dueDate: '5 Novembre, 2024',
-      dueDateValue: new Date('2024-11-05'),
-      description: 'Protection financière pour vos proches en cas de décès.',
-      guarantees: [
-        'Capital décès',
-        'Invalidité permanente',
-        'Assistance famille',
-      ],
-    },
-  ];
-
-  // Filtrer et trier les souscriptions
-  const filteredSubscriptions = mySubscriptions
-    .filter(subscription => {
-      const matchesSearch = subscription.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           subscription.monthlyPremium.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           subscription.status.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || subscription.category === selectedCategory;
+  // Filtrer et trier les souscriptions (données API getMyTakafulSubscriptions)
+  const filteredSubscriptions = subscriptions
+    .filter((sub) => {
+      const plan = sub.takafulPlan;
+      const term = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        !term ||
+        (plan.title && plan.title.toLowerCase().includes(term)) ||
+        (plan.monthlyContribution?.toString().includes(term)) ||
+        sub.status.toLowerCase().includes(term);
+      const displayCat = getDisplayCategoryFromTitle(plan?.title ?? '');
+      const matchesCategory = selectedCategory === 'all' || displayCat === selectedCategory;
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
+      const contribA = a.takafulPlan.monthlyContribution ?? 0;
+      const contribB = b.takafulPlan.monthlyContribution ?? 0;
+      const dateA = a.nextPaymentDate ? new Date(a.nextPaymentDate).getTime() : new Date(a.endDate).getTime();
+      const dateB = b.nextPaymentDate ? new Date(b.nextPaymentDate).getTime() : new Date(b.endDate).getTime();
       switch (sortBy) {
         case 'popular':
-          return b.monthlyPremiumValue - a.monthlyPremiumValue;
+          return contribB - contribA;
         case 'price':
-          return a.monthlyPremiumValue - b.monthlyPremiumValue;
+          return contribA - contribB;
         case 'recent':
-          return b.dueDateValue.getTime() - a.dueDateValue.getTime();
+          return dateB - dateA;
         case 'coverage':
-          return b.monthlyPremiumValue - a.monthlyPremiumValue;
+          return contribB - contribA;
         default:
           return 0;
       }
@@ -615,7 +643,7 @@ export default function TakafulPage() {
                             <motion.button
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              onClick={handleSubscribe}
+                              onClick={() => handleSubscribe(plan)}
                               className="w-full px-3 py-2 bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white rounded-2xl font-semibold hover:from-[#20b6b3] hover:to-[#00644d] transition-all duration-200 text-sm flex-shrink-0 ml-2"
                             >
                               Souscrire
@@ -724,7 +752,7 @@ export default function TakafulPage() {
                               <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={handleSubscribe}
+                                onClick={() => handleSubscribe(plan)}
                                 className="px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center space-x-2 flex-shrink-0 ml-3"
                               >
                                 <span>Souscrire</span>
@@ -770,9 +798,29 @@ export default function TakafulPage() {
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            {filteredSubscriptions.length > 0 ? (
+            {subscriptionsLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#5FB678] border-t-transparent" />
+              </div>
+            ) : subscriptionsError ? (
+              <div className="rounded-2xl p-6 bg-red-500/10 border border-red-500/30 text-red-200 text-center">
+                <p>{subscriptionsError}</p>
+              </div>
+            ) : !accessToken ? (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-12">
+                <div className="w-24 h-24 bg-[#2C3E3E] rounded-full flex items-center justify-center mx-auto mb-6">
+                  <User size={32} className="text-[#5FB678]" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Connectez-vous</h3>
+                <p className="text-white/80">Connectez-vous pour voir vos souscriptions Takaful.</p>
+              </motion.div>
+            ) : filteredSubscriptions.length > 0 ? (
               filteredSubscriptions.map((subscription, index) => {
-                const IconComponent = subscription.icon;
+                const plan = subscription.takafulPlan;
+                const IconComponent = getSubscriptionIcon(plan.title);
+                const dueLabel = subscription.nextPaymentDate
+                  ? `Prochain paiement : ${formatSubscriptionDate(subscription.nextPaymentDate)}`
+                  : `Fin : ${formatSubscriptionDate(subscription.endDate)}`;
                 return (
                   <motion.div
                     key={subscription.id}
@@ -787,28 +835,25 @@ export default function TakafulPage() {
                     className="bg-[#1A2A2A] rounded-3xl p-6 border border-[#5FB678] shadow-lg cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
-                      {/* Section gauche : Icône et informations */}
                       <div className="flex items-center space-x-4 flex-1">
                         <div className="w-12 h-12 bg-[#2C3E3E] rounded-xl flex items-center justify-center flex-shrink-0">
                           <IconComponent size={24} className="text-[#5FB678]" />
                         </div>
                         <div className="flex flex-col">
                           <h3 className="text-xl font-semibold text-white mb-1">
-                            {subscription.name}
+                            {plan.title}
                           </h3>
                           <p className="text-white/80 text-sm">
-                            {subscription.monthlyPremium}
+                            {formatAmount(plan.monthlyContribution)} / mois
                           </p>
                         </div>
                       </div>
-
-                      {/* Section droite : Statut et date */}
                       <div className="flex flex-col items-end">
                         <span className="text-[#5FB678] font-semibold mb-1">
                           {subscription.status}
                         </span>
                         <p className="text-white/80 text-sm">
-                          {subscription.dueDate}
+                          {dueLabel}
                         </p>
                       </div>
                     </div>
@@ -821,16 +866,16 @@ export default function TakafulPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-center py-12"
               >
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Search size={32} className="text-gray-400" />
+                <div className="w-24 h-24 bg-[#2C3E3E] rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Search size={32} className="text-[#5FB678]" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">
                   {searchTerm ? 'Aucune souscription trouvée' : 'Aucune souscription'}
                 </h3>
                 <p className="text-white/80">
-                  {searchTerm 
+                  {searchTerm
                     ? 'Essayez de modifier vos critères de recherche'
-                    : 'Vous n\'avez pas encore de souscription active'}
+                    : "Vous n'avez pas encore de souscription active"}
                 </p>
               </motion.div>
             )}
@@ -966,22 +1011,41 @@ export default function TakafulPage() {
       </section>
 
       {/* Takaful Modal */}
-      <MakeDonationModal
-        isOpen={showTakafulModal}
-        onClose={() => setShowTakafulModal(false)}
-        title="Takaful"
-        subtitle="Montant du produit takaful"
-        description="Veuillez saisir le montant du produit takaful."
-        amountSectionTitle="Montant du produits takaful"
-        confirmationTitle="Veuillez confirmer votre transaction"
-        confirmationDescription="Vérifiez les informations avant de confirmer votre souscription."
-        recapTitle="Vous allez payer la somme de"
-        recapMessage="Sur amane+ souscrivez a des produits takafuls halal."
-        successTitle="Souscription confirmée !"
-        successMessage="Votre souscription a été effectuée avec succès."
-        historyButtonText="Consulter l'historique"
-        historyButtonLink="/transactions"
-      />
+      {takafulModalConfig && (
+        <MakeTakafulModal
+          isOpen={showTakafulModal}
+          onClose={handleTakafulModalClose}
+          balance={user?.wallet?.balance ?? 0}
+          accessToken={accessToken ?? null}
+          onSuccess={handleTakafulSuccess}
+          onToast={(msg) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 4000);
+          }}
+          successTitle="Souscription confirmée !"
+          successMessage="Votre souscription a été effectuée avec succès."
+          historyButtonText="Consulter l'historique"
+          historyButtonLink="/transactions"
+          {...(takafulModalConfig.mode === 'new'
+            ? { mode: 'new' as const, takafulPlanId: takafulModalConfig.plan.id, takafulPlan: takafulModalConfig.plan }
+            : { mode: 'payment' as const, subscription: takafulModalConfig.subscription })}
+        />
+      )}
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Subscription Details Modal */}
       <AnimatePresence>
@@ -1000,11 +1064,10 @@ export default function TakafulPage() {
               onClick={(e) => e.stopPropagation()}
               className="bg-[#0B1212] rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             >
-              {/* Header */}
               <div className="sticky top-0 bg-[#0B1212] rounded-t-3xl p-6 border-b border-[#1A2A2A] flex justify-between items-center">
-                <h3 className="text-2xl font-bold text-white">Détails de la transaction</h3>
-                <button 
-                  onClick={() => setShowSubscriptionDetails(false)} 
+                <h3 className="text-2xl font-bold text-white">Détails de la souscription</h3>
+                <button
+                  onClick={() => setShowSubscriptionDetails(false)}
                   className="w-10 h-10 bg-[#5FB678] rounded-full flex items-center justify-center text-white hover:bg-[#4FA568] transition-colors"
                   title="Fermer"
                 >
@@ -1012,55 +1075,65 @@ export default function TakafulPage() {
                 </button>
               </div>
 
-              {/* Content */}
               <div className="p-6 space-y-6">
-                {/* Subscription Type Section */}
                 <div className="flex items-start space-x-4">
                   <div className="w-16 h-16 bg-[#2C3E3E] rounded-full flex items-center justify-center flex-shrink-0">
-                    <selectedSubscription.icon size={32} className="text-[#5FB678]" />
+                    {(() => {
+                      const IconComponent = getSubscriptionIcon(selectedSubscription.takafulPlan.title);
+                      return <IconComponent size={32} className="text-[#5FB678]" />;
+                    })()}
                   </div>
                   <div className="flex-1">
                     <h4 className="text-2xl font-bold text-white mb-2">
-                      {selectedSubscription.shortName}
+                      {selectedSubscription.takafulPlan.title}
                     </h4>
                     <p className="text-white/80">
-                      {selectedSubscription.description}
+                      Plan {selectedSubscription.takafulPlan.status}
                     </p>
                   </div>
                 </div>
 
-                {/* Status and Date */}
                 <div className="flex flex-col space-y-2">
                   <span className="text-[#5FB678] font-semibold text-lg">
                     {selectedSubscription.status}
                   </span>
                   <p className="text-white/80">
-                    {selectedSubscription.dueDate}
+                    {selectedSubscription.nextPaymentDate
+                      ? `Prochain paiement : ${formatSubscriptionDate(selectedSubscription.nextPaymentDate)}`
+                      : `Fin : ${formatSubscriptionDate(selectedSubscription.endDate)}`}
                   </p>
                 </div>
 
-                {/* Main Guarantees Section */}
-                <div className="space-y-4">
-                  <h5 className="text-xl font-bold text-white">Garanties principales</h5>
-                  <ul className="space-y-3">
-                    {selectedSubscription.guarantees.map((guarantee: string, index: number) => (
-                      <li key={index} className="flex items-center space-x-3">
-                        <div className="w-6 h-6 bg-[#5FB678] rounded-full flex items-center justify-center flex-shrink-0">
-                          <CheckCircle size={16} className="text-white" />
-                        </div>
-                        <span className="text-white/80">{guarantee}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Additional Info */}
-                <div className="pt-4 border-t border-[#1A2A2A]">
-                  <div className="flex justify-between items-center mb-2">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/80">Début</span>
+                    <span className="text-white">{formatSubscriptionDate(selectedSubscription.startDate)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/80">Fin</span>
+                    <span className="text-white">{formatSubscriptionDate(selectedSubscription.endDate)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-[#1A2A2A]">
                     <span className="text-white/80">Cotisation mensuelle</span>
-                    <span className="text-white font-semibold">{selectedSubscription.monthlyPremium}</span>
+                    <span className="text-white font-semibold">
+                      {formatAmount(selectedSubscription.takafulPlan.monthlyContribution)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/80">Contributions</span>
+                    <span className="text-white">{selectedSubscription._count.contributions}</span>
                   </div>
                 </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handlePay(selectedSubscription)}
+                  className="w-full py-4 rounded-2xl font-semibold text-white transition-opacity"
+                  style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
+                >
+                  Payer
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>

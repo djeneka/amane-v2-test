@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeftRight } from 'lucide-react';
 
 interface ScoreWalletProps {
@@ -20,8 +21,17 @@ export default function ScoreWallet({
   pointsNeeded = 180,
   conversionRate = 1
 }: ScoreWalletProps) {
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const maxPointsForNextLevel = progressToNextLevel + pointsNeeded;
-  const progressPercentage = (progressToNextLevel / maxPointsForNextLevel) * 100;
+  const progressPercentage = maxPointsForNextLevel > 0
+    ? (progressToNextLevel / maxPointsForNextLevel) * 100
+    : 100;
+
+  const handleConvertClick = () => {
+    setToastMessage('Bientôt disponible');
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   return (
     <motion.div
@@ -66,6 +76,8 @@ export default function ScoreWallet({
       <div className="flex items-center justify-between gap-4">
         {/* Bouton Convertir mes points */}
         <motion.button
+          type="button"
+          onClick={handleConvertClick}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="flex items-center space-x-2 bg-white text-[#101919] px-4 py-3 rounded-2xl font-medium text-sm whitespace-nowrap"
@@ -99,6 +111,21 @@ export default function ScoreWallet({
           Encore {pointsNeeded.toLocaleString('fr-FR')} points pour atteindre le rang {nextLevel} !
         </p>
       </div>
+
+      {/* Toast "Bientôt disponible" */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

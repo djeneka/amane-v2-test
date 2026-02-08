@@ -1,4 +1,4 @@
-import { apiGet } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 
 /** Créateur (createdBy) dans la réponse API */
 export interface InvestmentProductCreatedBy {
@@ -48,6 +48,127 @@ export async function getInvestmentProducts(
     `/api/investment-products?status=${encodeURIComponent(status)}`
   );
   return Array.isArray(list) ? list : [];
+}
+
+const INVESTMENT_SUBSCRIPTIONS_URL = '/api/investment';
+const INVESTMENT_CONTRIBUTIONS_URL = '/api/investments';
+const MY_INVESTMENTS_URL = '/api/investments/my-investments';
+
+/** Produit embarqué dans my-investments */
+export interface MyInvestmentProductEmbed {
+  id: string;
+  title: string;
+  estimatedReturn: string;
+  duration: number;
+}
+
+/** Utilisateur embarqué dans my-investments */
+export interface MyInvestmentUserEmbed {
+  id: string;
+  name: string;
+  email: string;
+}
+
+/** Souscription embarquée dans un investissement */
+export interface MyInvestmentSubscriptionEmbed {
+  id: string;
+  investmentProductId: string;
+  userId: string;
+  status: string;
+  subscribedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  investmentProduct: MyInvestmentProductEmbed;
+  user: MyInvestmentUserEmbed;
+}
+
+/** Investissement tel que renvoyé par GET /api/investments/my-investments */
+export interface MyInvestment {
+  id: string;
+  transactionId: string;
+  investmentSubscriptionId: string;
+  amount: number;
+  investmentDate: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  investmentSubscription: MyInvestmentSubscriptionEmbed;
+}
+
+/**
+ * Récupère la liste des investissements de l'utilisateur connecté.
+ * GET /api/investments/my-investments
+ * Header: Authorization: Bearer <accessToken>
+ */
+export async function getMyInvestments(accessToken: string): Promise<MyInvestment[]> {
+  const list = await apiGet<MyInvestment[]>(MY_INVESTMENTS_URL, { token: accessToken });
+  return Array.isArray(list) ? list : [];
+}
+
+/** Body pour ajouter une souscription investissement. POST /api/investment-subscriptions */
+export interface AddInvestmentBody {
+  investmentProductId: string;
+}
+
+/** Souscription investissement renvoyée par l'API après création */
+export interface InvestmentSubscription {
+  id: string;
+  investmentProductId: string;
+  userId: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Body pour effectuer un paiement de souscription investissement. */
+export interface MakeInvestmentSubscriptionBody {
+  walletCode: string;
+  investmentSubscriptionId: string;
+  amount: number;
+  investmentDate: string; // ISO 8601 (ex. "2024-01-15T00:00:00Z")
+}
+
+/** Réponse de makeInvestmentSubscription */
+export interface InvestmentContribution {
+  id: string;
+  transactionId: string;
+  investmentSubscriptionId: string;
+  userId: string;
+  amount: number;
+  investmentDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Ajoute une souscription investissement (étape 1 du modal).
+ * POST /api/investment-subscriptions
+ * @param accessToken - JWT (Bearer)
+ * @param body - investmentProductId
+ * @returns La souscription créée (contient id = investmentSubscriptionId)
+ */
+export async function addInvestment(
+  accessToken: string,
+  body: AddInvestmentBody
+): Promise<InvestmentSubscription> {
+  return apiPost<InvestmentSubscription>(`${INVESTMENT_SUBSCRIPTIONS_URL}-subscriptions`, body, { token: accessToken });
+}
+
+/**
+ * Effectue le paiement de la souscription investissement.
+ * POST /api/investment-subscriptions/contributions (ou chemin API à confirmer)
+ * @param accessToken - JWT (Bearer)
+ * @param body - walletCode, investmentSubscriptionId, amount, investmentDate (ISO 8601)
+ */
+export async function makeInvestmentSubscription(
+  accessToken: string,
+  body: MakeInvestmentSubscriptionBody
+): Promise<InvestmentContribution> {
+  return apiPost<InvestmentContribution>(
+    `${INVESTMENT_CONTRIBUTIONS_URL}`,
+    body,
+    { token: accessToken }
+  );
 }
 
 /**

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { login as apiLogin, type AuthUser, type LoginCredentials } from '@/services/auth';
 import { getCurrentUser } from '@/services/user';
+import { AUTH_UNAUTHORIZED_EVENT } from '@/lib/api';
 
 const STORAGE_USER = 'amane-user';
 const STORAGE_ACCESS_TOKEN = 'amane-access-token';
@@ -130,14 +131,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setAccessToken(null);
     setIsAuthenticated(false);
     localStorage.removeItem(STORAGE_USER);
     localStorage.removeItem(STORAGE_ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_REFRESH_TOKEN);
-  };
+  }, []);
+
+  // Déconnexion automatique quand une requête API retourne 401 (storage déjà nettoyé par api.ts)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onUnauthorized = () => {
+      logout();
+      window.location.href = '/';
+    };
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, onUnauthorized);
+  }, [logout]);
 
   const value: AuthContextType = {
     user,

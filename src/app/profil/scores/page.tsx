@@ -1,39 +1,162 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ScoreWallet from '@/components/ScoreWallet';
 import { Heart, Wallet, Megaphone, UserPlus, Gift, User, Trophy, BarChart3, Award, Package, Calendar, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { getMyDonations, type Donation } from '@/services/donations';
+import { getMyTransactions, type Transaction } from '@/services/transactions';
+import { getRankForScore, getNextRank } from '@/lib/rankRules';
+import { mySadaqahHistory, getMyRank, type SadaqahHistoryEntry, type RankingEntry } from '@/services/statistics';
 
 interface DonationHistoryItem {
-  id: number;
+  id: string;
   type: string;
   description: string;
   date: string;
   gain: number;
 }
 
+function formatHistoryDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const datePart = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    const timePart = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${datePart}, à ${timePart}`;
+  } catch {
+    return iso;
+  }
+}
+
+function sadaqahEntryToHistoryItem(entry: SadaqahHistoryEntry): DonationHistoryItem {
+  const type = entry.description.includes('Don général') ? 'Don général' : 'Don';
+  return {
+    id: entry.id,
+    type,
+    description: entry.description,
+    date: formatHistoryDate(entry.createdAt),
+    gain: entry.score,
+  };
+}
+
 export default function ScoresPage() {
+  const { isAuthenticated, accessToken, user } = useAuth();
+  const [myDonations, setMyDonations] = useState<Donation[]>([]);
+  const [myTransactions, setMyTransactions] = useState<Transaction[]>([]);
+  const [sadaqahHistory, setSadaqahHistory] = useState<SadaqahHistoryEntry[]>([]);
+  const [sadaqahHistoryLoading, setSadaqahHistoryLoading] = useState(true);
+  const [sadaqahHistoryError, setSadaqahHistoryError] = useState<string | null>(null);
+  const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [rankingLoading, setRankingLoading] = useState(true);
+  const [rankingError, setRankingError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Données pour l'historique des dons
-  const donationHistoryData: DonationHistoryItem[] = [
-    { id: 1, type: 'Don', description: 'Campagne orphelins', date: '11 Sep, 2025, à 11:56', gain: 50 },
-    { id: 2, type: 'Parrainage', description: 'Construction puits', date: '07 Sep, 2025, à 21:22', gain: 30 },
-    { id: 3, type: 'Conversion en don', description: 'Lorem ipsum dolor sit', date: '08 Août, 2025, à 16:36', gain: -100 },
-    { id: 4, type: 'Inscription', description: 'Création de compte sur Amane+', date: '29 Juin, 2025, à 09:48', gain: 20 },
-    { id: 5, type: 'Conversion en don', description: 'Lorem ipsum dolor sit', date: '11 Juin, 2025, à 20:02', gain: -50 },
-    { id: 6, type: 'Don', description: 'Aide aux sinistrés', date: '05 Juin, 2025, à 14:30', gain: 75 },
-    { id: 7, type: 'Parrainage', description: 'Éducation enfants', date: '01 Juin, 2025, à 10:15', gain: 25 },
-    { id: 8, type: 'Don', description: 'Santé communautaire', date: '28 Mai, 2025, à 18:45', gain: 100 },
-    { id: 9, type: 'Conversion en don', description: 'Lorem ipsum dolor sit', date: '20 Mai, 2025, à 12:20', gain: -75 },
-    { id: 10, type: 'Don', description: 'Construction école', date: '15 Mai, 2025, à 09:10', gain: 60 },
-    { id: 11, type: 'Parrainage', description: 'Eau potable', date: '10 Mai, 2025, à 16:00', gain: 35 },
-    { id: 12, type: 'Don', description: 'Aide alimentaire', date: '05 Mai, 2025, à 11:30', gain: 80 },
-  ];
+  // Score et rang réels (comme sur la home)
+  const sadaqahScore = user?.score?.score ?? 0;
+  const rankInfo = getRankForScore(sadaqahScore);
+  const nextRank = getNextRank(sadaqahScore);
+  const pointsToNextLevel = nextRank ? Math.max(0, nextRank.minPoints - sadaqahScore) : 0;
+
+  // Récupération des dons et transactions (comme sur la page home)
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setMyDonations([]);
+      setMyTransactions([]);
+      return;
+    }
+    let cancelled = false;
+    getMyDonations(accessToken)
+      .then((list) => {
+        if (!cancelled) setMyDonations(list);
+      })
+      .catch(() => {
+        if (!cancelled) setMyDonations([]);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setMyTransactions([]);
+      return;
+    }
+    let cancelled = false;
+    getMyTransactions(accessToken)
+      .then((list) => {
+        if (!cancelled) setMyTransactions(list);
+      })
+      .catch(() => {
+        if (!cancelled) setMyTransactions([]);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
+  // Historique sadaqah (GET /api/sadaqah-history)
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setSadaqahHistory([]);
+      setSadaqahHistoryLoading(false);
+      setSadaqahHistoryError(null);
+      return;
+    }
+    setSadaqahHistoryLoading(true);
+    setSadaqahHistoryError(null);
+    let cancelled = false;
+    mySadaqahHistory(accessToken)
+      .then((list) => {
+        if (!cancelled) setSadaqahHistory(list);
+      })
+      .catch((err) => {
+        if (!cancelled) setSadaqahHistoryError(err?.message ?? 'Erreur lors du chargement');
+      })
+      .finally(() => {
+        if (!cancelled) setSadaqahHistoryLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
+  // Classement (GET /api/ranking)
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setRanking([]);
+      setRankingLoading(false);
+      setRankingError(null);
+      return;
+    }
+    setRankingLoading(true);
+    setRankingError(null);
+    let cancelled = false;
+    getMyRank({ token: accessToken })
+      .then((list) => {
+        if (!cancelled) setRanking(list);
+      })
+      .catch((err) => {
+        if (!cancelled) setRankingError(err?.message ?? 'Erreur lors du chargement du classement');
+      })
+      .finally(() => {
+        if (!cancelled) setRankingLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
+  // Position du user dans le classement (userId du contexte = id user)
+  const myRankEntry = user?.id ? ranking.find((e) => e.userId === user.id) : null;
+  const myRankPosition = myRankEntry?.rank ?? null;
+  const totalInRanking = ranking.length;
+
+  // Indicateurs d'impact (alignés sur la page home)
+  const donationsCount = myDonations.length;
+  const spentAmount = myTransactions
+    .filter((t) => t.purpose !== 'DEPOSIT')
+    .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+  const campaignsCount = new Set(myDonations.map((d) => d.campaignId).filter(Boolean)).size;
+
+  // Données pour l'historique des dons (depuis mySadaqahHistory)
+  const donationHistoryData: DonationHistoryItem[] = sadaqahHistory.map(sadaqahEntryToHistoryItem);
 
   // Calcul de la pagination
   const totalPages = Math.ceil(donationHistoryData.length / itemsPerPage);
@@ -56,18 +179,34 @@ export default function ScoresPage() {
   const handlePageClick = (page: number) => {
     setCurrentPage(page);
   };
-  // Données pour Impact de vos dons
+  // Données pour Impact de vos dons (données réelles comme sur la home)
   const impactData = [
-    { icon: Heart, label: 'Dons', value: 12, color: '#00D9A5' },
-    { icon: Wallet, label: 'Dépensé (F CFA)', value: 125000, color: '#00D9A5' },
-    { icon: Megaphone, label: 'Campagnes', value: 15, color: '#00D9A5' },
+    { icon: Heart, label: 'Dons', value: donationsCount, color: '#00D9A5' },
+    { icon: Wallet, label: 'Dépensé (F CFA)', value: spentAmount, color: '#00D9A5' },
+    { icon: Megaphone, label: 'Campagnes', value: campaignsCount, color: '#00D9A5' },
   ];
 
-  // Données pour Statistiques sadaka score
+  // Statistiques sadaka score depuis mySadaqahHistory
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const scoreThisMonth = sadaqahHistory
+    .filter((e) => {
+      const d = new Date(e.createdAt);
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    })
+    .reduce((sum, e) => sum + e.score, 0);
+  const scoreThisYear = sadaqahHistory
+    .filter((e) => new Date(e.createdAt).getFullYear() === currentYear)
+    .reduce((sum, e) => sum + e.score, 0);
+  const scoreRecord = sadaqahHistory.length > 0
+    ? Math.max(...sadaqahHistory.map((e) => e.score))
+    : 0;
+
   const statsData = [
-    { label: 'Ce mois', value: 70, color: '#00D9A5' },
-    { label: 'Cette année', value: 320, color: '#00D9A5' },
-    { label: 'Record', value: 512, color: '#00D9A5' },
+    { label: 'Ce mois', value: scoreThisMonth, color: '#00D9A5' },
+    { label: 'Cette année', value: scoreThisYear, color: '#00D9A5' },
+    { label: 'Record', value: scoreRecord, color: '#00D9A5' },
   ];
 
   // Données pour Comment gagner des points
@@ -77,12 +216,28 @@ export default function ScoresPage() {
     { icon: User, label: 'Complète ton profil', color: '#00D9A5' },
   ];
 
-  // Données pour les badges débloqués
-  const badgesData = [
-    { icon: Package, label: 'Solidaire', description: 'A fait un don' },
-    { icon: UserPlus, label: 'Parrain', description: 'A parrainé un ami' },
-    { icon: Calendar, label: 'Donateur régulier', description: 'A donné 3 mois de suite' },
-  ];
+  // Badges débloqués : Solidaire (≥1 don), Donateur régulier (≥1 don dans chacun des 3 derniers mois), Parrain commenté
+  const hasAtLeastOneDon = sadaqahHistory.length >= 1;
+  const last3Months = [0, 1, 2].map((i) => {
+    const d = new Date(currentYear, currentMonth - i, 1);
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
+  const hasDonInMonth = (year: number, month: number) =>
+    sadaqahHistory.some((e) => {
+      const created = new Date(e.createdAt);
+      return created.getFullYear() === year && created.getMonth() === month;
+    });
+  const hasDonateurRegulier = last3Months.every(({ year, month }) => hasDonInMonth(year, month));
+
+  const badgesData: { icon: typeof Package; label: string; description: string }[] = [];
+  if (hasAtLeastOneDon) {
+    badgesData.push({ icon: Package, label: 'Solidaire', description: 'A fait un don' });
+  }
+  // Badge Parrain (désactivé / non affiché)
+  // badgesData.push({ icon: UserPlus, label: 'Parrain', description: 'A parrainé un ami' });
+  if (hasDonateurRegulier) {
+    badgesData.push({ icon: Calendar, label: 'Donateur régulier', description: 'A donné 3 mois de suite' });
+  }
 
   return (
     <div className="space-y-8">
@@ -92,11 +247,11 @@ export default function ScoresPage() {
         {/* ScoreWallet */}
         <div className="w-full">
           <ScoreWallet
-            totalScore={320}
-            rank="Argent"
-            nextLevel="Platine"
-            progressToNextLevel={320}
-            pointsNeeded={180}
+            totalScore={sadaqahScore}
+            rank={rankInfo.label}
+            nextLevel={nextRank?.label ?? rankInfo.label}
+            progressToNextLevel={sadaqahScore}
+            pointsNeeded={pointsToNextLevel}
             conversionRate={1}
           />
         </div>
@@ -107,10 +262,18 @@ export default function ScoresPage() {
             <div className="flex items-center space-x-3">
               <Trophy size={24} className="text-[#00D9A5]" />
               <div>
-                <p className="text-white font-medium text-sm">Tu es 12e sur 200</p>
+                {rankingLoading ? (
+                  <p className="text-white/70 font-medium text-sm">Chargement du classement...</p>
+                ) : rankingError ? (
+                  <p className="text-red-400/90 font-medium text-sm">{rankingError}</p>
+                ) : myRankPosition != null && totalInRanking > 0 ? (
+                  <p className="text-white font-medium text-sm">Tu es {myRankPosition}e sur {totalInRanking}</p>
+                ) : (
+                  <p className="text-white font-medium text-sm">Tu n&apos;es pas encore classé</p>
+                )}
               </div>
             </div>
-            <Link href="/profil/scores/classement">
+            <Link href="/profil/classement">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -127,7 +290,9 @@ export default function ScoresPage() {
         <div className="space-y-4">
           <h2 className="text-white text-xl font-semibold">Badges débloqués</h2>
           <div className="space-y-3">
-            {badgesData.map((badge, index) => {
+            {badgesData.length === 0 ? (
+              <p className="text-white/60 text-sm">Aucun badge débloqué pour le moment.</p>
+            ) : badgesData.map((badge, index) => {
               const Icon = badge.icon;
               return (
                 <motion.div
@@ -241,26 +406,35 @@ export default function ScoresPage() {
 
           {/* Table Body */}
           <div className="divide-y divide-white/10">
-            {currentData.map((item) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="grid grid-cols-4 gap-4 p-4 hover:bg-[#101919]/70 transition-colors"
-              >
-                <div className="text-white text-sm">{item.type}</div>
-                <div className="text-white text-sm">{item.description}</div>
-                <div className="text-white/70 text-sm">{item.date}</div>
-                <div className={`text-sm font-semibold text-right ${
-                  item.gain >= 0 ? 'text-[#00D9A5]' : 'text-[#FF4D4D]'
-                }`}>
-                  {item.gain >= 0 ? '+' : ''}{item.gain}
-                </div>
-              </motion.div>
-            ))}
+            {sadaqahHistoryLoading ? (
+              <div className="p-8 text-center text-white/70 text-sm">Chargement de l&apos;historique...</div>
+            ) : sadaqahHistoryError ? (
+              <div className="p-8 text-center text-red-400 text-sm">{sadaqahHistoryError}</div>
+            ) : currentData.length === 0 ? (
+              <div className="p-8 text-center text-white/70 text-sm">Aucun don dans l&apos;historique.</div>
+            ) : (
+              currentData.map((item) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="grid grid-cols-4 gap-4 p-4 hover:bg-[#101919]/70 transition-colors"
+                >
+                  <div className="text-white text-sm">{item.type}</div>
+                  <div className="text-white text-sm">{item.description}</div>
+                  <div className="text-white/70 text-sm">{item.date}</div>
+                  <div className={`text-sm font-semibold text-right ${
+                    item.gain >= 0 ? 'text-[#00D9A5]' : 'text-[#FF4D4D]'
+                  }`}>
+                    {item.gain >= 0 ? '+' : ''}{item.gain}
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
 
           {/* Pagination */}
+          {donationHistoryData.length > 0 && (
           <div className="flex items-center justify-between p-4 border-t border-white/10">
             <div className="text-white/70 text-sm">
               Affichage {startIndex + 1} à {Math.min(endIndex, donationHistoryData.length)} sur {donationHistoryData.length}
@@ -310,6 +484,7 @@ export default function ScoresPage() {
               </button>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

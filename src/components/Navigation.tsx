@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationPopup from '@/components/NotificationPopup';
+import { getUnreadNotificationsCount } from '@/services/notifications';
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,9 +22,21 @@ export default function Navigation() {
   const [showWalletAmount, setShowWalletAmount] = useState(false);
   const [showSadaqahScore, setShowSadaqahScore] = useState(false);
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const pathname = usePathname();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, accessToken } = useAuth();
   const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Charger le nombre de notifications non lues (et rafraîchir à la fermeture du popup)
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setUnreadNotificationCount(0);
+      return;
+    }
+    getUnreadNotificationsCount(accessToken)
+      .then(setUnreadNotificationCount)
+      .catch(() => setUnreadNotificationCount(0));
+  }, [isAuthenticated, accessToken, showNotificationPopup]);
 
   // Fermer le dropdown quand on clique en dehors
   useEffect(() => {
@@ -66,7 +79,7 @@ export default function Navigation() {
     { name: 'A propos d\'Amane+', href: '/profil/a-propos', image: '/icons/information.png' },
     { name: 'Aide & Support', href: '/profil/aide-support', image: '/icons/message-question.png' },
     { name: 'Termes & Conditions', href: '/profil/termes', image: '/icons/security-safe.png' },
-    { name: 'Inviter des personnes', href: '/profil/inviter', image: '/icons/share.png' },
+    // { name: 'Inviter des personnes', href: '/profil/inviter', image: '/icons/share.png' },
     { name: 'Déconnexion', href: '/logout', icon: LogOut, isLogout: true },
   ];
 
@@ -343,7 +356,11 @@ export default function Navigation() {
                     alt="Notifications"
                     className="w-5 h-5 object-contain"
                   />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#FF3B30] rounded-full border-2 border-[#080909]"></span>
+                  {unreadNotificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#FF3B30] rounded-full border-2 border-[#080909] text-[10px] font-bold text-white">
+                      {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                    </span>
+                  )}
                 </motion.div>
 
                 {/* User Profile */}
@@ -779,7 +796,11 @@ export default function Navigation() {
                         alt="Notifications"
                         className="w-5 h-5 object-contain"
                       />
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#FF3B30] rounded-full border-2 border-[#3E4042]"></span>
+                      {unreadNotificationCount > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-[#FF3B30] rounded-full border-2 border-[#3E4042] text-[10px] font-bold text-white">
+                          {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                        </span>
+                      )}
                     </div>
                   </motion.div>
 

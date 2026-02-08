@@ -51,12 +51,21 @@ function mapApiCampaignToCampaign(api: ApiCampaign): Campaign {
 }
 
 /**
+ * Récupère toutes les campagnes actives depuis l'API (données brutes avec category API).
+ * GET /api/campaigns?status=ACTIVE
+ */
+export async function getActiveCampaignsRaw(): Promise<ApiCampaign[]> {
+  const list = await apiGet<ApiCampaign[]>('/api/campaigns?status=ACTIVE');
+  return Array.isArray(list) ? list : [];
+}
+
+/**
  * Récupère toutes les campagnes actives depuis l'API.
  * GET /api/campaigns?status=ACTIVE
  */
 export async function getActiveCampaigns(): Promise<Campaign[]> {
-  const list = await apiGet<ApiCampaign[]>('/api/campaigns?status=ACTIVE');
-  return (Array.isArray(list) ? list : []).map(mapApiCampaignToCampaign);
+  const list = await getActiveCampaignsRaw();
+  return list.map(mapApiCampaignToCampaign);
 }
 
 export async function getCampaignById(id: string): Promise<Campaign | null> {
