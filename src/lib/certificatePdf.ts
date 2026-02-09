@@ -126,7 +126,7 @@ async function buildCertificateDoc(data: CertificateData): Promise<jsPDF> {
     data.impactUrl ||
     (typeof window !== 'undefined'
       ? `${window.location.origin}/transactions`
-      : 'https://amane.plus/transactions');
+      : 'https://amaneplus.net/transactions');
 
   const imageDataUrl = await loadBackgroundAsJpegDataUrl(CERTIFICATE_IMAGE_URL);
   const qrDataUrl = await getQrDataUrl(impactUrl);

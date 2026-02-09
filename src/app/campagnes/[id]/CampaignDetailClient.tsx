@@ -27,7 +27,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const walletBalance = user?.wallet?.balance ?? 610473;
+  const walletBalance = user?.wallet?.balance ?? 0;
   const progress = campaign.targetAmount > 0 ? (campaign.currentAmount / campaign.targetAmount) * 100 : 0;
 
   const formatAmount = (amount: number) => {
