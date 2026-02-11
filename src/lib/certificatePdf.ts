@@ -24,9 +24,9 @@ const LAYOUT = {
   donorUnderline: { x1: 55, y1: 101, x2: 155, y2: 101 },
   recipientName: { x: 115, y: 86, fontSize: 16, align: 'center' as const },
   recipientUnderline: { x1: 55, y1: 131, x2: 155, y2: 131 },
-  amount: { x: 115, y: 112, fontSize: 20, align: 'center' as const },
+  amount: { x: 117, y: 118, fontSize: 20, align: 'center' as const },
   certNumber: { x: 115, y: 152, fontSize: 10, align: 'center' as const },
-  qr: { x: 40, y: 146, sizeMm: 24 },
+  qr: { x: 40, y: 152, sizeMm: 24 },
   /** Centre horizontal du bloc QR pour texte centré */
   qrCenterX: 42,
   scanMeY: 260,

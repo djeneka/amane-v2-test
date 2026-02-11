@@ -527,11 +527,7 @@ export default function Navigation() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className={`md:hidden border-t ${
-              isAuthenticated 
-                ? 'bg-[#3E4042] border-gray-500/30' 
-                : 'bg-[#00644D] border-white/20'
-            }`}
+            className="md:hidden border-t bg-[#00644D] border-white/20"
           >
             <div className="px-4 py-6 space-y-4">
               {isAuthenticated ? (
@@ -545,7 +541,7 @@ export default function Navigation() {
                   >
                     <Home 
                       size={18} 
-                      className={isActive('/') ? 'text-[#5CD07D]' : 'text-[#A8A9AB]'} 
+                      className={isActive('/') ? 'text-[#5CD07D]' : 'text-white/90'} 
                     />
                     <Link
                       href="/"
@@ -553,7 +549,7 @@ export default function Navigation() {
                       className={`flex-1 p-3 rounded-lg transition-colors duration-200 ${
                         isActive('/')
                           ? 'bg-white/20 text-white' 
-                          : 'text-[#A8A9AB] hover:bg-white/10'
+                          : 'text-white/90 hover:bg-white/10'
                       }`}
                     >
                       <span className="font-medium">Accueil</span>
@@ -573,7 +569,7 @@ export default function Navigation() {
                       className="w-[18px] h-[18px] object-contain transition-all duration-200"
                       style={isActive('/transactions') 
                         ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
-                        : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
+                        : { filter: 'brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
                       }
                     />
                     <Link
@@ -582,7 +578,7 @@ export default function Navigation() {
                       className={`flex-1 p-3 rounded-lg transition-colors duration-200 ${
                         isActive('/transactions')
                           ? 'bg-white/20 text-white' 
-                          : 'text-[#A8A9AB] hover:bg-white/10'
+                          : 'text-white/90 hover:bg-white/10'
                       }`}
                     >
                       <span className="font-medium">Transactions</span>
@@ -602,7 +598,7 @@ export default function Navigation() {
                       className="w-[18px] h-[18px] object-contain transition-all duration-200"
                       style={isActive('/communaute') 
                         ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
-                        : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
+                        : { filter: 'brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
                       }
                     />
                     <Link
@@ -611,41 +607,53 @@ export default function Navigation() {
                       className={`flex-1 p-3 rounded-lg transition-colors duration-200 ${
                         isActive('/communaute')
                           ? 'bg-white/20 text-white' 
-                          : 'text-[#A8A9AB] hover:bg-white/10'
+                          : 'text-white/90 hover:bg-white/10'
                       }`}
                     >
                       <span className="font-medium">Communauté</span>
                     </Link>
                   </motion.div>
 
-                  {/* Services */}
+                  {/* Nos services - sous-éléments bien disposés */}
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.2 }}
-                    className="flex items-center space-x-2"
+                    className="rounded-xl bg-white/10 overflow-hidden"
                   >
-                    <img 
-                      src="/icons/category-2.png" 
-                      alt="Services"
-                      className="w-[18px] h-[18px] object-contain transition-all duration-200"
-                      style={isServicesActive() 
-                        ? { filter: 'brightness(0) saturate(100%) invert(67%) sepia(95%) saturate(1234%) hue-rotate(89deg) brightness(102%) contrast(101%)' } 
-                        : { filter: 'brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)' }
-                      }
-                    />
-                    <button
-                      onClick={() => {
-                        setIsServicesDropdownOpen(!isServicesDropdownOpen);
-                      }}
-                      className={`flex-1 p-3 rounded-lg transition-colors duration-200 text-left ${
-                        isServicesActive()
-                          ? 'bg-white/20 text-white' 
-                          : 'text-[#A8A9AB] hover:bg-white/10'
-                      }`}
-                    >
-                      <span className="font-medium">Services</span>
-                    </button>
+                    <div className="flex items-center space-x-2 px-4 py-3 border-b border-white/10">
+                      <img 
+                        src="/icons/category-2.png" 
+                        alt="Services"
+                        className="w-[18px] h-[18px] object-contain"
+                        style={{ filter: 'brightness(0) saturate(100%) invert(100%)' }}
+                      />
+                      <h3 className="text-sm font-semibold text-white">Nos services</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 p-3">
+                      {servicesItems.map((item, index) => {
+                        const active = isActive(item.href);
+                        return (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            onClick={() => setIsOpen(false)}
+                            className={`flex items-center gap-2.5 p-3 rounded-lg transition-colors duration-200 ${
+                              active 
+                                ? 'bg-white/25 text-white' 
+                                : 'text-white/90 hover:bg-white/15'
+                            }`}
+                          >
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="w-5 h-5 object-contain flex-shrink-0"
+                            />
+                            <span className="text-sm font-medium">{item.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </motion.div>
                 </>
               ) : (
@@ -662,74 +670,60 @@ export default function Navigation() {
                       className={`p-3 rounded-lg transition-colors duration-200 ${
                         isActive('/')
                           ? 'bg-white/20 text-white' 
-                          : 'text-white/80 hover:bg-white/10'
+                          : 'text-white/90 hover:bg-white/10'
                       }`}
                     >
                       <span className="font-medium">Accueil</span>
                     </Link>
                   </motion.div>
 
-                  {/* Nos Services Section */}
+                  {/* Nos services - sous-éléments bien disposés */}
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.1 }}
+                    className="rounded-xl bg-white/10 overflow-hidden"
                   >
-                    <div className="p-3">
-                      <h3 className="text-sm font-medium text-white mb-2">
-                        Nos services
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2 ml-6">
-                        {servicesItems.map((item, index) => {
-                          const active = isActive(item.href);
-                          return (
-                            <Link
-                              key={item.name}
-                              href={item.href}
-                              onClick={() => setIsOpen(false)}
-                              className={`flex items-center space-x-2 p-3 rounded-lg transition-colors duration-200 ${
-                                active 
-                                  ? 'bg-white/20 text-white' 
-                                  : 'text-white/80 hover:bg-white/10'
-                              }`}
-                            >
-                              <img 
-                                src={item.image} 
-                                alt={item.name}
-                                className="w-4 h-4 object-contain"
-                              />
-                              <span className="text-xs">{item.name}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
+                    <div className="flex items-center space-x-2 px-4 py-3 border-b border-white/10">
+                      <img 
+                        src="/icons/category-2.png" 
+                        alt="Services"
+                        className="w-[18px] h-[18px] object-contain"
+                        style={{ filter: 'brightness(0) saturate(100%) invert(100%)' }}
+                      />
+                      <h3 className="text-sm font-semibold text-white">Nos services</h3>
                     </div>
-                  </motion.div>
-
-                  {/* Dons */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.15 }}
-                  >
-                    <Link
-                      href="/don"
-                      onClick={() => setIsOpen(false)}
-                      className={`p-3 rounded-lg transition-colors duration-200 ${
-                        isActive('/don')
-                          ? 'bg-white/20 text-white' 
-                          : 'text-white/80 hover:bg-white/10'
-                      }`}
-                    >
-                      <span className="font-medium">Dons</span>
-                    </Link>
+                    <div className="grid grid-cols-2 gap-2 p-3">
+                      {servicesItems.map((item) => {
+                        const active = isActive(item.href);
+                        return (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            onClick={() => setIsOpen(false)}
+                            className={`flex items-center gap-2.5 p-3 rounded-lg transition-colors duration-200 ${
+                              active 
+                                ? 'bg-white/25 text-white' 
+                                : 'text-white/90 hover:bg-white/15'
+                            }`}
+                          >
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="w-5 h-5 object-contain flex-shrink-0"
+                            />
+                            <span className="text-sm font-medium">{item.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </motion.div>
 
                   {/* Pourquoi Amane+? */}
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.2 }}
+                    transition={{ duration: 0.3, delay: 0.15 }}
                   >
                     <Link
                       href="/#pourquoi-amane"
@@ -743,7 +737,7 @@ export default function Navigation() {
                           window.location.href = '/#pourquoi-amane';
                         }
                       }}
-                      className="p-3 rounded-lg transition-colors duration-200 text-white/80 hover:bg-white/10"
+                      className="p-3 rounded-lg transition-colors duration-200 text-white/90 hover:bg-white/10"
                     >
                       <span className="font-medium">Pourquoi Amane+?</span>
                     </Link>
@@ -753,7 +747,7 @@ export default function Navigation() {
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.25 }}
+                    transition={{ duration: 0.3, delay: 0.2 }}
                   >
                     <Link
                       href="/contact"
@@ -761,7 +755,7 @@ export default function Navigation() {
                       className={`p-3 rounded-lg transition-colors duration-200 ${
                         isActive('/contact')
                           ? 'bg-white/20 text-white' 
-                          : 'text-white/80 hover:bg-white/10'
+                          : 'text-white/90 hover:bg-white/10'
                       }`}
                     >
                       <span className="font-medium">Contactez-nous</span>
@@ -776,7 +770,7 @@ export default function Navigation() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 0.3 }}
-                  className="pt-4 border-t border-gray-500/30"
+                  className="pt-4 border-t border-white/20"
                 >
                   {/* Notification Icon for Mobile */}
                   <motion.div
@@ -814,7 +808,7 @@ export default function Navigation() {
                       <p className="text-sm font-medium text-white">
                         Salam, {getUserFirstName()}
                       </p>
-                      <p className="text-xs text-[#A8A9AB]">
+                      <p className="text-xs text-white/70">
                         La patience est lumière ✨
                       </p>
                     </div>
@@ -840,10 +834,10 @@ export default function Navigation() {
                           }}
                           className={`flex items-center space-x-3 p-3 rounded-lg transition-colors duration-200 ${
                             item.isLogout 
-                              ? 'text-red-400 hover:text-red-300 hover:bg-red-500/20' 
+                              ? 'text-red-300 hover:text-red-200 hover:bg-red-500/20' 
                               : active
                                 ? 'bg-white/20 text-white'
-                                : 'text-white/80 hover:bg-white/10'
+                                : 'text-white/90 hover:bg-white/10'
                           }`}
                         >
                           {item.image ? (

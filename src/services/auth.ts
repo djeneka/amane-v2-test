@@ -40,7 +40,55 @@ export type LoginCredentials =
   | { phoneNumber: string; password: string };
 
 const LOGIN_URL = '/api/auth/login';
+const REGISTER_URL = '/api/auth/register';
 const FORGOT_PASSWORD_URL = '/api/auth/forgot-password';
+
+/** Corps de requête : inscription */
+export interface RegisterBody {
+  email: string;
+  password: string;
+  name: string;
+  phoneNumber: string;
+  profilePicture: string;
+}
+
+/** Réponse POST /api/auth/register */
+export interface RegisterResponse {
+  message: string;
+}
+
+/**
+ * Inscription d'un nouvel utilisateur.
+ * POST /api/auth/register
+ * @param body - email, password, name, phoneNumber, profilePicture
+ * @returns message indiquant qu'un code de vérification a été envoyé
+ */
+export async function register(body: RegisterBody): Promise<RegisterResponse> {
+  return apiPost<RegisterResponse>(REGISTER_URL, body);
+}
+
+const VERIFY_ACCOUNT_URL = '/api/auth/verify-account';
+
+/** Corps de requête : vérification du compte par OTP */
+export interface VerifyAccountBody {
+  otp: string;
+  phoneNumber: string;
+}
+
+/** Réponse POST /api/auth/verify-account */
+export interface VerifyAccountResponse {
+  message: string;
+}
+
+/**
+ * Vérifie le compte avec le code OTP reçu (après inscription).
+ * POST /api/auth/verify-account
+ * @param body - otp, phoneNumber (format international ex. +33612345678)
+ * @returns message de succès
+ */
+export async function verifyAccount(body: VerifyAccountBody): Promise<VerifyAccountResponse> {
+  return apiPost<VerifyAccountResponse>(VERIFY_ACCOUNT_URL, body);
+}
 
 /** Corps de requête : demande de reset mot de passe (email OU phoneNumber) */
 export type ForgotPasswordBody = { email: string } | { phoneNumber: string };
