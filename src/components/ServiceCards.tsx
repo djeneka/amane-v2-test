@@ -73,9 +73,8 @@ export default function ServiceCards({ showHelpButton = true }: ServiceCardsProp
           <Link key={service.href} href={service.href} className="w-full">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, delay: service.delay }}
-              viewport={{ once: true }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`bg-[#83CBB4] rounded-4xl ${service.paddingClass} flex flex-col justify-between cursor-pointer hover:bg-[#7FB88E] transition-colors w-full`}
@@ -92,9 +91,8 @@ export default function ServiceCards({ showHelpButton = true }: ServiceCardsProp
       {showHelpButton && (
         <motion.button
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.5 }}
-          viewport={{ once: true }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setIsHelpModalOpen(true)}

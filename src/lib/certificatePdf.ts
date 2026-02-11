@@ -26,7 +26,7 @@ const LAYOUT = {
   recipientUnderline: { x1: 55, y1: 131, x2: 155, y2: 131 },
   amount: { x: 117, y: 118, fontSize: 20, align: 'center' as const },
   certNumber: { x: 115, y: 152, fontSize: 10, align: 'center' as const },
-  qr: { x: 40, y: 152, sizeMm: 24 },
+  qr: { x: 40, y: 149, sizeMm: 22 },
   /** Centre horizontal du bloc QR pour texte centré */
   qrCenterX: 42,
   scanMeY: 260,

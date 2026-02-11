@@ -39,9 +39,8 @@ export default function Wallet({
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      viewport={{ once: true }}
       className="rounded-3xl p-6 space-y-6 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3]"
     >
       {/* Compte principal */}

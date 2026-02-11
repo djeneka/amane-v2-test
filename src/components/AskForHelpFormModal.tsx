@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, CheckCircle, User, Building, Hash, Infinity, Heart, ChevronDown, FileText, Upload, Paperclip, Handshake, Pen, Clock, Home, MapPin, Users, Briefcase, DollarSign, GraduationCap, Building2, Loader2 } from 'lucide-react';
+import { X, ArrowRight, CheckCircle, User, Building, Hash, Infinity, Heart, ChevronDown, FileText, Upload, Paperclip, Handshake, Pen, Clock, Home, MapPin, Users, Briefcase, Banknote, GraduationCap, Building2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -62,6 +62,16 @@ const HABITATION_KIND_OPTIONS = [
   { value: 'Autres', label: 'Autres' },
 ] as const;
 
+const SITUATION_MATRIMONIALE_OPTIONS = [
+  { value: '', label: 'Sélectionner...' },
+  { value: 'Célibataire', label: 'Célibataire' },
+  { value: 'Marié(e)', label: 'Marié(e)' },
+  { value: 'Veuf(ve)', label: 'Veuf(ve)' },
+  { value: 'Divorcé(e)', label: 'Divorcé(e)' },
+  { value: 'Concubinage', label: 'Concubinage' },
+  { value: 'Autre', label: 'Autre' },
+];
+
 interface AskForHelpFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -115,13 +125,64 @@ const ATTACHMENT_TYPES = [
   'OTHER',
 ] as const;
 
-/** Mapping des clés documents → type d'attachment API */
+/** Mapping des clés documents → type d'attachment API (fallback) */
 const ATTACHMENT_TYPE_MAP: Record<string, (typeof ATTACHMENT_TYPES)[number]> = {
   identity: 'ID_CARD',
   situation: 'SITUATION_JUSTIFICATION',
   income: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION',
   quote: 'QUOTE_DETAILS',
-  income2: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION',
+};
+
+/** Documents requis par type de campagne (étape 3) — affichés selon la campagne sélectionnée */
+type DocConfig = { key: string; label: string; apiType: (typeof ATTACHMENT_TYPES)[number] };
+const DOCUMENTS_BY_CATEGORY: Record<string, DocConfig[]> = {
+  HEALTH: [
+    { key: 'identity', label: "Copie de la Pièce d'Identité (CNI / Passeport)", apiType: 'ID_CARD' },
+    { key: 'situation', label: 'Certificat médical', apiType: 'SITUATION_JUSTIFICATION' },
+    { key: 'quote', label: 'Devis détaillé (hôpital / pharmacie / intervention)', apiType: 'QUOTE_DETAILS' },
+    { key: 'income', label: "Preuve de revenus ou Attestation d'indigence", apiType: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION' },
+  ],
+  EDUCATION: [
+    { key: 'identity', label: "Copie de la Pièce d'Identité", apiType: 'ID_CARD' },
+    { key: 'situation', label: 'Certificat de scolarité', apiType: 'SITUATION_JUSTIFICATION' },
+    { key: 'quote', label: 'Facture ou Devis détaillé (frais scolaires)', apiType: 'QUOTE_DETAILS' },
+    { key: 'income', label: "Preuve de revenus ou Attestation d'indigence", apiType: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION' },
+  ],
+  FOOD: [
+    { key: 'identity', label: "Copie de la Pièce d'Identité", apiType: 'ID_CARD' },
+    { key: 'income', label: "Preuve de revenus ou Attestation d'indigence", apiType: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION' },
+  ],
+  CLOTHING: [
+    { key: 'identity', label: "Copie de la Pièce d'Identité", apiType: 'ID_CARD' },
+    { key: 'income', label: "Preuve de revenus ou Attestation d'indigence", apiType: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION' },
+  ],
+  HOUSING: [
+    { key: 'identity', label: "Copie de la Pièce d'Identité", apiType: 'ID_CARD' },
+    { key: 'situation', label: "Justificatif de situation (avis d'expulsion / constat / etc.)", apiType: 'SITUATION_JUSTIFICATION' },
+    { key: 'quote', label: 'Devis détaillé (travaux / loyer)', apiType: 'QUOTE_DETAILS' },
+    { key: 'income', label: "Preuve de revenus ou Attestation d'indigence", apiType: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION' },
+  ],
+  TRANSPORTATION: [
+    { key: 'identity', label: "Copie de la Pièce d'Identité", apiType: 'ID_CARD' },
+    { key: 'situation', label: 'Justificatif de situation (certificat médical ou scolaire)', apiType: 'SITUATION_JUSTIFICATION' },
+    { key: 'quote', label: 'Devis ou estimation des frais', apiType: 'QUOTE_DETAILS' },
+    { key: 'income', label: "Preuve de revenus ou Attestation d'indigence", apiType: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION' },
+  ],
+  UTILITIES: [
+    { key: 'identity', label: "Copie de la Pièce d'Identité", apiType: 'ID_CARD' },
+    { key: 'situation', label: 'Facture impayée (CIE / SODECI / etc.)', apiType: 'SITUATION_JUSTIFICATION' },
+    { key: 'income', label: "Preuve de revenus ou Attestation d'indigence", apiType: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION' },
+  ],
+  WIDOW_SUPPORT: [
+    { key: 'identity', label: "Copie de la Pièce d'Identité", apiType: 'ID_CARD' },
+    { key: 'situation', label: "Acte de décès du conjoint", apiType: 'SITUATION_JUSTIFICATION' },
+    { key: 'income', label: "Preuve de revenus ou Attestation d'indigence", apiType: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION' },
+  ],
+  OTHER: [
+    { key: 'identity', label: "Copie de la Pièce d'Identité", apiType: 'ID_CARD' },
+    { key: 'situation', label: 'Justificatif lié à la demande', apiType: 'SITUATION_JUSTIFICATION' },
+    { key: 'income', label: "Preuve de revenus ou Attestation d'indigence", apiType: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION' },
+  ],
 };
 
 /** Dérive prénom et nom depuis user.name (format "Nom Prénom" ou "Prénom Nom") */
@@ -216,13 +277,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const router = useRouter();
 
-  // Attachments (type, url, label) — documents à fournir
+  // Attachments (type, url, label) — documents à fournir (clés selon DOCUMENTS_BY_CATEGORY)
   const [documents, setDocuments] = useState<{ [key: string]: File | null }>({
     identity: null,
     situation: null,
     income: null,
     quote: null,
-    income2: null,
   });
   const [attachmentLabels, setAttachmentLabels] = useState<{ [key: string]: string }>({});
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
@@ -336,11 +396,24 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
         situation: null,
         income: null,
         quote: null,
-        income2: null,
       });
       setAttachmentLabels({});
     }
   }, [isOpen]);
+
+  /** Éligibilité Charia suggérée selon le revenu mensuel (sélection manuelle toujours possible) */
+  useEffect(() => {
+    const raw = monthlyIncomeOfBeneficiary.trim();
+    const value = raw === '' ? 0 : Number(raw);
+    if (Number.isNaN(value)) return;
+    if (value === 0) {
+      setBeneficiaryShariahEligibility('AL_FOUQARA');
+    } else if (value <= 50000) {
+      setBeneficiaryShariahEligibility('AL_MASAKIN');
+    } else {
+      setBeneficiaryShariahEligibility('AL_GHARIMOIN');
+    }
+  }, [monthlyIncomeOfBeneficiary]);
 
   // Initialiser le canvas de signature
   useEffect(() => {
@@ -460,16 +533,23 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
       throw new Error('Veuillez vous reconnecter pour envoyer une demande d\'aide.');
     }
 
-    // Upload des pièces jointes vers S3 (dossier aid-requests) et récupération des URLs
-    const documentEntries = Object.entries(documents).filter(([, file]) => file != null) as [string, File][];
+    // Documents requis pour la campagne sélectionnée uniquement
+    const apiCategory = (selectedCampaign?.category ?? 'OTHER').toUpperCase();
+    const docConfigs = DOCUMENTS_BY_CATEGORY[apiCategory] ?? DOCUMENTS_BY_CATEGORY['OTHER'];
+    const documentEntries = docConfigs
+      .filter((dc) => documents[dc.key] != null)
+      .map((dc) => [dc.key, documents[dc.key]!] as [string, File]);
     const uploadedUrls = await Promise.all(
       documentEntries.map(([, file]) => uploadFile(file, 'aid-requests'))
     );
-    const attachments = documentEntries.map(([key], i) => ({
-      type: ATTACHMENT_TYPE_MAP[key] ?? 'OTHER',
-      url: uploadedUrls[i],
-      label: attachmentLabels[key] ?? key,
-    }));
+    const attachments = documentEntries.map(([key], i) => {
+      const config = docConfigs.find((dc) => dc.key === key)!;
+      return {
+        type: config.apiType,
+        url: uploadedUrls[i],
+        label: attachmentLabels[key] ?? config.label,
+      };
+    });
 
     const formData = {
       transmitter: selectedEmitter ? TRANSMITTER_API[selectedEmitter] : undefined,
@@ -499,9 +579,9 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
         healthDetails: {
           lifeThreateningEmergency,
           patientHaveCmuCard: patientHaveCmuCard ?? undefined,
-          percentageOfCmuCard: patientHaveCmuCard === true && percentageOfCmuCard.trim() !== '',
+          percentageOfCmuCard: patientHaveCmuCard === true ? (percentageOfCmuCard.trim() ? Number(percentageOfCmuCard) : 0) : 0,
           quoteIsFromApprovedEstablishment: quoteIsFromApprovedEstablishment ?? undefined,
-          establishmentName: establishmentName || undefined,
+          establishmentName: quoteIsFromApprovedEstablishment === false ? 'N/A' : (establishmentName || undefined),
           patientTotalityUnableToPay: patientTotalityUnableToPay ?? undefined,
           whatPercentage: whatPercentage ? Number(whatPercentage) : 0,
           totalQuote: totalQuote ? Number(totalQuote) : 0,
@@ -541,21 +621,93 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
     return createAidRequest(accessToken, formData);
   };
 
-  const handleNext = () => {
-    if (currentStep === 1 && !selectedEmitter) return;
-    if (currentStep === 1 && selectedEmitter === 'partner' && !transmitterCompanyName.trim()) return;
-    if (currentStep === 1 && selectedEmitter === 'volunteer' && !transmitterCodeId.trim()) return;
-    if (currentStep === 1 && (selectedEmitter === 'myself' || selectedEmitter === 'third-party') &&
-        (!transmitterLastName.trim() || !transmitterFirstName.trim())) return;
-
-    if (currentStep === 2) {
-      if (!beneficiaryFirstName.trim() || !beneficiaryLastName.trim()) return;
-      if (campaignCategory === 'HEALTH' && patientHaveCmuCard === true && !percentageOfCmuCard.trim()) return;
+  /** Validation pour activer le bouton Suivant : tous les champs requis doivent être renseignés */
+  const isNextDisabled = useMemo(() => {
+    if (currentStep === 1) {
+      if (!selectedEmitter) return true;
+      if (selectedEmitter === 'partner') return !transmitterCompanyName.trim();
+      if (selectedEmitter === 'volunteer') return !transmitterCodeId.trim();
+      if (selectedEmitter === 'myself' || selectedEmitter === 'third-party') {
+        return !transmitterLastName.trim() || !transmitterFirstName.trim();
+      }
+      return false;
     }
+    if (currentStep === 2) {
+      if (!beneficiaryFirstName.trim() || !beneficiaryLastName.trim()) return true;
+      if (!beneficiaryGender) return true;
+      if (!beneficiaryAge.trim()) return true;
+      if (!beneficiaryLocation.trim()) return true;
+      if (!beneficiaryMaritalStatus.trim()) return true;
+      if (!selectedCampaign) return true;
+      if (campaignCategory === 'HEALTH') {
+        if (patientHaveCmuCard === true && !percentageOfCmuCard.trim()) return true;
+        if (quoteIsFromApprovedEstablishment === true && !establishmentName.trim()) return true;
+        if (!totalQuote.trim()) return true;
+      }
+      if (campaignCategory === 'EDUCATION') {
+        if (!typeOfNeed.trim()) return true;
+        if (isStudentRegistered === null) return true;
+        if (riskOfExclusion === true && !outstandingAmount.trim()) return true;
+      }
+      if (campaignCategory === 'WIDOW_SUPPORT') {
+        if (haveMinorChildren === null) return true;
+        if (haveMinorChildren === true && !numberOfMinorChildren.trim()) return true;
+      }
+      if (campaignCategory === 'HABITATION') {
+        if (!kindOfInfrastructure.trim()) return true;
+        if (isCommunityInfrastructure === null) return true;
+        if (landHaveTitleDeedOrAuthorisation == null) return true;
+        if (areThereAtLeastTwoConflictingQuotesFromServiceProviders === true && !whatIsTheQuote.trim()) return true;
+      }
+      return false;
+    }
+    if (currentStep === 3) {
+      const apiCategory = (selectedCampaign?.category ?? 'OTHER').toUpperCase();
+      const docConfigs = DOCUMENTS_BY_CATEGORY[apiCategory] ?? DOCUMENTS_BY_CATEGORY['OTHER'];
+      const uploadedCount = docConfigs.filter((dc) => documents[dc.key] != null).length;
+      return uploadedCount < 2;
+    }
+    if (currentStep === 4) return !isCertified;
+    if (currentStep === 5) return !signature;
+    return false;
+  }, [
+    currentStep,
+    selectedEmitter,
+    documents,
+    transmitterCompanyName,
+    transmitterCodeId,
+    transmitterLastName,
+    transmitterFirstName,
+    beneficiaryFirstName,
+    beneficiaryLastName,
+    beneficiaryGender,
+    beneficiaryAge,
+    beneficiaryLocation,
+    beneficiaryMaritalStatus,
+    selectedCampaign,
+    campaignCategory,
+    patientHaveCmuCard,
+    percentageOfCmuCard,
+    quoteIsFromApprovedEstablishment,
+    establishmentName,
+    totalQuote,
+    typeOfNeed,
+    isStudentRegistered,
+    riskOfExclusion,
+    outstandingAmount,
+    haveMinorChildren,
+    numberOfMinorChildren,
+    kindOfInfrastructure,
+    isCommunityInfrastructure,
+    landHaveTitleDeedOrAuthorisation,
+    areThereAtLeastTwoConflictingQuotesFromServiceProviders,
+    whatIsTheQuote,
+    isCertified,
+    signature,
+  ]);
 
-    if (currentStep === 4 && !isCertified) return;
-    if (currentStep === 5) return;
-
+  const handleNext = () => {
+    if (isNextDisabled) return;
     if (currentStep < STEPS.length) setCurrentStep(currentStep + 1);
   };
 
@@ -823,10 +975,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                 <div className="relative">
                   <Infinity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min={0}
                     value={beneficiaryAge}
-                    onChange={(e) => setBeneficiaryAge(e.target.value)}
+                    onChange={(e) => setBeneficiaryAge(e.target.value.replace(/\D/g, ''))}
                     className="w-full pl-12 pr-14 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
                     placeholder="0"
                     aria-label="Âge du bénéficiaire en années"
@@ -869,13 +1023,21 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-white">Situation matrimoniale</label>
-                <input
-                  type="text"
-                  value={beneficiaryMaritalStatus}
-                  onChange={(e) => setBeneficiaryMaritalStatus(e.target.value)}
-                  className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                  placeholder="Célibataire, Marié(e), Veuf(ve)..."
-                />
+                <div className="relative">
+                  <select
+                    value={beneficiaryMaritalStatus}
+                    onChange={(e) => setBeneficiaryMaritalStatus(e.target.value)}
+                    aria-label="Situation matrimoniale"
+                    className="w-full pl-4 pr-12 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 appearance-none cursor-pointer"
+                  >
+                    {SITUATION_MATRIMONIALE_OPTIONS.map((opt) => (
+                      <option key={opt.value || 'empty'} value={opt.value} className="bg-[#1E2726] text-white">
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#48BB78] pointer-events-none" />
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-white">Musulman</label>
@@ -895,10 +1057,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                 <div className="relative flex items-center">
                   <Users className="absolute left-4 text-[#48BB78] w-5 h-5 z-10" />
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min={0}
                     value={numberOfBeneficiaries}
-                    onChange={(e) => setNumberOfBeneficiaries(e.target.value)}
+                    onChange={(e) => setNumberOfBeneficiaries(e.target.value.replace(/\D/g, ''))}
                     className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
                     placeholder="0"
                   />
@@ -920,17 +1084,18 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
               <div className="space-y-2">
                 <label className="text-sm font-medium text-white">Revenu mensuel</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                  <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
                     type="text"
                     inputMode="numeric"
+                    pattern="[0-9]*"
                     value={monthlyIncomeOfBeneficiary}
-                    onChange={(e) => setMonthlyIncomeOfBeneficiary(e.target.value)}
+                    onChange={(e) => setMonthlyIncomeOfBeneficiary(e.target.value.replace(/\D/g, ''))}
                     className="w-full pl-12 pr-16 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
                     placeholder="0"
-                    aria-label="Revenu mensuel en F CFA"
+                    aria-label="Revenu mensuel en XOF"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0] text-sm">F CFA</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0] text-sm">XOF</span>
                 </div>
               </div>
               <div className="space-y-2">
@@ -1062,9 +1227,13 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
+                      type="button"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => setPatientHaveCmuCard(v)}
+                      onClick={() => {
+                        setPatientHaveCmuCard(v);
+                        if (!v) setPercentageOfCmuCard('0');
+                      }}
                       className={`rounded-3xl px-4 py-2 ${patientHaveCmuCard === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
                       {v ? 'Oui' : 'Non'}
@@ -1072,17 +1241,21 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   ))}
                 </div>
                 {patientHaveCmuCard === true && (
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={percentageOfCmuCard}
-                      onChange={(e) => setPercentageOfCmuCard(e.target.value)}
-                      className="w-full pl-4 pr-10 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                      placeholder="%"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0]">%</span>
+                  <div className="space-y-2">
+                    <label className="text-white text-sm font-medium block">Pourcentage couvert par la carte CMU</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={percentageOfCmuCard}
+                        onChange={(e) => setPercentageOfCmuCard(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                        className="w-full pl-4 pr-10 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                        placeholder="0-100"
+                        aria-label="Pourcentage couvert par la carte CMU"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0]">%</span>
+                    </div>
                   </div>
                 )}
                 <div className="flex gap-3 flex-wrap">
@@ -1092,22 +1265,31 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       key={String(v)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => setQuoteIsFromApprovedEstablishment(v)}
+                      onClick={() => {
+                        setQuoteIsFromApprovedEstablishment(v);
+                        if (!v) setEstablishmentName('N/A');
+                        else setEstablishmentName('');
+                      }}
                       className={`rounded-3xl px-4 py-2 ${quoteIsFromApprovedEstablishment === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
                       {v ? 'Oui' : 'Non'}
                     </motion.button>
                   ))}
                 </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={establishmentName}
-                    onChange={(e) => setEstablishmentName(e.target.value)}
-                    className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Nom de l'établissement"
-                  />
-                </div>
+                {quoteIsFromApprovedEstablishment === true ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={establishmentName}
+                      onChange={(e) => setEstablishmentName(e.target.value)}
+                      className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                      placeholder="Nom de l'établissement"
+                      aria-label="Nom de l'établissement"
+                    />
+                  </div>
+                ) : quoteIsFromApprovedEstablishment === false ? (
+                  <p className="text-[#A0AEC0] text-sm">Nom de l&apos;établissement : N/A</p>
+                ) : null}
                 <div className="flex gap-3 flex-wrap">
                   <span className="text-white text-sm font-medium w-full">Patient totalement dans l’incapacité de payer ? (patientTotalityUnableToPay)</span>
                   {([true, false] as const).map((v) => (
@@ -1143,7 +1325,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={totalQuote}
                     onChange={(e) => setTotalQuote(e.target.value)}
                     className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Montant (F CFA)"
+                    placeholder="Montant (XOF)"
                   />
                 </div>
               </div>
@@ -1204,7 +1386,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       value={outstandingAmount}
                       onChange={(e) => setOutstandingAmount(e.target.value)}
                       className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                      placeholder="Montant (F CFA)"
+                      placeholder="Montant (XOF)"
                     />
                   </div>
                 )}
@@ -1372,29 +1554,9 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
           </div>
         );
       
-      case 3:
-        const documentTypes = [
-          {
-            key: 'identity',
-            label: 'Copie de la Pièce d\'Identité (CNI / Passeport)',
-          },
-          {
-            key: 'situation',
-            label: 'Justificatif de situation (Certificat médical / Scolarité / Acte de décès)',
-          },
-          {
-            key: 'income',
-            label: 'Preuve de revenus ou Attestation d\'indigence',
-          },
-          {
-            key: 'quote',
-            label: 'Devis détaillé (Santé / Scolarité / Travaux)',
-          },
-          {
-            key: 'income2',
-            label: 'Preuve de revenus ou Attestation d\'indigence',
-          },
-        ];
+      case 3: {
+        const apiCategory = (selectedCampaign?.category ?? 'OTHER').toUpperCase();
+        const documentTypes = DOCUMENTS_BY_CATEGORY[apiCategory] ?? DOCUMENTS_BY_CATEGORY['OTHER'];
 
         const handleFileSelect = (key: string, file: File | null) => {
           setDocuments(prev => ({ ...prev, [key]: file }));
@@ -1406,7 +1568,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
               Documents à fournir
             </h3>
             <p className="text-[#A0AEC0] mb-6">
-              Téléchargez les documents nécessaires
+              Téléchargez au moins 2 documents parmi les suivants (selon le type de campagne).
             </p>
             
             <div className="space-y-3">
@@ -1491,6 +1653,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
             </div>
           </div>
         );
+      }
       
       case 4:
         return (
@@ -1803,16 +1966,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleNext}
-                        disabled={
-                          (currentStep === 1 && !selectedEmitter) ||
-                          (currentStep === 1 && selectedEmitter === 'partner' && !transmitterCompanyName.trim()) ||
-                          (currentStep === 1 && selectedEmitter === 'volunteer' && !transmitterCodeId.trim()) ||
-                          (currentStep === 1 && (selectedEmitter === 'myself' || selectedEmitter === 'third-party') && (!transmitterLastName.trim() || !transmitterFirstName.trim())) ||
-                          (currentStep === 2 && (!beneficiaryFirstName.trim() || !beneficiaryLastName.trim())) ||
-                          (currentStep === 2 && campaignCategory === 'HEALTH' && patientHaveCmuCard === true && !percentageOfCmuCard.trim()) ||
-                          (currentStep === 4 && !isCertified) ||
-                          (currentStep === 5 && !signature)
-                        }
+                        disabled={isNextDisabled}
                         className="px-6 py-3 bg-gradient-to-r from-[#48BB78] to-[#38B2AC] text-white font-bold rounded-3xl flex items-center gap-2 hover:from-[#38A169] hover:to-[#319795] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <span>Suivant</span>

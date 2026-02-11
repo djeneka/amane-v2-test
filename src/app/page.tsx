@@ -780,9 +780,8 @@ export default function Home() {
               {/* Activités du mois : 10 derniers dons du mois courant, une barre = un don */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
                 className="rounded-2xl p-6"
               >
                 <h3 className="text-white font-bold text-xl mb-2">Activités du mois</h3>
@@ -818,9 +817,8 @@ export default function Home() {
               {/* Statut Zakat (prochaine zakat à régler : celles avec reste à payer > 0) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true }}
                 className="bg-[#10191963] rounded-2xl p-6"
               >
                 {currentZakatToPay ? (
