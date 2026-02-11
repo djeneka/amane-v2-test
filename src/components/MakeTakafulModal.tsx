@@ -29,7 +29,7 @@ function parseApiErrorMessage(err: unknown): string {
   } catch {
     // pas du JSON
   }
-  return API_MESSAGE_TRANSLATIONS[extracted] ?? extracted || 'Une erreur est survenue.';
+  return API_MESSAGE_TRANSLATIONS[extracted] ?? (extracted || 'Une erreur est survenue.');
 }
 
 const DEFAULT_AMOUNTS = [10000, 50000, 100000];

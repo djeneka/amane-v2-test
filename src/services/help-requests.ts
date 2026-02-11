@@ -29,7 +29,7 @@ export interface AidRequestBeneficiaryDetails {
 export interface AidRequestHealthDetails {
   lifeThreateningEmergency?: boolean;
   patientHaveCmuCard?: boolean;
-  percentageOfCmuCard?: boolean;
+  percentageOfCmuCard?: number;
   quoteIsFromApprovedEstablishment?: boolean;
   establishmentName?: string;
   patientTotalityUnableToPay?: boolean;
