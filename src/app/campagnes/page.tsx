@@ -247,7 +247,7 @@ export default function CampagnesPage() {
                     className="object-contain"
                   />
                 </div>
-                <span>Offrir Sans Choisir</span>
+                <span>Laisser Amane+ choisir</span>
               </motion.button>
             </div>
 
