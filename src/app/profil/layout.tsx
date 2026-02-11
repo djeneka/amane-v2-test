@@ -19,7 +19,16 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated, authReady } = useAuth();
+
+  // Accès réservé aux utilisateurs connectés
+  useEffect(() => {
+    if (!authReady) return;
+    if (!isAuthenticated) {
+      const redirect = `/connexion?redirect=${encodeURIComponent(pathname)}`;
+      router.replace(redirect);
+    }
+  }, [authReady, isAuthenticated, pathname, router]);
 
   const sidebarItems = [
     { 
@@ -30,11 +39,39 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
       title: 'Informations personnelles'
     },
     { 
+      id: 'dons', 
+      label: 'Mes dons', 
+      icon: '/icons/don.png',
+      href: '/profil/dons',
+      title: 'Mes dons'
+    },
+    { 
+      id: 'demandes', 
+      label: 'Mes demandes', 
+      icon: '/icons/message-question.png',
+      href: '/profil/demandes',
+      title: 'Mes demandes'
+    },
+    { 
       id: 'scores', 
       label: 'Mes Sadaka Scores', 
       icon: '/icons/medal-star-g.png',
       href: '/profil/scores',
       title: 'Mes Sadaka Scores'
+    },
+    { 
+      id: 'classement', 
+      label: 'Classements', 
+      icon: '/icons/ranking.png',
+      href: '/profil/classement',
+      title: 'Classements'
+    },
+    { 
+      id: 'portefeuille', 
+      label: 'Portefeuille', 
+      icon: '/icons/wallet-card(1).png',
+      href: '/profil/portefeuille',
+      title: 'Portefeuille'
     },
     { 
       id: 'settings', 
@@ -73,14 +110,14 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
     },
   ];
 
-  // Trouver l'élément actif basé sur le pathname (exclure l'élément "invite" qui ouvre un modal)
-  const activeItem = sidebarItems.find(item => {
-    if (item.id === 'invite') return false; // L'élément invite n'a pas de route
-    if (item.href === '/profil') {
-      return pathname === '/profil';
-    }
-    return pathname.startsWith(item.href);
-  }) || sidebarItems[0];
+  // Trouver l'élément actif basé sur le pathname (préférer la route la plus spécifique)
+  const activeItem = [...sidebarItems]
+    .filter((item) => item.id !== 'invite')
+    .sort((a, b) => (b.href.length - a.href.length))
+    .find((item) => {
+      if (item.href === '/profil') return pathname === '/profil';
+      return pathname === item.href || pathname.startsWith(item.href + '/');
+    }) || sidebarItems[0];
 
   const handleLogout = () => {
     setShowLogoutModal(true);
@@ -103,6 +140,18 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
       document.body.style.overflow = 'unset';
     };
   }, [isSidebarOpen]);
+
+  // Chargement ou redirection : ne pas afficher le contenu profil
+  if (!authReady || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-r from-[#00644D] to-[#101919] flex items-center justify-center py-8 px-4">
+        <div className="text-center text-white">
+          <div className="inline-block w-10 h-10 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4" />
+          <p className="text-white/80">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-[#00644D] to-[#101919] py-8 px-4 sm:px-6 lg:px-8">
@@ -203,7 +252,16 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
                       alt={item.label}
                       width={20}
                       height={20}
-                      className={isActive ? 'brightness-0 invert' : 'opacity-70 flex-shrink-0'}
+                      className={
+                        item.id === 'portefeuille'
+                          ? isActive
+                            ? 'brightness-0 invert flex-shrink-0'
+                            : 'flex-shrink-0 opacity-90'
+                          : isActive
+                            ? 'brightness-0 invert'
+                            : 'opacity-70 flex-shrink-0'
+                      }
+                      style={item.id === 'portefeuille' && !isActive ? { filter: 'brightness(0) saturate(100%) invert(24%) sepia(98%) saturate(1500%) hue-rotate(152deg) brightness(95%) contrast(90%)' } : undefined}
                     />
                     <span className="font-medium truncate">{item.label}</span>
                   </Link>

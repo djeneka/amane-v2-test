@@ -5,12 +5,11 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, User, Phone, Calendar, ArrowRight, Shield, CheckCircle, Heart, Users, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { register as apiRegister, verifyAccount, resendOtp } from "@/services/auth";
 import AuthGuard from "@/components/AuthGuard";
 
 export default function InscriptionPage() {
   const router = useRouter();
-  const { register } = useAuth();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -20,6 +19,8 @@ export default function InscriptionPage() {
     password: "",
     confirmPassword: "",
   });
+  /** Indicatif pays pour le téléphone (format international ex. +2250712345678) */
+  const [phoneCountryCode, setPhoneCountryCode] = useState("+225");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,9 +29,32 @@ export default function InscriptionPage() {
   
   // États pour la vérification
   const [step, setStep] = useState<'inscription' | 'verification' | 'success'>('inscription');
-  const [verificationCode, setVerificationCode] = useState<string[]>(['', '', '', '', '']);
+  const [verificationCode, setVerificationCode] = useState<string[]>(['', '', '', '']);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [verificationError, setVerificationError] = useState('');
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  /** Le bouton "Créer mon compte" est actif seulement si tous les champs sont renseignés et les conditions cochées */
+  const isFormComplete =
+    !!formData.firstName.trim() &&
+    !!formData.lastName.trim() &&
+    !!formData.email.trim() &&
+    /\S+@\S+\.\S+/.test(formData.email) &&
+    !!formData.phone.trim() &&
+    formData.phone.replace(/\D/g, "").length >= 8 &&
+    !!formData.birthDate &&
+    formData.password.length >= 8 &&
+    formData.password === formData.confirmPassword &&
+    !!formData.confirmPassword &&
+    acceptTerms;
+
+  /** Retourne le numéro au format international (ex. +2250787274093), sans supprimer le 0 après l'indicatif */
+  const toInternationalPhone = (localNumber: string): string => {
+    const digitsOnly = localNumber.replace(/\D/g, "") || "";
+    const code = phoneCountryCode.replace(/\D/g, "");
+    return `+${code}${digitsOnly}`;
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -57,8 +81,11 @@ export default function InscriptionPage() {
       newErrors.email = "Format d'email invalide";
     }
 
+    const phoneDigits = formData.phone.replace(/\D/g, "");
     if (!formData.phone.trim()) {
       newErrors.phone = "Le numéro de téléphone est requis";
+    } else if (phoneDigits.length < 8) {
+      newErrors.phone = "Le numéro doit contenir au moins 8 chiffres";
     }
 
     if (!formData.birthDate) {
@@ -85,33 +112,51 @@ export default function InscriptionPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setIsLoading(true);
-    
+    setErrors((prev) => ({ ...prev, general: '' }));
+
     try {
-      // Simuler l'inscription sans connecter l'utilisateur
-      // Dans un vrai cas, vous feriez un appel API pour créer le compte
-      // mais sans créer de session
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Stocker temporairement les données d'inscription
-      // (dans un vrai cas, le backend enverrait le code de vérification)
-      localStorage.setItem('pending-registration', JSON.stringify({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
+      await apiRegister({
+        email: formData.email.trim(),
         password: formData.password,
-      }));
-      
-      // Passer à l'étape de vérification
+        name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
+        phoneNumber: toInternationalPhone(formData.phone.trim()),
+        profilePicture: '',
+      });
+
+      // Stocker temporairement les données pour l'étape de vérification (et après succès)
+      localStorage.setItem(
+        'pending-registration',
+        JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: toInternationalPhone(formData.phone.trim()),
+          password: formData.password,
+        })
+      );
+
       setStep('verification');
-    } catch (error) {
-      setErrors({ general: 'Une erreur est survenue. Veuillez réessayer.' });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : String(err);
+      try {
+        const data = JSON.parse(message) as { message?: string };
+        setErrors((prev) => ({
+          ...prev,
+          general: data.message ?? 'Une erreur est survenue. Veuillez réessayer.',
+        }));
+      } catch {
+        setErrors((prev) => ({
+          ...prev,
+          general: message || 'Une erreur est survenue. Veuillez réessayer.',
+        }));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +172,7 @@ export default function InscriptionPage() {
     setVerificationError('');
 
     // Auto-focus sur le champ suivant
-    if (value && index < 4) {
+    if (value && index < 3) {
       const nextInput = document.getElementById(`code-${index + 1}`);
       nextInput?.focus();
     }
@@ -142,9 +187,21 @@ export default function InscriptionPage() {
 
   const handleVerifyCode = async () => {
     const code = verificationCode.join('');
-    
-    if (code.length !== 5) {
+
+    if (code.length !== 4) {
       setVerificationError('Veuillez entrer le code complet');
+      return;
+    }
+
+    const pendingData = localStorage.getItem('pending-registration');
+    if (!pendingData) {
+      setVerificationError('Une erreur est survenue. Veuillez réessayer.');
+      return;
+    }
+
+    const userData = JSON.parse(pendingData) as { phone: string };
+    if (!userData.phone) {
+      setVerificationError('Données d\'inscription invalides. Veuillez réessayer.');
       return;
     }
 
@@ -152,79 +209,62 @@ export default function InscriptionPage() {
     setVerificationError('');
 
     try {
-      // Simuler la vérification du code
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock: Le code doit être "11111"
-      if (code !== '11111') {
-        setVerificationError('Code incorrect. Veuillez réessayer.');
-        setIsVerifying(false);
-        return;
-      }
-      
-      // Vérifier que les données d'inscription existent
-      const pendingData = localStorage.getItem('pending-registration');
-      
-      if (!pendingData) {
-        setVerificationError('Une erreur est survenue. Veuillez réessayer.');
-        setIsVerifying(false);
-        return;
-      }
-      
-      // Code correct : afficher le popup de succès (sans connecter l'utilisateur)
-      // La connexion se fera au clic sur le bouton du popup
+      await verifyAccount({
+        otp: code,
+        phoneNumber: userData.phone,
+      });
       setStep('success');
-    } catch (error) {
-      setVerificationError('Une erreur est survenue. Veuillez réessayer.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      try {
+        const data = JSON.parse(message) as { message?: string };
+        setVerificationError(data.message ?? 'Code incorrect. Veuillez réessayer.');
+      } catch {
+        setVerificationError(message || 'Code incorrect. Veuillez réessayer.');
+      }
     } finally {
       setIsVerifying(false);
     }
   };
 
-  const handleSuccessContinue = async () => {
-    try {
-      // Récupérer les données d'inscription temporaires
-      const pendingData = localStorage.getItem('pending-registration');
-      
-      if (pendingData) {
-        const userData = JSON.parse(pendingData);
-        
-        // Maintenant seulement, on enregistre et connecte l'utilisateur
-        const success = await register({
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          email: userData.email,
-          phone: userData.phone,
-          password: userData.password,
-        });
-        
-        if (success) {
-          // Nettoyer les données temporaires
-          localStorage.removeItem('pending-registration');
-          
-          // Rediriger vers l'accueil
-          router.push('/');
-        } else {
-          // En cas d'erreur, revenir à l'étape de vérification
-          setStep('verification');
-          setVerificationError('Une erreur est survenue lors de la création du compte.');
-        }
-      } else {
-        // Si les données n'existent plus, revenir à l'inscription
-        setStep('inscription');
-      }
-    } catch (error) {
-      setStep('verification');
-      setVerificationError('Une erreur est survenue. Veuillez réessayer.');
+  /** Au clic sur "Se connecter" dans le popup : effacer le storage et rediriger vers la page connexion */
+  const handleSuccessContinue = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('pending-registration');
     }
+    router.push('/connexion');
   };
 
-  const handleResendCode = () => {
-    // Mock: Simuler le renvoi du code
-    setVerificationCode(['', '', '', '', '']);
+  const handleResendCode = async () => {
+    const pendingData = localStorage.getItem('pending-registration');
+    if (!pendingData) {
+      setVerificationError('Données d\'inscription introuvables. Veuillez réessayer l\'inscription.');
+      return;
+    }
+    const userData = JSON.parse(pendingData) as { phone: string };
+    if (!userData.phone) {
+      setVerificationError('Numéro de téléphone introuvable.');
+      return;
+    }
+    setIsResending(true);
     setVerificationError('');
-    // Dans un vrai cas, vous feriez un appel API pour renvoyer le code
-    console.log('Code renvoyé');
+    setResendSuccess(false);
+    try {
+      await resendOtp({ phoneNumber: userData.phone });
+      setVerificationCode(['', '', '', '']);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      try {
+        const data = JSON.parse(message) as { message?: string };
+        setVerificationError(data.message ?? 'Impossible de renvoyer le code. Réessayez.');
+      } catch {
+        setVerificationError(message || 'Impossible de renvoyer le code. Réessayez.');
+      }
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -455,17 +495,36 @@ export default function InscriptionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
                 >
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange("phone", e.target.value)}
-                      className={`w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
-                        errors.phone ? "ring-2 ring-red-500" : ""
-                      }`}
-                      placeholder="Téléphone"
-                    />
+                  <div className="flex rounded-2xl overflow-hidden bg-white/80 backdrop-blur-sm border-0 focus-within:ring-2 focus-within:ring-white/50 focus-within:bg-white/90">
+                    <select
+                      value={phoneCountryCode}
+                      onChange={(e) => setPhoneCountryCode(e.target.value)}
+                      aria-label="Indicatif pays"
+                      className="pl-3 pr-2 py-4 bg-white/50 text-gray-700 font-medium border-0 focus:ring-0 focus:outline-none cursor-pointer"
+                    >
+                      <option value="+33">+33</option>
+                      <option value="+221">+221</option>
+                      <option value="+225">+225</option>
+                      <option value="+223">+223</option>
+                      <option value="+226">+226</option>
+                      <option value="+228">+228</option>
+                      <option value="+227">+227</option>
+                      <option value="+224">+224</option>
+                      <option value="+212">+212</option>
+                      <option value="+213">+213</option>
+                    </select>
+                    <div className="relative flex-1">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange("phone", e.target.value.replace(/\D/g, ""))}
+                        className={`w-full pl-10 pr-4 py-4 bg-transparent border-0 focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-500 ${
+                          errors.phone ? "ring-2 ring-red-500 rounded-r-2xl" : ""
+                        }`}
+                        placeholder="6 12 34 56 78"
+                      />
+                    </div>
                   </div>
                   {errors.phone && (
                     <p className="text-red-300 text-sm mt-1">{errors.phone}</p>
@@ -595,12 +654,15 @@ export default function InscriptionPage() {
                 </div>
               </motion.div>
 
+              {errors.general && (
+                <p className="text-red-300 text-sm text-center">{errors.general}</p>
+              )}
               <motion.button
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.1 }}
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !isFormComplete}
                 className="w-full text-white py-4 px-6 rounded-2xl font-medium hover:opacity-90 focus:ring-4 focus:ring-white/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 style={{ background: 'linear-gradient(to right, #8FC99E, #20B6B3)' }}
               >
@@ -619,8 +681,8 @@ export default function InscriptionPage() {
               </motion.button>
             </form>
 
-            {/* Séparateur */}
-            <motion.div
+            {/* Section "Ou s'inscrire avec" et boutons Google / Facebook — à réactiver plus tard */}
+            {/* <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.2 }}
@@ -631,7 +693,6 @@ export default function InscriptionPage() {
               <div className="flex-1 h-px bg-white/30"></div>
             </motion.div>
 
-            {/* Boutons de connexion sociale */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -641,9 +702,7 @@ export default function InscriptionPage() {
               <button
                 type="button"
                 onClick={() => {
-                  // Mock: Simuler l'inscription Google
                   console.log('Inscription Google');
-                  // Ici vous pouvez ajouter la logique d'inscription Google
                 }}
                 className="flex items-center justify-center gap-3 bg-transparent backdrop-blur-sm rounded-2xl py-4 px-4 hover:bg-white/90 transition-all duration-200 border border-white/30"
               >
@@ -658,9 +717,7 @@ export default function InscriptionPage() {
               <button
                 type="button"
                 onClick={() => {
-                  // Mock: Simuler l'inscription Facebook
                   console.log('Inscription Facebook');
-                  // Ici vous pouvez ajouter la logique d'inscription Facebook
                 }}
                 className="flex items-center justify-center gap-3 bg-transparent backdrop-blur-sm rounded-2xl py-4 px-4 hover:bg-white/90 transition-all duration-200 border border-white/30"
               >
@@ -669,7 +726,7 @@ export default function InscriptionPage() {
                 </svg>
                 <span className="text-white font-medium">Facebook</span>
               </button>
-            </motion.div>
+            </motion.div> */}
 
             <motion.div
               initial={{ opacity: 0 }}
@@ -792,10 +849,12 @@ export default function InscriptionPage() {
                     >
                       Vous n'avez pas reçu de code ?{" "}
                       <button
+                        type="button"
                         onClick={handleResendCode}
-                        className="text-[#5AB678] hover:text-[#5AB678]/80 font-medium underline transition-colors"
+                        disabled={isResending}
+                        className="text-[#5AB678] hover:text-[#5AB678]/80 font-medium underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Renvoyer
+                        {isResending ? 'Envoi…' : resendSuccess ? 'Code renvoyé !' : 'Renvoyer'}
                       </button>
                     </motion.p>
                   </motion.div>

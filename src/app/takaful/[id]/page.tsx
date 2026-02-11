@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Shield, Users, Star, CheckCircle, Heart, Car, Home, User,
   FileText, Apple, Play
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import MakeDonationModal from '@/components/MakeDonationModal';
+import MakeTakafulModal from '@/components/MakeTakafulModal';
+import { useAuth } from '@/contexts/AuthContext';
 import { getTakafulPlanById, type TakafulPlan } from '@/services/takaful-plans';
 
 const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
@@ -37,6 +38,8 @@ export default function TakafulDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTakafulModal, setShowTakafulModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { accessToken, user } = useAuth();
 
   useEffect(() => {
     if (!id) {
@@ -78,7 +81,14 @@ export default function TakafulDetailPage() {
     return formatAmount(amount);
   };
 
-  const handleSubscribe = () => setShowTakafulModal(true);
+  const handleSubscribe = () => {
+    if (!accessToken) {
+      setToastMessage('Veuillez vous connecter pour souscrire.');
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+    setShowTakafulModal(true);
+  };
 
   if (loading) {
     return (
@@ -280,22 +290,40 @@ export default function TakafulDetailPage() {
         </div>
       </div>
 
-      <MakeDonationModal
-        isOpen={showTakafulModal}
-        onClose={() => setShowTakafulModal(false)}
-        title="Takaful"
-        subtitle="Montant du produit takaful"
-        description="Veuillez saisir le montant du produit takaful."
-        amountSectionTitle="Montant du produits takaful"
-        confirmationTitle="Veuillez confirmer votre transaction"
-        confirmationDescription="Vérifiez les informations avant de confirmer votre souscription."
-        recapTitle="Vous allez payer la somme de"
-        recapMessage="Sur amane+ souscrivez a des produits takafuls halal."
-        successTitle="Souscription confirmée !"
-        successMessage="Votre souscription a été effectuée avec succès."
-        historyButtonText="Consulter l'historique"
-        historyButtonLink="/transactions"
-      />
+      {plan && (
+        <MakeTakafulModal
+          isOpen={showTakafulModal}
+          onClose={() => setShowTakafulModal(false)}
+          balance={user?.wallet?.balance ?? 0}
+          accessToken={accessToken ?? null}
+          onSuccess={() => setShowTakafulModal(false)}
+          onToast={(msg) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 4000);
+          }}
+          successTitle="Souscription confirmée !"
+          successMessage="Votre souscription a été effectuée avec succès."
+          historyButtonText="Consulter l'historique"
+          historyButtonLink="/transactions"
+          mode="new"
+          takafulPlanId={plan.id}
+          takafulPlan={plan}
+        />
+      )}
+
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <section className="py-20 relative z-10" style={{ background: 'linear-gradient(to top, #d6fcf6, #229693)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

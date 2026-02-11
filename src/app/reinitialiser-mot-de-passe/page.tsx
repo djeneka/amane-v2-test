@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, ArrowLeft, Eye, EyeOff, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { resetPassword } from "@/services/auth";
 
-export default function ReinitialiserMotDePassePage() {
+function ReinitialiserMotDePasseContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
@@ -263,5 +263,38 @@ export default function ReinitialiserMotDePassePage() {
       )}
     </AnimatePresence>
     </>
+  );
+}
+
+function ReinitialiserMotDePasseFallback() {
+  return (
+    <div
+      className="min-h-screen relative flex items-center justify-center p-4"
+      style={{
+        backgroundImage: "url(/images/bg-s.png)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      <div className="absolute inset-0 bg-black/60" />
+      <div className="container mx-auto px-4 py-8 relative z-10 w-full max-w-md flex justify-center items-center">
+        <div className="bg-[#00644D]/10 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/20 w-full max-w-md flex flex-col items-center gap-4">
+          <div
+            className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"
+            aria-hidden
+          />
+          <p className="text-white/90 text-sm">Chargement...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ReinitialiserMotDePassePage() {
+  return (
+    <Suspense fallback={<ReinitialiserMotDePasseFallback />}>
+      <ReinitialiserMotDePasseContent />
+    </Suspense>
   );
 }

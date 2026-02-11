@@ -14,6 +14,7 @@ import Image from 'next/image';
 import MakeDonationModal from '@/components/MakeDonationModal';
 import { getActiveCampaigns } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
+import { useAuth } from '@/contexts/AuthContext';
 
 const COUNTRY_LABELS: Record<string, string> = {
   ci: "côte d'ivoire",
@@ -26,7 +27,10 @@ const CITY_LABELS: Record<string, string> = {
   bamako: 'bamako',
 };
 
+const TOAST_DURATION_MS = 4000;
+
 export default function CampagnesPage() {
+  const { user, accessToken, isAuthenticated } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +43,7 @@ export default function CampagnesPage() {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   /** Nombre de donateurs par campaignId (API statistics) */
   const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
 
@@ -68,7 +73,7 @@ export default function CampagnesPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const walletBalance = 610473;
+  const walletBalance = user?.wallet?.balance ?? 0;
 
   const categories = [
     { id: 'all', name: 'Toutes', icon: Globe, color: 'bg-gray-500' },
@@ -215,7 +220,14 @@ export default function CampagnesPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => setShowDonationModal(true)}
+                onClick={() => {
+                  if (!isAuthenticated || !user) {
+                    setToastMessage('Veuillez vous connecter pour faire un don.');
+                    setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                    return;
+                  }
+                  setShowDonationModal(true);
+                }}
                 className="px-6 py-2 rounded-3xl font-semibold text-white flex items-center space-x-4 transition-all duration-200"
                 style={{ 
                   background: 'linear-gradient(to right, #3AE1B4, #13A98B)',
@@ -749,11 +761,30 @@ export default function CampagnesPage() {
         </div>
       </section>
 
-      {/* Modal de don */}
-      <MakeDonationModal 
-        isOpen={showDonationModal} 
+      {/* Toast : utilisateur non connecté */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de don général (Offrir Sans Choisir) : pas de campaignId → POST /api/donations/general */}
+      <MakeDonationModal
+        isOpen={showDonationModal}
         onClose={() => setShowDonationModal(false)}
         balance={walletBalance}
+        campaignId={null}
+        accessToken={accessToken ?? null}
+        donorName={user?.name ?? null}
+        onSuccess={() => setShowDonationModal(false)}
       />
     </div>
   );

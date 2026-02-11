@@ -37,10 +37,17 @@ export async function POST(request: NextRequest) {
     }
 
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const safeExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) ? ext : 'jpg';
-    const key = `${directory}/profil/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    const pdfExt = 'pdf';
+    const safeExt = imageExts.includes(ext) ? ext : ext === pdfExt ? pdfExt : 'jpg';
+    const folder = (formData.get('folder') as string)?.trim();
+    const subdir = folder || (safeExt === pdfExt ? 'certificates' : 'profil');
+    const key = `${directory}/${subdir}/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
     const body = Buffer.from(await file.arrayBuffer());
-    const contentType = file.type || `image/${safeExt}`;
+    const contentType =
+      safeExt === 'pdf'
+        ? 'application/pdf'
+        : file.type || `image/${safeExt}`;
 
     await s3.send(
       new PutObjectCommand({

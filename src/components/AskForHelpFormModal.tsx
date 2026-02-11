@@ -1,10 +1,66 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowRight, CheckCircle, User, Building, Hash, Infinity, Heart, ChevronDown, FileText, Upload, Paperclip, Handshake, Pen, Clock, Home } from 'lucide-react';
+import { X, ArrowRight, CheckCircle, User, Building, Hash, Infinity, Heart, ChevronDown, FileText, Upload, Paperclip, Handshake, Pen, Clock, Home, MapPin, Users, Briefcase, DollarSign, GraduationCap, Building2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { getActiveCampaignsRaw, type ApiCampaign } from '@/services/campaigns';
+import { createAidRequest } from '@/services/help-requests';
+import { uploadFile } from '@/lib/upload';
+
+/** Catégories de campagne alignées sur l’API */
+export type CampaignCategory = 'HEALTH' | 'EDUCATION' | 'WIDOW_SUPPORT' | 'HABITATION';
+
+const API_CATEGORY_TO_SECTION: Record<string, CampaignCategory> = {
+  HEALTH: 'HEALTH',
+  EDUCATION: 'EDUCATION',
+  HOUSING: 'HABITATION',
+  UTILITIES: 'WIDOW_SUPPORT',
+};
+
+function apiCategoryToSection(apiCategory: string): CampaignCategory | null {
+  return API_CATEGORY_TO_SECTION[apiCategory?.toUpperCase()] ?? null;
+}
+
+const SECTION_LABELS: Record<CampaignCategory, string> = {
+  HEALTH: 'Soutien Santé',
+  EDUCATION: 'Éducation / Scolarisation',
+  WIDOW_SUPPORT: 'Accompagnement des Veuves',
+  HABITATION: 'Réhabilitation / Infrastructures',
+};
+
+/** Options type de besoin (Éducation) — design Figma */
+const EDUCATION_TYPE_NEED_OPTIONS = [
+  { value: "Arriérés d'écolage", label: "Arriérés d'écolage" },
+  { value: 'Fournitures/Kits', label: 'Fournitures/Kits' },
+  { value: 'Transport', label: 'Transport' },
+] as const;
+
+/** Options habitation (Veuves) — design Figma */
+const WIDOW_WHERE_SHE_LIVES_OPTIONS = [
+  { value: 'Location', label: 'Location' },
+  { value: 'Familiale', label: 'Familiale' },
+  { value: 'Hébergement', label: 'Hébergement' },
+] as const;
+
+/** Options genre de soutien (Veuves) — design Figma */
+const WIDOW_KIND_OF_SUPPORT_OPTIONS = [
+  { value: 'AGR', label: "Pour une Activité Génératrice de Revenu (AGR)" },
+  { value: 'VIVRES', label: 'Des vivres' },
+  { value: 'DETTES', label: 'Payement de ses dettes' },
+  { value: 'FACTURES_LOYERS', label: 'Pour le payement des factures/loyers' },
+  { value: 'SCOLARISATION', label: 'Scolarisation des enfants' },
+] as const;
+
+/** Options type d'infrastructure — design Figma */
+const HABITATION_KIND_OPTIONS = [
+  { value: 'Mosquée', label: 'Mosquée' },
+  { value: 'École', label: 'École' },
+  { value: "Centre d'apprentissage", label: "Centre d'apprentissage" },
+  { value: 'Autres', label: 'Autres' },
+] as const;
 
 interface AskForHelpFormModalProps {
   isOpen: boolean;
@@ -21,31 +77,146 @@ const STEPS = [
 
 type EmitterType = 'myself' | 'third-party' | 'partner' | 'volunteer' | null;
 
+/** Valeurs API pour l'émetteur (transmitter) */
+const TRANSMITTER_API: Record<NonNullable<EmitterType>, string> = {
+  myself: 'SELF',
+  'third-party': 'THIRD_PARTY',
+  partner: 'PARTNER',
+  volunteer: 'VOLUNTEER_AMANE',
+};
+
+/** Éligibilité Charia — catégories Asnaf (3 options) */
+/** Valeurs API (typo backend : AL_GHARIMOIN) */
+export type ShariahEligibilityValue = 'AL_FOUQARA' | 'AL_MASAKIN' | 'AL_GHARIMOIN';
+
+const SHARIAH_ELIGIBILITY_OPTIONS: { value: ShariahEligibilityValue; label: string }[] = [
+  { value: 'AL_FOUQARA', label: 'Al fouqara (pauvre : aucun revenu)' },
+  { value: 'AL_MASAKIN', label: 'Al Masakin (Nécessiteux : revenu insuffisant pour les besoins de base)' },
+  { value: 'AL_GHARIMOIN', label: 'Al Gharimin (Endetté : dettes de santé ou de survie uniquement)' },
+];
+
+/** Urgence — valeurs API */
+export type UrgencyLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
+const URGENCY_OPTIONS: { value: UrgencyLevel; label: string }[] = [
+  { value: 'LOW', label: 'Faible' },
+  { value: 'MEDIUM', label: 'Moyenne' },
+  { value: 'HIGH', label: 'Haute' },
+];
+
+/** Types d'attachment acceptés par l'API (valeurs exactes) */
+const ATTACHMENT_TYPES = [
+  'ID_CARD',
+  'SITUATION_JUSTIFICATION',
+  'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION',
+  'QUOTE_DETAILS',
+  'CASE_PHOTO',
+  'SIGNATURE',
+  'OTHER',
+] as const;
+
+/** Mapping des clés documents → type d'attachment API */
+const ATTACHMENT_TYPE_MAP: Record<string, (typeof ATTACHMENT_TYPES)[number]> = {
+  identity: 'ID_CARD',
+  situation: 'SITUATION_JUSTIFICATION',
+  income: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION',
+  quote: 'QUOTE_DETAILS',
+  income2: 'PROOF_OF_INCOME_OR_INDIGENCY_ATTESTATION',
+};
+
+/** Dérive prénom et nom depuis user.name (format "Nom Prénom" ou "Prénom Nom") */
+function nameToFirstLast(name: string): { firstName: string; lastName: string } {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: '', lastName: '' };
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+  return { lastName: parts[0], firstName: parts.slice(1).join(' ') };
+}
+
 export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormModalProps) {
+  const { user: currentUser, accessToken } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedEmitter, setSelectedEmitter] = useState<EmitterType>(null);
-  
-  // États pour les champs de l'étape 2
-  const [requesterLastName, setRequesterLastName] = useState('');
-  const [requesterFirstName, setRequesterFirstName] = useState('');
-  const [organizationName, setOrganizationName] = useState('');
-  const [volunteerIdCode, setVolunteerIdCode] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | null>(null);
-  const [age, setAge] = useState('');
-  const [supportCategory, setSupportCategory] = useState('Soutien Santé');
-  const [isVitalEmergency, setIsVitalEmergency] = useState(false);
-  const [hasInsurance, setHasInsurance] = useState<boolean | null>(null);
-  const [insurancePercentage, setInsurancePercentage] = useState('');
+
+  // Transmitter (émetteur) — aligné API transmitterDetails
+  const [transmitterFirstName, setTransmitterFirstName] = useState('');
+  const [transmitterLastName, setTransmitterLastName] = useState('');
+  const [transmitterCompanyName, setTransmitterCompanyName] = useState('');
+  const [transmitterCodeId, setTransmitterCodeId] = useState('');
+
+  // Bénéficiaire — aligné API beneficiaryDetails
+  const [beneficiaryFirstName, setBeneficiaryFirstName] = useState('');
+  const [beneficiaryLastName, setBeneficiaryLastName] = useState('');
+  const [beneficiaryGender, setBeneficiaryGender] = useState<'male' | 'female' | null>(null);
+  const [beneficiaryLocation, setBeneficiaryLocation] = useState('');
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [beneficiaryMaritalStatus, setBeneficiaryMaritalStatus] = useState('');
+  const [beneficiaryIsMuslim, setBeneficiaryIsMuslim] = useState<boolean | null>(null);
+  const [numberOfBeneficiaries, setNumberOfBeneficiaries] = useState('');
+  const [beneficiaryActivity, setBeneficiaryActivity] = useState('');
+  const [monthlyIncomeOfBeneficiary, setMonthlyIncomeOfBeneficiary] = useState('');
+  const [beneficiaryShariahEligibility, setBeneficiaryShariahEligibility] = useState<ShariahEligibilityValue | ''>('');
+  const [beneficiaryAcceptPicture, setBeneficiaryAcceptPicture] = useState<boolean | null>(null);
+  const [beneficiaryAge, setBeneficiaryAge] = useState('');
+
+  // Urgence (API)
+  const [urgency, setUrgency] = useState<UrgencyLevel>('MEDIUM');
+
+  // Campagnes actives (liste API) et sélection
+  const [activeCampaigns, setActiveCampaigns] = useState<ApiCampaign[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<ApiCampaign | null>(null);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  // Section affichée selon la catégorie API (HEALTH, EDUCATION, HOUSING, UTILITIES ; autre = null)
+  const campaignCategory = useMemo<CampaignCategory | null>(
+    () => (selectedCampaign ? apiCategoryToSection(selectedCampaign.category) : null),
+    [selectedCampaign]
+  );
+
+  // Health (affiché si campaignCategory === 'HEALTH')
+  const [lifeThreateningEmergency, setLifeThreateningEmergency] = useState(false);
+  const [patientHaveCmuCard, setPatientHaveCmuCard] = useState<boolean | null>(null);
+  const [percentageOfCmuCard, setPercentageOfCmuCard] = useState('');
+  const [quoteIsFromApprovedEstablishment, setQuoteIsFromApprovedEstablishment] = useState<boolean | null>(null);
+  const [establishmentName, setEstablishmentName] = useState('');
+  const [patientTotalityUnableToPay, setPatientTotalityUnableToPay] = useState<boolean | null>(null);
+  const [whatPercentage, setWhatPercentage] = useState('');
+  const [totalQuote, setTotalQuote] = useState('');
+
+  // Education (affiché si campaignCategory === 'EDUCATION')
+  const [typeOfNeed, setTypeOfNeed] = useState('');
+  const [educationEstablishmentName, setEducationEstablishmentName] = useState('');
+  const [isStudentRegistered, setIsStudentRegistered] = useState<boolean | null>(null);
+  const [riskOfExclusion, setRiskOfExclusion] = useState<boolean | null>(null);
+  const [outstandingAmount, setOutstandingAmount] = useState('');
+
+  // Widow support (affiché si campaignCategory === 'WIDOW_SUPPORT')
+  const [haveMinorChildren, setHaveMinorChildren] = useState<boolean | null>(null);
+  const [numberOfMinorChildren, setNumberOfMinorChildren] = useState('');
+  const [stableAccomodation, setStableAccomodation] = useState<boolean | null>(null);
+  const [whereSheLives, setWhereSheLives] = useState('');
+  const [kindOfSupport, setKindOfSupport] = useState('');
+  const [isDessertIncluded, setIsDessertIncluded] = useState<boolean | null>(null);
+
+  // Habitation (affiché si campaignCategory === 'HABITATION')
+  const [kindOfInfrastructure, setKindOfInfrastructure] = useState('');
+  const [kindOfInfrastructureOther, setKindOfInfrastructureOther] = useState('');
+  const [isCommunityInfrastructure, setIsCommunityInfrastructure] = useState<boolean | null>(null);
+  const [landHaveTitleDeedOrAuthorisation, setLandHaveTitleDeedOrAuthorisation] = useState<boolean | null>(null);
+  const [isThereManagementCommitteeForFutureMaintenance, setIsThereManagementCommitteeForFutureMaintenance] = useState<boolean | null>(null);
+  const [areThereAtLeastTwoConflictingQuotesFromServiceProviders, setAreThereAtLeastTwoConflictingQuotesFromServiceProviders] = useState<boolean | null>(null);
+  const [whatIsTheQuote, setWhatIsTheQuote] = useState('');
+
   const [isCertified, setIsCertified] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isSignatureApplied, setIsSignatureApplied] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
   const router = useRouter();
-  
-  // États pour les documents
+
+  // Attachments (type, url, label) — documents à fournir
   const [documents, setDocuments] = useState<{ [key: string]: File | null }>({
     identity: null,
     situation: null,
@@ -53,6 +224,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
     quote: null,
     income2: null,
   });
+  const [attachmentLabels, setAttachmentLabels] = useState<{ [key: string]: string }>({});
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const signatureContainerRef = useRef<HTMLDivElement>(null);
@@ -68,6 +240,20 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
+
+  // Charger les campagnes actives à l'ouverture du modal
+  useEffect(() => {
+    if (isOpen) {
+      getActiveCampaignsRaw().then(setActiveCampaigns).catch(() => setActiveCampaigns([]));
+    }
+  }, [isOpen]);
+
+  // Masquer le toast d'erreur après 4 s
+  useEffect(() => {
+    if (!errorToast) return;
+    const t = setTimeout(() => setErrorToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [errorToast]);
 
   // Fermer le dropdown de catégorie quand on clique en dehors
   useEffect(() => {
@@ -91,22 +277,60 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
     if (!isOpen) {
       setCurrentStep(1);
       setSelectedEmitter(null);
-      setRequesterLastName('');
-      setRequesterFirstName('');
-      setOrganizationName('');
-      setVolunteerIdCode('');
-      setGender(null);
-      setAge('');
-      setSupportCategory('Soutien Santé');
-      setIsVitalEmergency(false);
-      setHasInsurance(null);
-      setInsurancePercentage('');
+      setTransmitterFirstName('');
+      setTransmitterLastName('');
+      setTransmitterCompanyName('');
+      setTransmitterCodeId('');
+      setBeneficiaryFirstName('');
+      setBeneficiaryLastName('');
+      setBeneficiaryGender(null);
+      setBeneficiaryLocation('');
+      setIsGettingLocation(false);
+      setLocationError(null);
+      setBeneficiaryMaritalStatus('');
+      setBeneficiaryIsMuslim(null);
+      setNumberOfBeneficiaries('');
+      setBeneficiaryActivity('');
+      setMonthlyIncomeOfBeneficiary('');
+      setBeneficiaryShariahEligibility('');
+      setBeneficiaryAcceptPicture(null);
+      setBeneficiaryAge('');
+      setUrgency('MEDIUM');
+      setSelectedCampaign(null);
       setIsCategoryDropdownOpen(false);
+      setLifeThreateningEmergency(false);
+      setPatientHaveCmuCard(null);
+      setPercentageOfCmuCard('');
+      setQuoteIsFromApprovedEstablishment(null);
+      setEstablishmentName('');
+      setPatientTotalityUnableToPay(null);
+      setWhatPercentage('');
+      setTotalQuote('');
+      setTypeOfNeed('');
+      setEducationEstablishmentName('');
+      setIsStudentRegistered(null);
+      setRiskOfExclusion(null);
+      setOutstandingAmount('');
+      setHaveMinorChildren(null);
+      setNumberOfMinorChildren('');
+      setStableAccomodation(null);
+      setWhereSheLives('');
+      setKindOfSupport('');
+      setIsDessertIncluded(null);
+      setKindOfInfrastructure('');
+      setKindOfInfrastructureOther('');
+      setIsCommunityInfrastructure(null);
+      setLandHaveTitleDeedOrAuthorisation(null);
+      setIsThereManagementCommitteeForFutureMaintenance(null);
+      setAreThereAtLeastTwoConflictingQuotesFromServiceProviders(null);
+      setWhatIsTheQuote('');
       setIsCertified(false);
       setSignature(null);
       setIsDrawing(false);
       setIsSignatureApplied(false);
       setShowSuccessModal(false);
+      setIsSubmitting(false);
+      setErrorToast(null);
       setDocuments({
         identity: null,
         situation: null,
@@ -114,6 +338,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
         quote: null,
         income2: null,
       });
+      setAttachmentLabels({});
     }
   }, [isOpen]);
 
@@ -229,138 +454,151 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
     URL.revokeObjectURL(url);
   };
 
-  // Fonction pour simuler l'envoi au serveur (mock)
-  const mockSubmitToServer = async () => {
-    // Préparer les données du formulaire
+  // Payload aligné sur l'API (clés et types exacts, dont typos côté API)
+  const submitAidRequest = async () => {
+    if (!accessToken) {
+      throw new Error('Veuillez vous reconnecter pour envoyer une demande d\'aide.');
+    }
+
+    // Upload des pièces jointes vers S3 (dossier aid-requests) et récupération des URLs
+    const documentEntries = Object.entries(documents).filter(([, file]) => file != null) as [string, File][];
+    const uploadedUrls = await Promise.all(
+      documentEntries.map(([, file]) => uploadFile(file, 'aid-requests'))
+    );
+    const attachments = documentEntries.map(([key], i) => ({
+      type: ATTACHMENT_TYPE_MAP[key] ?? 'OTHER',
+      url: uploadedUrls[i],
+      label: attachmentLabels[key] ?? key,
+    }));
+
     const formData = {
-      // Étape 1 : Informations sur l'émetteur
-      emitterType: selectedEmitter,
-      
-      // Étape 2 : Identification du bénéficiaire
-      ...(selectedEmitter === 'partner' && {
-        organizationName: organizationName,
-      }),
-      ...(selectedEmitter === 'volunteer' && {
-        volunteerIdCode: volunteerIdCode,
-      }),
-      ...((selectedEmitter === 'myself' || selectedEmitter === 'third-party') && {
-        requesterLastName: requesterLastName,
-        requesterFirstName: requesterFirstName,
-        gender: gender,
-        age: age,
-        supportCategory: supportCategory,
-        isVitalEmergency: isVitalEmergency,
-        hasInsurance: hasInsurance,
-        ...(hasInsurance === true && {
-          insurancePercentage: insurancePercentage,
-        }),
-      }),
-      
-      // Étape 3 : Documents
-      documents: {
-        identity: documents.identity ? {
-          name: documents.identity.name,
-          size: documents.identity.size,
-          type: documents.identity.type,
-        } : null,
-        situation: documents.situation ? {
-          name: documents.situation.name,
-          size: documents.situation.size,
-          type: documents.situation.type,
-        } : null,
-        income: documents.income ? {
-          name: documents.income.name,
-          size: documents.income.size,
-          type: documents.income.type,
-        } : null,
-        quote: documents.quote ? {
-          name: documents.quote.name,
-          size: documents.quote.size,
-          type: documents.quote.type,
-        } : null,
-        income2: documents.income2 ? {
-          name: documents.income2.name,
-          size: documents.income2.size,
-          type: documents.income2.type,
-        } : null,
+      transmitter: selectedEmitter ? TRANSMITTER_API[selectedEmitter] : undefined,
+      campaignId: selectedCampaign?.id,
+      campaignCategory: selectedCampaign ? selectedCampaign.category : undefined,
+      urgency,
+      transmitterDetails: {
+        transmitterFirstName: transmitterFirstName || undefined,
+        tansmitterLastName: transmitterLastName || undefined,
+        transmitterCompanyName: transmitterCompanyName || undefined,
+        transamitterCodeId: transmitterCodeId || undefined,
       },
-      
-      // Étape 4 : Engagement
-      isCertified: isCertified,
-      
-      // Étape 5 : Signature
-      signature: signature, // Base64 de la signature
-      
-      // Métadonnées
-      submittedAt: new Date().toISOString(),
+      beneficiaryDetails: {
+        beneficiaryFirstName,
+        beneficiaryLastName,
+        beneficiaryGender: beneficiaryGender ?? undefined,
+        beneficiaryLocation,
+        beneficiaryMarialStatus: beneficiaryMaritalStatus || undefined,
+        beneficiaryIsMuslim: beneficiaryIsMuslim ?? undefined,
+        numberOfBeneficiaries: numberOfBeneficiaries ? Number(numberOfBeneficiaries) : 0,
+        beneficiaryActivity: beneficiaryActivity || undefined,
+        monthlyIncomeOfBeneficiary: monthlyIncomeOfBeneficiary ? Number(monthlyIncomeOfBeneficiary) : 0,
+        beneficiaryShariahEligibity: beneficiaryShariahEligibility || undefined,
+        beneficiaryAcceptPicture: beneficiaryAcceptPicture ?? undefined,
+      },
+      ...(campaignCategory === 'HEALTH' && {
+        healthDetails: {
+          lifeThreateningEmergency,
+          patientHaveCmuCard: patientHaveCmuCard ?? undefined,
+          percentageOfCmuCard: patientHaveCmuCard === true && percentageOfCmuCard.trim() !== '',
+          quoteIsFromApprovedEstablishment: quoteIsFromApprovedEstablishment ?? undefined,
+          establishmentName: establishmentName || undefined,
+          patientTotalityUnableToPay: patientTotalityUnableToPay ?? undefined,
+          whatPercentage: whatPercentage ? Number(whatPercentage) : 0,
+          totalQuote: totalQuote ? Number(totalQuote) : 0,
+        },
+      }),
+      ...(campaignCategory === 'EDUCATION' && {
+        educationDetails: {
+          typeOfNeed: typeOfNeed || undefined,
+          isStudentRegistered: isStudentRegistered ?? undefined,
+          riskOfExclusion: riskOfExclusion ?? undefined,
+          outstandingAmount: riskOfExclusion === true ? (outstandingAmount ? Number(outstandingAmount) : 0) : 0,
+        },
+      }),
+      ...(campaignCategory === 'WIDOW_SUPPORT' && {
+        widowSupportDetails: {
+          haveMinorChildren: haveMinorChildren ?? undefined,
+          numberOfMinorChildren: numberOfMinorChildren ? Number(numberOfMinorChildren) : 0,
+          stableAccomodation: stableAccomodation ?? undefined,
+          whereSheLives: whereSheLives || undefined,
+          kindOfSupport: kindOfSupport || undefined,
+          isDessertIncluded: isDessertIncluded ?? undefined,
+        },
+      }),
+      ...(campaignCategory === 'HABITATION' && {
+        habitationDetails: {
+          kindOfInsfrastructure: kindOfInfrastructure || undefined,
+          isCommunityInfrastructure: isCommunityInfrastructure ?? undefined,
+          landHaveTitleDeedOrAuthorisation: landHaveTitleDeedOrAuthorisation != null ? String(landHaveTitleDeedOrAuthorisation) : undefined,
+          isThereManagementCommitteeForFutureMaintenance: isThereManagementCommitteeForFutureMaintenance ?? undefined,
+          areThereAtLeastTwoConflictingQuotesFromServiceProviders: areThereAtLeastTwoConflictingQuotesFromServiceProviders ?? undefined,
+          whatIsTheQuote: whatIsTheQuote ? Number(whatIsTheQuote) : 0,
+        },
+      }),
+      attachments,
     };
 
-    // Simuler un appel API avec un délai
-    console.log('📤 Envoi des données au serveur (MOCK):', formData);
-    
-    try {
-      // Simuler un délai de requête
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simuler une réponse réussie
-      const mockResponse = {
-        success: true,
-        message: 'Votre demande d\'aide a été envoyée avec succès',
-        requestId: `REQ-${Date.now()}`,
-        data: formData,
-      };
-      
-      console.log('✅ Réponse du serveur (MOCK):', mockResponse);
-      
-      // Ici, vous pouvez ajouter une notification de succès ou rediriger
-      // Par exemple : toast.success('Demande envoyée avec succès !');
-      
-      return mockResponse;
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'envoi (MOCK):', error);
-      throw error;
-    }
+    return createAidRequest(accessToken, formData);
   };
 
   const handleNext = () => {
-    // Validation avant de passer à l'étape suivante
-    if (currentStep === 1 && !selectedEmitter) {
-      return; // Ne pas avancer si aucune option n'est sélectionnée
-    }
-    
-    // Validation pour l'étape 2
+    if (currentStep === 1 && !selectedEmitter) return;
+    if (currentStep === 1 && selectedEmitter === 'partner' && !transmitterCompanyName.trim()) return;
+    if (currentStep === 1 && selectedEmitter === 'volunteer' && !transmitterCodeId.trim()) return;
+    if (currentStep === 1 && (selectedEmitter === 'myself' || selectedEmitter === 'third-party') &&
+        (!transmitterLastName.trim() || !transmitterFirstName.trim())) return;
+
     if (currentStep === 2) {
-      if (selectedEmitter === 'partner' && !organizationName.trim()) {
-        return; // Ne pas avancer si partenaire et nom d'organisation vide
-      }
-      if (selectedEmitter === 'volunteer' && !volunteerIdCode.trim()) {
-        return; // Ne pas avancer si bénévole et ID Code vide
-      }
-      if ((selectedEmitter === 'myself' || selectedEmitter === 'third-party') && 
-          (!requesterLastName.trim() || !requesterFirstName.trim() || !gender || !age.trim())) {
-        return; // Ne pas avancer si nom, prénom, genre ou âge vide pour moi-même ou tierce personne
-      }
-      // Validation pour le pourcentage d'assurance si "Oui" est sélectionné
-      if ((selectedEmitter === 'myself' || selectedEmitter === 'third-party') && 
-          hasInsurance === true && !insurancePercentage.trim()) {
-        return; // Ne pas avancer si assurance = Oui mais pourcentage non renseigné
-      }
+      if (!beneficiaryFirstName.trim() || !beneficiaryLastName.trim()) return;
+      if (campaignCategory === 'HEALTH' && patientHaveCmuCard === true && !percentageOfCmuCard.trim()) return;
     }
-    
-    // Validation pour l'étape 4 (certification)
-    if (currentStep === 4 && !isCertified) {
-      return; // Ne pas avancer si la certification n'est pas acceptée
+
+    if (currentStep === 4 && !isCertified) return;
+    if (currentStep === 5) return;
+
+    if (currentStep < STEPS.length) setCurrentStep(currentStep + 1);
+  };
+
+  /** Récupère la position actuelle et remplit le lieu d'habitation (géolocalisation + géocodage inverse). */
+  const handleGetCurrentPosition = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setLocationError('La géolocalisation n\'est pas disponible sur ce navigateur.');
+      return;
     }
-    
-    // Si on est à l'étape 5, on ne fait rien ici (géré par le bouton "Appliquer")
-    if (currentStep === 5) {
-      return; // Le bouton "Appliquer" gère le téléchargement
-    }
-    
-    // Pour les autres étapes, passer à l'étape suivante
-    if (currentStep < STEPS.length) {
-      setCurrentStep(currentStep + 1);
-    }
+    setLocationError(null);
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { 'Accept-Language': 'fr' } }
+          );
+          const data = await res.json();
+          const addr = data.address;
+          const parts = [
+            addr?.suburb ?? addr?.neighbourhood ?? addr?.quarter,
+            addr?.village ?? addr?.town ?? addr?.city ?? addr?.municipality,
+            addr?.state ?? addr?.county,
+          ].filter(Boolean);
+          const display = parts.length > 0 ? parts.join(', ') : data.display_name ?? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          setBeneficiaryLocation(display);
+        } catch {
+          setBeneficiaryLocation(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        } finally {
+          setIsGettingLocation(false);
+        }
+      },
+      (err) => {
+        setIsGettingLocation(false);
+        if (err.code === 1) setLocationError('Autorisation refusée. Activez la localisation dans les paramètres.');
+        else if (err.code === 2) setLocationError('Position indisponible.');
+        else if (err.code === 3) setLocationError('Délai dépassé. Réessayez.');
+        else setLocationError('Impossible de récupérer la position.');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
   };
 
   const handleBack = () => {
@@ -397,19 +635,17 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
       console.warn('⚠️ Veuillez d\'abord appliquer la signature');
       return;
     }
-    
-    console.log('🚀 Début de l\'envoi au serveur...');
-    
-    // Simuler l'envoi au serveur
-    mockSubmitToServer()
+    setIsSubmitting(true);
+    submitAidRequest()
       .then(() => {
-        console.log('✅ Envoi réussi, affichage du modal de succès...');
-        // Afficher le modal de succès
         setShowSuccessModal(true);
       })
       .catch((error) => {
-        console.error('❌ Erreur lors de l\'envoi:', error);
-        // Ici, vous pouvez afficher un message d'erreur à l'utilisateur
+        console.error('Erreur lors de l\'envoi de la demande d\'aide:', error);
+        setErrorToast(error instanceof Error ? error.message : 'Impossible d\'envoyer la demande. Réessayez plus tard.');
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
   };
 
@@ -443,7 +679,14 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   key={option.value}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setSelectedEmitter(option.value as EmitterType)}
+                  onClick={() => {
+                    if (option.value === 'myself' && currentUser?.name) {
+                      const { firstName, lastName } = nameToFirstLast(currentUser.name);
+                      setTransmitterFirstName(firstName);
+                      setTransmitterLastName(lastName);
+                    }
+                    setSelectedEmitter(option.value as EmitterType);
+                  }}
                   className={`w-full rounded-3xl p-4 text-left transition-all ${
                     selectedEmitter === option.value
                       ? 'bg-[#43B48F] text-white'
@@ -459,6 +702,65 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                 </motion.button>
               ))}
             </div>
+
+            {/* Champs à remplir selon le type d'émetteur — puis on passe au step 2 */}
+            {selectedEmitter === 'partner' && (
+              <div className="mt-6 space-y-4">
+                <div className="relative">
+                  <Building className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                  <input
+                    type="text"
+                    value={transmitterCompanyName}
+                    onChange={(e) => setTransmitterCompanyName(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
+                    placeholder="Nom de l'organisation"
+                  />
+                </div>
+              </div>
+            )}
+
+            {selectedEmitter === 'volunteer' && (
+              <div className="mt-6 space-y-4">
+                <div className="relative">
+                  <Hash className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                  <input
+                    type="text"
+                    value={transmitterCodeId}
+                    onChange={(e) => setTransmitterCodeId(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
+                    placeholder="ID Code bénévole"
+                  />
+                </div>
+              </div>
+            )}
+
+            {(selectedEmitter === 'myself' || selectedEmitter === 'third-party') && (
+              <div className="mt-6 space-y-4 bg-[#00644d]/10 rounded-3xl p-4">
+                <h4 className="text-lg font-semibold text-white">Identité de l'émetteur</h4>
+                <div className="space-y-4">
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                    <input
+                      type="text"
+                      value={transmitterLastName}
+                      onChange={(e) => setTransmitterLastName(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-3xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
+                      placeholder="Nom"
+                    />
+                  </div>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                    <input
+                      type="text"
+                      value={transmitterFirstName}
+                      onChange={(e) => setTransmitterFirstName(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-3xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
+                      placeholder="Prénom"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       
@@ -469,256 +771,602 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
               Identification du bénéficiaire
             </h3>
             <p className="text-[#A0AEC0] mb-6">
-              Veuillez remplir les informations du bénéficiaire
+              Renseignez d'abord les informations du bénéficiaire, puis choisissez le type de campagne et les détails associés.
             </p>
-            
-            {/* Champs conditionnels selon le type d'émetteur */}
-            {selectedEmitter === 'partner' ? (
-              // Un seul champ pour Partenaire
-              <div className="space-y-4">
+
+            {/* ——— 1. Bénéficiaire — design mobile Figma (labels au-dessus, libellés exacts) ——— */}
+            <div className="space-y-5 bg-[#00644d]/10 rounded-3xl p-4">
+              <h4 className="text-lg font-semibold text-white">Informations bénéficiaire</h4>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Nom</label>
                 <div className="relative">
-                  <Building className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
                     type="text"
-                    value={organizationName}
-                    onChange={(e) => setOrganizationName(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border-1 border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                    placeholder="nom de l'organisation"
+                    value={beneficiaryLastName}
+                    onChange={(e) => setBeneficiaryLastName(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Nom"
                   />
                 </div>
               </div>
-            ) : selectedEmitter === 'volunteer' ? (
-              // Un seul champ pour Bénévole
-              <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Prénoms</label>
                 <div className="relative">
-                  <Hash className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
                     type="text"
-                    value={volunteerIdCode}
-                    onChange={(e) => setVolunteerIdCode(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border-1 border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                    placeholder="ID Code"
+                    value={beneficiaryFirstName}
+                    onChange={(e) => setBeneficiaryFirstName(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Prénoms"
                   />
                 </div>
               </div>
-            ) : (
-              // Formulaire complet pour Moi-même ou Tierce personne
-              <div className="space-y-8">
-                {/* Section Identité */}
-                <div className="space-y-4 bg-[#00644d]/10 rounded-3xl p-4">
-                  <h4 className="text-lg font-semibold text-white">Identité</h4>
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
-                      <input
-                        type="text"
-                        value={requesterLastName}
-                        onChange={(e) => setRequesterLastName(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border-1 border-[#48BB78] rounded-3xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                        placeholder="Nom"
-                      />
-                    </div>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
-                      <input
-                        type="text"
-                        value={requesterFirstName}
-                        onChange={(e) => setRequesterFirstName(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border-1 border-[#48BB78] rounded-3xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                        placeholder="Prénoms"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Genre</label>
+                <div className="flex gap-4">
+                  {(['male', 'female'] as const).map((g) => (
+                    <label key={g} className="flex items-center gap-2 cursor-pointer">
+                      <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${beneficiaryGender === g ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
+                        {beneficiaryGender === g && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
+                      </span>
+                      <input type="radio" name="beneficiaryGender" className="sr-only" checked={beneficiaryGender === g} onChange={() => setBeneficiaryGender(g)} />
+                      <span className="text-white text-sm">{g === 'male' ? 'Homme' : 'Femme'}</span>
+                    </label>
+                  ))}
                 </div>
-
-                {/* Section Genre */}
-                <div className="space-y-4 bg-[#00644d]/10 rounded-3xl p-4">
-                  <h4 className="text-lg font-semibold text-white">Genre</h4>
-                  <div className="flex gap-3">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setGender('male')}
-                      className={`w-fit rounded-3xl p-2 flex items-center gap-3 transition-all ${
-                        gender === 'male'
-                          ? 'bg-[#43B48F] text-white'
-                          : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'
-                      }`}
-                    >
-                      {gender === 'male' && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                      <span className="font-medium">Homme</span>
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setGender('female')}
-                      className={`w-fit rounded-3xl p-2 flex items-center gap-3 transition-all ${
-                        gender === 'female'
-                          ? 'bg-[#43B48F] text-white'
-                          : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'
-                      }`}
-                    >
-                      {gender === 'female' && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                      <span className="font-medium">Femme</span>
-                    </motion.button>
-                  </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Âge</label>
+                <div className="relative">
+                  <Infinity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                  <input
+                    type="number"
+                    min={0}
+                    value={beneficiaryAge}
+                    onChange={(e) => setBeneficiaryAge(e.target.value)}
+                    className="w-full pl-12 pr-14 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="0"
+                    aria-label="Âge du bénéficiaire en années"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0] text-sm">ans</span>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Lieu d&apos;habitation</label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                  <input
+                    type="text"
+                    value={beneficiaryLocation}
+                    onChange={(e) => setBeneficiaryLocation(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Ville, commune, quartier"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGetCurrentPosition}
+                  disabled={isGettingLocation}
+                  className="w-full mt-2 py-3 px-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-[#48BB78] text-sm font-medium hover:bg-[#2A3534] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isGettingLocation ? (
+                    <>
+                      <span className="inline-block w-4 h-4 border-2 border-[#48BB78] border-t-transparent rounded-full animate-spin" />
+                      Récupération en cours...
+                    </>
+                  ) : (
+                    'Choisir ma position actuelle'
+                  )}
+                </button>
+                {locationError && (
+                  <p className="mt-2 text-sm text-red-400" role="alert">
+                    {locationError}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Situation matrimoniale</label>
+                <input
+                  type="text"
+                  value={beneficiaryMaritalStatus}
+                  onChange={(e) => setBeneficiaryMaritalStatus(e.target.value)}
+                  className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                  placeholder="Célibataire, Marié(e), Veuf(ve)..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Musulman</label>
+                <div className="flex gap-4">
+                  {([true, false] as const).map((v) => (
+                    <motion.button key={String(v)} type="button" whileTap={{ scale: 0.98 }} onClick={() => setBeneficiaryIsMuslim(v)} className="flex items-center gap-2">
+                      <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${beneficiaryIsMuslim === v ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
+                        {beneficiaryIsMuslim === v && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
+                      </span>
+                      <span className="text-white text-sm">{v ? 'Oui' : 'Non'}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Nombre de personnes à charge</label>
+                <div className="relative flex items-center">
+                  <Users className="absolute left-4 text-[#48BB78] w-5 h-5 z-10" />
+                  <input
+                    type="number"
+                    min={0}
+                    value={numberOfBeneficiaries}
+                    onChange={(e) => setNumberOfBeneficiaries(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Votre activité/fonction</label>
+                <div className="relative">
+                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                  <input
+                    type="text"
+                    value={beneficiaryActivity}
+                    onChange={(e) => setBeneficiaryActivity(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Ex: Commerçant, Enseignant..."
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Revenu mensuel</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={monthlyIncomeOfBeneficiary}
+                    onChange={(e) => setMonthlyIncomeOfBeneficiary(e.target.value)}
+                    className="w-full pl-12 pr-16 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="0"
+                    aria-label="Revenu mensuel en F CFA"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0] text-sm">F CFA</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Éligibilité Charia (Catégories Asnaf)</label>
+                <div className="flex flex-col gap-2">
+                  {SHARIAH_ELIGIBILITY_OPTIONS.map((opt) => (
+                    <motion.button key={opt.value} type="button" whileTap={{ scale: 0.98 }} onClick={() => setBeneficiaryShariahEligibility(opt.value)} className="flex items-center gap-3 text-left w-full">
+                      <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${beneficiaryShariahEligibility === opt.value ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
+                        {beneficiaryShariahEligibility === opt.value && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
+                      </span>
+                      <span className="text-white text-sm">{opt.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Pour la transparence le demandeur accepterait-il la prise de photo.</label>
+                <div className="flex gap-4">
+                  {([true, false] as const).map((v) => (
+                    <motion.button key={String(v)} type="button" whileTap={{ scale: 0.98 }} onClick={() => setBeneficiaryAcceptPicture(v)} className="flex items-center gap-2">
+                      <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${beneficiaryAcceptPicture === v ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
+                        {beneficiaryAcceptPicture === v && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
+                      </span>
+                      <span className="text-white text-sm">{v ? 'Oui' : 'Non'}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-                {/* Section Âge */}
-                <div className="space-y-4 bg-[#00644d]/10 rounded-3xl p-4">
-                  <h4 className="text-lg font-semibold text-white">Âge</h4>
-                  <div className="relative">
-                    <label htmlFor="age-input" className="sr-only">Âge</label>
-                    <Infinity className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#A0AEC0] w-5 h-5 z-10" />
-                    <input
-                      id="age-input"
-                      type="number"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      aria-label="Âge en années"
-                      className="w-full pl-12 pr-16 py-4 bg-[#1E2726] border-1 border-[#48BB78] rounded-3xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                      placeholder=""
-                    />
-                    <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[#A0AEC0] pointer-events-none">
-                      ans
+            {/* ——— 2. Sélection de la campagne (liste getActiveCampaigns) ——— */}
+            <div className="space-y-4 mt-8">
+              <p className="text-[#A0AEC0] text-sm">Sélection de la campagne</p>
+              <div className="relative" ref={categoryDropdownRef}>
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  className="w-full pl-12 pr-12 py-4 bg-[#1E2726] border border-[#48BB78] rounded-3xl text-white flex items-center justify-between transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    {campaignCategory === 'HEALTH' && <Heart className="w-5 h-5 text-[#48BB78]" />}
+                    {campaignCategory === 'EDUCATION' && <GraduationCap className="w-5 h-5 text-[#48BB78]" />}
+                    {campaignCategory === 'WIDOW_SUPPORT' && <Users className="w-5 h-5 text-[#48BB78]" />}
+                    {campaignCategory === 'HABITATION' && <Building2 className="w-5 h-5 text-[#48BB78]" />}
+                    {!campaignCategory && selectedCampaign && <Building className="w-5 h-5 text-[#48BB78]" />}
+                    <span>
+                      {selectedCampaign
+                        ? (campaignCategory ? SECTION_LABELS[campaignCategory] : selectedCampaign.title)
+                        : 'Choisir une campagne'}
                     </span>
                   </div>
-                </div>
-
-                {/* Section Catégorie de soutien */}
-                <div className="space-y-4 ">
-                  <div className="relative " ref={categoryDropdownRef}>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                      className="w-full pl-12 pr-12 py-4 bg-[#1E2726] border-1 border-[#48BB78] rounded-3xl text-white flex items-center justify-between transition-all"
+                  <motion.div animate={{ rotate: isCategoryDropdownOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                    <ChevronDown className="w-5 h-5 text-[#48BB78]" />
+                  </motion.div>
+                </motion.button>
+                <AnimatePresence>
+                  {isCategoryDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute z-20 w-full mt-2 bg-[#1E2726] border border-[#101919] rounded-3xl overflow-hidden max-h-60 overflow-y-auto"
                     >
-                      <div className="flex items-center gap-3">
-                        <Heart className="w-5 h-5 text-[#48BB78]" />
-                        <span>{supportCategory}</span>
-                      </div>
-                      <motion.div
-                        animate={{ rotate: isCategoryDropdownOpen ? 180 : 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ChevronDown className="w-5 h-5 text-[#48BB78]" />
-                      </motion.div>
-                    </motion.button>
-                    <AnimatePresence>
-                      {isCategoryDropdownOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="absolute z-20 w-full mt-2 bg-[#1E2726] border-1 border-[#101919] rounded-3xl overflow-hidden"
-                        >
-                          {['Soutien Santé', 'Soutien Éducation', 'Soutien Alimentaire', 'Soutien Logement'].map((category) => (
+                      {activeCampaigns.length === 0 ? (
+                        <div className="px-4 py-3 text-[#A0AEC0] text-sm">Aucune campagne active</div>
+                      ) : (
+                        activeCampaigns.map((campaign) => {
+                          const section = apiCategoryToSection(campaign.category);
+                          return (
                             <button
-                              key={category}
+                              key={campaign.id}
+                              type="button"
                               onClick={() => {
-                                setSupportCategory(category);
+                                setSelectedCampaign(campaign);
                                 setIsCategoryDropdownOpen(false);
                               }}
                               className="w-full px-4 py-3 text-left text-white hover:bg-[#2A3534] transition-colors flex items-center gap-3"
                             >
-                              <Heart className="w-5 h-5 text-[#48BB78]" />
-                              <span>{category}</span>
+                              {section === 'HEALTH' && <Heart className="w-5 h-5 text-[#48BB78]" />}
+                              {section === 'EDUCATION' && <GraduationCap className="w-5 h-5 text-[#48BB78]" />}
+                              {section === 'WIDOW_SUPPORT' && <Users className="w-5 h-5 text-[#48BB78]" />}
+                              {section === 'HABITATION' && <Building2 className="w-5 h-5 text-[#48BB78]" />}
+                              {!section && <Building className="w-5 h-5 text-[#48BB78]" />}
+                              <span>{campaign.title}</span>
                             </button>
-                          ))}
-                        </motion.div>
+                          );
+                        })
                       )}
-                    </AnimatePresence>
-                  </div>
-                </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
 
-                {/* Section Urgence vitale */}
-                <div className="space-y-4 ">
+            {/* Urgence (API) */}
+            <div className="space-y-4 mt-6">
+              <h4 className="text-lg font-semibold text-white">Urgence</h4>
+              <div className="flex flex-wrap gap-3">
+                {URGENCY_OPTIONS.map((opt) => (
                   <motion.button
+                    key={opt.value}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => setIsVitalEmergency(!isVitalEmergency)}
-                    className="w-full flex items-center gap-3 text-left"
+                    onClick={() => setUrgency(opt.value)}
+                    className={`rounded-3xl px-4 py-2 transition-all ${
+                      urgency === opt.value ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'
+                    }`}
                   >
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                      isVitalEmergency
-                        ? 'bg-[#48BB78] border-[#48BB78]'
-                        : 'bg-transparent border-[#48BB78]'
-                    }`}>
-                      {isVitalEmergency && (
-                        <CheckCircle className="w-4 h-4 text-white" />
-                      )}
-                    </div>
-                    <span className="text-white text-sm">
-                      S'agit-il d'une urgence vitale (pronostic engagé sous 24h-48h) ?
-                    </span>
+                    {opt.label}
                   </motion.button>
-                </div>
+                ))}
+              </div>
+            </div>
 
-                {/* Section Couverture d'assurance */}
-                <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-white">
-                    Le patient a-t-il une couverture d'assurance (Mutuelle/CMU) ?
-                  </h4>
-                  <div className="flex gap-3">
+            {/* ——— Champs selon le type de campagne ——— */}
+            {campaignCategory === 'HEALTH' && (
+              <div className="space-y-6 mt-8 bg-[#00644d]/10 rounded-3xl p-4">
+                <h4 className="text-lg font-semibold text-white">Détails santé</h4>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <span className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${lifeThreateningEmergency ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
+                    {lifeThreateningEmergency && <CheckCircle className="w-3.5 h-3.5 text-[#101919]" />}
+                  </span>
+                  <input type="checkbox" className="sr-only" checked={lifeThreateningEmergency} onChange={(e) => setLifeThreateningEmergency(e.target.checked)} />
+                  <span className="text-white text-sm">S&apos;agit-il d&apos;une urgence vitale (pronostic engagé sous 24h-48h) ?</span>
+                </label>
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">Patient a une carte CMU ? (patientHaveCmuCard)</span>
+                  {([true, false] as const).map((v) => (
                     <motion.button
+                      key={String(v)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => setHasInsurance(true)}
-                      className={`w-fit rounded-3xl p-2 flex items-center gap-3 transition-all ${
-                        hasInsurance === true
-                          ? 'bg-[#43B48F] text-white'
-                          : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'
-                      }`}
+                      onClick={() => setPatientHaveCmuCard(v)}
+                      className={`rounded-3xl px-4 py-2 ${patientHaveCmuCard === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {hasInsurance === true && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                      <span className="font-medium">Oui</span>
+                      {v ? 'Oui' : 'Non'}
                     </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setHasInsurance(false)}
-                      className={`w-fit rounded-3xl p-2 flex items-center gap-3 transition-all ${
-                        hasInsurance === false
-                          ? 'bg-[#43B48F] text-white'
-                          : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'
-                      }`}
-                    >
-                      {hasInsurance === false && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                      <span className="font-medium">Non</span>
-                    </motion.button>
-                  </div>
+                  ))}
                 </div>
-
-                {/* Section Pourcentage d'assurance */}
-                {hasInsurance === true && (
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-white">À combien de % ?</h4>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={insurancePercentage}
-                        onChange={(e) => setInsurancePercentage(e.target.value)}
-                        min="0"
-                        max="100"
-                        aria-label="Pourcentage de couverture d'assurance"
-                        className="w-full pl-4 pr-16 py-4 bg-[#1E2726] border-1 border-[#48BB78] rounded-3xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                        placeholder=""
-                      />
-                      <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[#A0AEC0] pointer-events-none">
-                        %
-                      </span>
-                    </div>
+                {patientHaveCmuCard === true && (
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={percentageOfCmuCard}
+                      onChange={(e) => setPercentageOfCmuCard(e.target.value)}
+                      className="w-full pl-4 pr-10 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                      placeholder="%"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0]">%</span>
                   </div>
                 )}
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">Devis d’un établissement agréé ? (quoteIsFromApprovedEstablishment)</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setQuoteIsFromApprovedEstablishment(v)}
+                      className={`rounded-3xl px-4 py-2 ${quoteIsFromApprovedEstablishment === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={establishmentName}
+                    onChange={(e) => setEstablishmentName(e.target.value)}
+                    className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Nom de l'établissement"
+                  />
+                </div>
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">Patient totalement dans l’incapacité de payer ? (patientTotalityUnableToPay)</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setPatientTotalityUnableToPay(v)}
+                      className={`rounded-3xl px-4 py-2 ${patientTotalityUnableToPay === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+                {patientTotalityUnableToPay === false && (
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={whatPercentage}
+                      onChange={(e) => setWhatPercentage(e.target.value)}
+                      className="w-full pl-4 pr-10 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                      placeholder="%"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0]">%</span>
+                  </div>
+                )}
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={totalQuote}
+                    onChange={(e) => setTotalQuote(e.target.value)}
+                    className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Montant (F CFA)"
+                  />
+                </div>
+              </div>
+            )}
+
+            {campaignCategory === 'EDUCATION' && (
+              <div className="space-y-6 mt-8 bg-[#00644d]/10 rounded-3xl p-4">
+                <h4 className="text-lg font-semibold text-white">Éducation / Scolarisation</h4>
+                <div className="space-y-2">
+                  <label className="text-white text-sm font-medium block">Type de besoin</label>
+                  <div className="flex flex-col gap-2">
+                    {EDUCATION_TYPE_NEED_OPTIONS.map((opt) => (
+                      <motion.button key={opt.value} type="button" whileTap={{ scale: 0.98 }} onClick={() => setTypeOfNeed(opt.value)} className="flex items-center gap-2 text-left">
+                        <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${typeOfNeed === opt.value ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
+                          {typeOfNeed === opt.value && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
+                        </span>
+                        <span className="text-white text-sm">{opt.label}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-white text-sm font-medium block">L&apos;élève/étudiant est-il déjà inscrit dans un établissement ?</label>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setIsStudentRegistered(v)}
+                      className={`rounded-3xl px-4 py-2 ${isStudentRegistered === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-white text-sm font-medium block">S&apos;agit-il d&apos;un risque d&apos;exclusion pour les impayés ?</label>
+                  <div className="flex gap-4">
+                    {([true, false] as const).map((v) => (
+                      <motion.button key={String(v)} type="button" whileTap={{ scale: 0.98 }} onClick={() => {
+                        setRiskOfExclusion(v);
+                        if (!v) setOutstandingAmount('');
+                      }} className="flex items-center gap-2">
+                        <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${riskOfExclusion === v ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
+                          {riskOfExclusion === v && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
+                        </span>
+                        <span className="text-white text-sm">{v ? 'Oui' : 'Non'}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+                {riskOfExclusion === true && (
+                  <div className="space-y-2">
+                    <label className="text-white text-sm font-medium block">À combien s&apos;élève les impayés ?</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={outstandingAmount}
+                      onChange={(e) => setOutstandingAmount(e.target.value)}
+                      className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                      placeholder="Montant (F CFA)"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {campaignCategory === 'WIDOW_SUPPORT' && (
+              <div className="space-y-6 mt-8 bg-[#00644d]/10 rounded-3xl p-4">
+                <h4 className="text-lg font-semibold text-white">Accompagnement des Veuves</h4>
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">A des enfants mineurs ? (haveMinorChildren)</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setHaveMinorChildren(v)}
+                      className={`rounded-3xl px-4 py-2 ${haveMinorChildren === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+                {haveMinorChildren === true && (
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={0}
+                      value={numberOfMinorChildren}
+                      onChange={(e) => setNumberOfMinorChildren(e.target.value)}
+                      className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                      placeholder="Nombre d’enfants mineurs (numberOfMinorChildren)"
+                    />
+                  </div>
+                )}
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">Hébergement stable ? (stableAccomodation)</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setStableAccomodation(v)}
+                      className={`rounded-3xl px-4 py-2 ${stableAccomodation === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={whereSheLives}
+                    onChange={(e) => setWhereSheLives(e.target.value)}
+                    className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Où vit-elle (whereSheLives)"
+                  />
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={kindOfSupport}
+                    onChange={(e) => setKindOfSupport(e.target.value)}
+                    className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Type de soutien (kindOfSupport)"
+                  />
+                </div>
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">Désert inclus ? (isDessertIncluded)</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setIsDessertIncluded(v)}
+                      className={`rounded-3xl px-4 py-2 ${isDessertIncluded === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {campaignCategory === 'HABITATION' && (
+              <div className="space-y-6 mt-8 bg-[#00644d]/10 rounded-3xl p-4">
+                <h4 className="text-lg font-semibold text-white">Réhabilitation / Infrastructures</h4>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={kindOfInfrastructure}
+                    onChange={(e) => setKindOfInfrastructure(e.target.value)}
+                    className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Type d’infrastructure (kindOfInfrastructure)"
+                  />
+                </div>
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">Infrastructure communautaire ? (isCommunityInfrastructure)</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setIsCommunityInfrastructure(v)}
+                      className={`rounded-3xl px-4 py-2 ${isCommunityInfrastructure === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">Terrain avec titre de propriété ou autorisation ? (landHaveTitleDeedOrAuthorisation)</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setLandHaveTitleDeedOrAuthorisation(v)}
+                      className={`rounded-3xl px-4 py-2 ${landHaveTitleDeedOrAuthorisation === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">Comité de gestion pour maintenance future ? (isThereManagementCommitteeForFutureMaintenance)</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setIsThereManagementCommitteeForFutureMaintenance(v)}
+                      className={`rounded-3xl px-4 py-2 ${isThereManagementCommitteeForFutureMaintenance === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="flex gap-3 flex-wrap">
+                  <span className="text-white text-sm font-medium w-full">Au moins 2 devis de prestataires ? (areThereAtLeastTwoConflictingQuotesFromServiceProviders)</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setAreThereAtLeastTwoConflictingQuotesFromServiceProviders(v)}
+                      className={`rounded-3xl px-4 py-2 ${areThereAtLeastTwoConflictingQuotesFromServiceProviders === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? 'Oui' : 'Non'}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={whatIsTheQuote}
+                    onChange={(e) => setWhatIsTheQuote(e.target.value)}
+                    className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
+                    placeholder="Montant du devis (whatIsTheQuote)"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -1041,6 +1689,20 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                 <X className="w-5 h-5 text-white" />
               </button>
 
+              {/* Toast d'erreur (rouge) */}
+              <AnimatePresence>
+                {errorToast && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -16 }}
+                    className="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg bg-red-600 border border-red-500 max-w-[90%] text-center"
+                  >
+                    {errorToast}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Contenu principal */}
               <div className="flex flex-1 min-h-0 overflow-hidden">
                 {/* Stepper - Panneau de gauche */}
@@ -1143,13 +1805,11 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                         onClick={handleNext}
                         disabled={
                           (currentStep === 1 && !selectedEmitter) ||
-                          (currentStep === 2 && (
-                            (selectedEmitter === 'partner' && !organizationName.trim()) ||
-                            (selectedEmitter === 'volunteer' && !volunteerIdCode.trim()) ||
-                            ((selectedEmitter === 'myself' || selectedEmitter === 'third-party') && 
-                             (!requesterLastName.trim() || !requesterFirstName.trim() || !gender || !age.trim() ||
-                              (hasInsurance === true && !insurancePercentage.trim())))
-                          )) ||
+                          (currentStep === 1 && selectedEmitter === 'partner' && !transmitterCompanyName.trim()) ||
+                          (currentStep === 1 && selectedEmitter === 'volunteer' && !transmitterCodeId.trim()) ||
+                          (currentStep === 1 && (selectedEmitter === 'myself' || selectedEmitter === 'third-party') && (!transmitterLastName.trim() || !transmitterFirstName.trim())) ||
+                          (currentStep === 2 && (!beneficiaryFirstName.trim() || !beneficiaryLastName.trim())) ||
+                          (currentStep === 2 && campaignCategory === 'HEALTH' && patientHaveCmuCard === true && !percentageOfCmuCard.trim()) ||
                           (currentStep === 4 && !isCertified) ||
                           (currentStep === 5 && !signature)
                         }
@@ -1163,13 +1823,23 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     {/* Bouton Terminer pour l'étape 5 après application de la signature */}
                     {currentStep === 5 && isSignatureApplied && (
                       <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={!isSubmitting ? { scale: 1.02 } : undefined}
+                        whileTap={!isSubmitting ? { scale: 0.98 } : undefined}
                         onClick={handleFinish}
-                        className="px-6 py-3 bg-gradient-to-r from-[#48BB78] to-[#38B2AC] text-white font-bold rounded-3xl flex items-center gap-2 hover:from-[#38A169] hover:to-[#319795] transition-all"
+                        disabled={isSubmitting}
+                        className="px-6 py-3 bg-gradient-to-r from-[#48BB78] to-[#38B2AC] text-white font-bold rounded-3xl flex items-center justify-center gap-2 hover:from-[#38A169] hover:to-[#319795] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                       >
-                        <span>Terminer</span>
-                        <CheckCircle className="w-5 h-5" />
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
+                            <span>Envoi en cours...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Terminer</span>
+                            <CheckCircle className="w-5 h-5" />
+                          </>
+                        )}
                       </motion.button>
                     )}
                   </div>

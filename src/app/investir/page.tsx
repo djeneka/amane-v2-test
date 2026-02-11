@@ -10,8 +10,9 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getInvestmentProducts, mapInvestmentToDisplay, API_CATEGORY_LABELS, API_CATEGORY_TO_SLUG, type InvestmentProductDisplay, type InvestmentCategorySlug } from '@/services/investments';
-import MakeDonationModal from '@/components/MakeDonationModal';
+import { getInvestmentProducts, getMyInvestments, mapInvestmentToDisplay, API_CATEGORY_LABELS, API_CATEGORY_TO_SLUG, type InvestmentProductDisplay, type InvestmentCategorySlug, type MyInvestment } from '@/services/investments';
+import MakeInvestmentModal from '@/components/MakeInvestmentModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function InvestirPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,6 +21,9 @@ export default function InvestirPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [expandedFilters, setExpandedFilters] = useState(false);
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
+  const [selectedProductForModal, setSelectedProductForModal] = useState<InvestmentProductDisplay | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { accessToken, user } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
   const [activeTab, setActiveTab] = useState<'products' | 'investments'>('products');
   const [showInvestmentDetails, setShowInvestmentDetails] = useState(false);
@@ -27,6 +31,9 @@ export default function InvestirPage() {
   const [products, setProducts] = useState<InvestmentProductDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [investments, setInvestments] = useState<MyInvestment[]>([]);
+  const [investmentsLoading, setInvestmentsLoading] = useState(false);
+  const [investmentsError, setInvestmentsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +49,26 @@ export default function InvestirPage() {
       });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'investments' || !accessToken) {
+      if (!accessToken) setInvestments([]);
+      return;
+    }
+    let cancelled = false;
+    setInvestmentsLoading(true);
+    setInvestmentsError(null);
+    getMyInvestments(accessToken)
+      .then((list) => { if (!cancelled) setInvestments(list); })
+      .catch((err) => {
+        if (!cancelled) {
+          setInvestmentsError(err?.message ?? 'Erreur chargement des investissements');
+          setInvestments([]);
+        }
+      })
+      .finally(() => { if (!cancelled) setInvestmentsLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, accessToken]);
 
   const categoryIcons: Record<InvestmentCategorySlug, React.ComponentType<{ size?: number; className?: string }>> = {
     immobilier: Building,
@@ -202,7 +229,13 @@ export default function InvestirPage() {
     }
   };
 
-  const handleInvest = () => {
+  const handleInvest = (product: InvestmentProductDisplay) => {
+    if (!accessToken) {
+      setToastMessage('Veuillez vous connecter pour investir.');
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+    setSelectedProductForModal(product);
     setShowInvestmentModal(true);
   };
 
@@ -213,97 +246,72 @@ export default function InvestirPage() {
     { label: 'Années d\'expérience', value: '15+', icon: Star },
   ];
 
-  // Données des investissements
-  const myInvestments = [
-    {
-      id: '1',
-      icon: Building,
-      name: 'Fonds Immobilier Premium',
-      shortName: 'Immobilier',
-      category: 'immobilier',
-      amount: '5 000 000 F',
-      amountValue: 5000000,
-      status: 'Actif',
-      returnRate: '12%',
-      returnRateValue: 12,
-      startDate: '15 Juin, 2024',
-      startDateValue: new Date('2024-06-15'),
-      description: 'Investissement dans un portefeuille immobilier diversifié.',
-      benefits: [
-        'Rendement mensuel garanti',
-        'Diversification géographique',
-        'Gestion professionnelle',
-      ],
-    },
-    {
-      id: '2',
-      icon: Leaf,
-      name: 'Agriculture Durable',
-      shortName: 'Agriculture',
-      category: 'agriculture',
-      amount: '3 500 000 F',
-      amountValue: 3500000,
-      status: 'Actif',
-      returnRate: '10%',
-      returnRateValue: 10,
-      startDate: '20 Juillet, 2024',
-      startDateValue: new Date('2024-07-20'),
-      description: 'Investissement dans des projets agricoles durables et éthiques.',
-      benefits: [
-        'Impact social positif',
-        'Rendement stable',
-        'Développement local',
-      ],
-    },
-    {
-      id: '3',
-      icon: Zap,
-      name: 'Tech Innovation Fund',
-      shortName: 'Technologie',
-      category: 'technologie',
-      amount: '7 000 000 F',
-      amountValue: 7000000,
-      status: 'Actif',
-      returnRate: '15%',
-      returnRateValue: 15,
-      startDate: '10 Août, 2024',
-      startDateValue: new Date('2024-08-10'),
-      description: 'Investissement dans des startups technologiques prometteuses.',
-      benefits: [
-        'Croissance rapide',
-        'Innovation',
-        'Potentiel élevé',
-      ],
-    },
-    {
-      id: '4',
-      icon: Zap,
-      name: 'Énergie Renouvelable',
-      shortName: 'Énergie',
-      category: 'energie',
-      amount: '4 200 000 F',
-      amountValue: 4200000,
-      status: 'Actif',
-      returnRate: '11%',
-      returnRateValue: 11,
-      startDate: '5 Septembre, 2024',
-      startDateValue: new Date('2024-09-05'),
-      description: 'Investissement dans des projets d\'énergie solaire et éolienne.',
-      benefits: [
-        'Impact environnemental',
-        'Rendement régulier',
-        'Durabilité',
-      ],
-    },
-  ];
+  /** Icône par mot-clé dans le titre du produit */
+  const getInvestmentIcon = (title: string) => {
+    const t = (title || '').toLowerCase();
+    if (t.includes('immobilier') || t.includes('immo')) return Building;
+    if (t.includes('agriculture') || t.includes('agri')) return Leaf;
+    if (t.includes('tech') || t.includes('innovation')) return Zap;
+    if (t.includes('énergie') || t.includes('energie') || t.includes('auto')) return Zap;
+    return TrendingUp;
+  };
+
+  /** Catégorie pour le filtre à partir du titre */
+  const getInvestmentCategory = (title: string): InvestmentCategorySlug => {
+    const t = (title || '').toLowerCase();
+    if (t.includes('immobilier') || t.includes('immo')) return 'immobilier';
+    if (t.includes('agriculture') || t.includes('agri')) return 'agriculture';
+    if (t.includes('tech') || t.includes('innovation')) return 'technologie';
+    if (t.includes('énergie') || t.includes('energie') || t.includes('auto')) return 'energie';
+    return 'immobilier';
+  };
+
+  const formatInvestmentDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return iso;
+    }
+  };
+
+  /** Investissements mappés pour l'affichage */
+  const myInvestmentsDisplay = useMemo(() => {
+    return investments.map((inv) => {
+      const product = inv.investmentSubscription?.investmentProduct;
+      const title = product?.title ?? 'Investissement';
+      const returnVal = parseFloat(product?.estimatedReturn ?? '0') || 0;
+      return {
+        id: inv.id,
+        icon: getInvestmentIcon(title),
+        name: title,
+        shortName: title,
+        category: getInvestmentCategory(title),
+        amount: formatAmount(inv.amount),
+        amountValue: inv.amount,
+        status: inv.status === 'ACTIVE' ? 'Actif' : inv.status,
+        returnRate: `${returnVal}%`,
+        returnRateValue: returnVal,
+        startDate: formatInvestmentDate(inv.investmentDate),
+        startDateValue: new Date(inv.investmentDate),
+        description: `Investissement de ${formatAmount(inv.amount)} — Durée ${product?.duration ?? '–'} mois.`,
+        benefits: [`Rendement estimé ${returnVal}%`, `Durée ${product?.duration ?? '–'} mois`],
+        raw: inv,
+      };
+    });
+  }, [investments]);
 
   // Filtrer et trier les investissements
-  const filteredInvestments = myInvestments
+  const filteredInvestments = myInvestmentsDisplay
     .filter(investment => {
       const matchesSearch = investment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            investment.amount.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            investment.status.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || investment.category === selectedCategory;
+      const categorySlug = API_CATEGORY_TO_SLUG[selectedCategory] ?? selectedCategory;
+      const matchesCategory = selectedCategory === 'all' || investment.category === categorySlug;
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
@@ -763,7 +771,7 @@ export default function InvestirPage() {
                             <motion.button
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              onClick={handleInvest}
+                              onClick={() => handleInvest(product)}
                               className="w-full px-3 py-2 bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white rounded-2xl font-semibold hover:from-[#20b6b3] hover:to-[#00644d] transition-all duration-200 text-sm flex-shrink-0 ml-2"
                             >
                               Investir
@@ -906,7 +914,7 @@ export default function InvestirPage() {
                               <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={handleInvest}
+                                onClick={() => handleInvest(product)}
                                 className="px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center space-x-2 flex-shrink-0 ml-3"
                               >
                                 <span>Investir</span>
@@ -953,7 +961,23 @@ export default function InvestirPage() {
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            {filteredInvestments.length > 0 ? (
+            {investmentsLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="w-10 h-10 border-2 border-[#5FB678] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : investmentsError ? (
+              <div className="rounded-2xl p-6 bg-red-500/10 border border-red-500/30 text-red-200 text-center">
+                <p>{investmentsError}</p>
+              </div>
+            ) : !accessToken ? (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-12">
+                <div className="w-24 h-24 bg-[#2C3E3E] rounded-full flex items-center justify-center mx-auto mb-6">
+                  <TrendingUp size={32} className="text-[#5FB678]" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Connectez-vous</h3>
+                <p className="text-white/80">Connectez-vous pour voir vos investissements.</p>
+              </motion.div>
+            ) : filteredInvestments.length > 0 ? (
               filteredInvestments.map((investment, index) => {
                 const IconComponent = investment.icon;
                 return (
@@ -1149,24 +1173,52 @@ export default function InvestirPage() {
       </section>
 
 
-      {/* Payment Popup */}
       {/* Investment Modal */}
-      <MakeDonationModal
-        isOpen={showInvestmentModal}
-        onClose={() => setShowInvestmentModal(false)}
-        title="Investissement"
-        subtitle="Montant de l'investissement"
-        description="Veuillez saisir le montant de l'investissement."
-        amountSectionTitle="Montant de l'investissement"
-        confirmationTitle="Veuillez confirmer votre transaction"
-        confirmationDescription="Vérifiez les informations avant de confirmer votre investissement."
-        recapTitle="Vous allez investir la somme de"
-        recapMessage="Amane+ s'engage à utiliser votre argent, identifiés par nos partenaires de confiance."
-        successTitle="Investissement confirmé !"
-        successMessage="Votre investissement a été effectué avec succès."
-        historyButtonText="Consulter l'historique"
-        historyButtonLink="/transactions"
-      />
+      {selectedProductForModal && (
+        <MakeInvestmentModal
+          isOpen={showInvestmentModal}
+          onClose={() => {
+            setShowInvestmentModal(false);
+            setSelectedProductForModal(null);
+          }}
+          balance={user?.wallet?.balance ?? 0}
+          accessToken={accessToken ?? null}
+          investmentProductId={selectedProductForModal.id}
+          investmentProduct={selectedProductForModal}
+          onSuccess={() => {
+            setShowInvestmentModal(false);
+            setSelectedProductForModal(null);
+            if (activeTab === 'investments' && accessToken) {
+              getMyInvestments(accessToken)
+                .then(setInvestments)
+                .catch(() => {});
+            }
+          }}
+          onToast={(msg) => {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 4000);
+          }}
+          successTitle="Investissement confirmé !"
+          successMessage="Votre investissement a été effectué avec succès."
+          historyButtonText="Consulter l'historique"
+          historyButtonLink="/transactions"
+        />
+      )}
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Investment Details Modal */}
       <AnimatePresence>
@@ -1228,7 +1280,7 @@ export default function InvestirPage() {
                 <div className="space-y-4">
                   <h5 className="text-xl font-bold text-white">Avantages principaux</h5>
                   <ul className="space-y-3">
-                    {selectedInvestment.benefits.map((benefit: string, index: number) => (
+                    {(selectedInvestment.benefits ?? []).map((benefit: string, index: number) => (
                       <li key={index} className="flex items-center space-x-3">
                         <div className="w-6 h-6 bg-[#5FB678] rounded-full flex items-center justify-center flex-shrink-0">
                           <CheckCircle size={16} className="text-white" />

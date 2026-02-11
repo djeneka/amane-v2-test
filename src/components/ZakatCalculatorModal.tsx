@@ -3,11 +3,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight } from 'lucide-react';
+import { createZakat } from '@/services/zakat';
 
 interface ZakatCalculatorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave?: () => void; // Callback appelé après sauvegarde
+  onSave?: () => void;
+  /** JWT pour créer la zakat via l’API (si fourni, on appelle createZakat au lieu du localStorage) */
+  accessToken?: string | null;
+  /** Appelé après création réussie via l’API (toast + redirection côté page) */
+  onSuccess?: () => void;
 }
 
 export interface SavedZakat {
@@ -26,8 +31,17 @@ const STEPS = [
   { id: 5, label: 'Confirmation' },
 ];
 
-export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatCalculatorModalProps) {
+const currentYear = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => currentYear - i);
+
+/** Garde uniquement les chiffres (0-9) pour les champs montants. */
+function onlyDigits(value: string): string {
+  return value.replace(/[^0-9]/g, '');
+}
+
+export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessToken, onSuccess }: ZakatCalculatorModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [hasGoldSilver, setHasGoldSilver] = useState<boolean | null>(null);
   const [unit, setUnit] = useState<'monetary' | 'weight' | null>(null);
   const [value, setValue] = useState('');
@@ -37,6 +51,8 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
   const [commercialGoodsValue, setCommercialGoodsValue] = useState('');
   const [hasDebts, setHasDebts] = useState<boolean | null>(null);
   const [debtsValue, setDebtsValue] = useState('');
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Empêcher le scroll du body quand le modal est ouvert
   useEffect(() => {
@@ -54,6 +70,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1);
+      setSelectedYear(currentYear);
       setHasGoldSilver(null);
       setUnit(null);
       setValue('');
@@ -63,6 +80,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
       setCommercialGoodsValue('');
       setHasDebts(null);
       setDebtsValue('');
+      setSubmitError(null);
     }
   }, [isOpen]);
 
@@ -79,34 +97,44 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
   const handleSave = () => {
     const totalAssets = calculateTotalAssets();
     const zakatAmount = calculateZakat();
-    
+
+    if (accessToken) {
+      setSubmitLoading(true);
+      setSubmitError(null);
+      const calculationDate = new Date(selectedYear, 0, 1).toISOString();
+      createZakat(accessToken, {
+        calculationDate,
+        year: selectedYear,
+        totalAmount: Math.round(totalAssets),
+      })
+        .then(() => {
+          onSuccess?.();
+          onSave?.();
+          handleClose();
+        })
+        .catch((err) => {
+          setSubmitError(err?.message ?? 'Impossible de créer la zakat');
+        })
+        .finally(() => {
+          setSubmitLoading(false);
+        });
+      return;
+    }
+
     const now = new Date();
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    
     const savedZakat: SavedZakat = {
       id: Date.now().toString(),
       date: `${now.getDate()} ${months[now.getMonth()]}, ${now.getFullYear()}`,
       totalAssets,
       zakatAmount,
-      remainingToPay: zakatAmount, // Par défaut, tout reste à payer
+      remainingToPay: zakatAmount,
     };
-
-    // Charger les zakat existantes
     const savedZakats = localStorage.getItem('savedZakats');
     const zakats: SavedZakat[] = savedZakats ? JSON.parse(savedZakats) : [];
-    
-    // Ajouter la nouvelle zakat
-    zakats.unshift(savedZakat); // Ajouter au début
-    
-    // Sauvegarder dans localStorage
+    zakats.unshift(savedZakat);
     localStorage.setItem('savedZakats', JSON.stringify(zakats));
-    
-    // Appeler le callback si fourni
-    if (onSave) {
-      onSave();
-    }
-    
-    // Fermer le modal
+    if (onSave) onSave();
     handleClose();
   };
 
@@ -155,6 +183,26 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
     if (currentStep === 1) {
       return (
         <div className="space-y-4 sm:space-y-6">
+          {/* Année de calcul */}
+          <div className="space-y-2">
+            <label htmlFor="zakat-year" className="text-white font-bold text-base sm:text-lg">
+              Année de calcul
+            </label>
+            <select
+              id="zakat-year"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="w-full py-3 sm:py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white focus:outline-none focus:ring-2 focus:ring-[#8DD17F] text-sm sm:text-base"
+              aria-label="Année de calcul de la zakat"
+            >
+              {YEAR_OPTIONS.map((y) => (
+                <option key={y} value={y} className="bg-[#101919] text-white">
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Question 1: Avez-vous de l'or / argent ? */}
           <div className="space-y-3 sm:space-y-4">
             <h3 className="text-white font-bold text-base sm:text-lg">Avez-vous de l'or / argent ?</h3>
@@ -260,9 +308,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               <div className="relative">
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   id="zakat-value-input"
                   value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                  onChange={(e) => setValue(onlyDigits(e.target.value))}
                   className="w-full py-3 sm:py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F] text-sm sm:text-base pr-20 sm:pr-20"
                   placeholder="0"
                   aria-label="Valeur de l'argent ou de l'or"
@@ -336,9 +386,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               <div className="relative">
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   id="savings-value-input"
                   value={savingsValue}
-                  onChange={(e) => setSavingsValue(e.target.value)}
+                  onChange={(e) => setSavingsValue(onlyDigits(e.target.value))}
                   className="w-full py-3 sm:py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F] text-sm sm:text-base pr-20 sm:pr-20"
                   placeholder="0"
                   aria-label="Valeur de l'épargne"
@@ -412,9 +464,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               <div className="relative">
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   id="commercial-goods-value-input"
                   value={commercialGoodsValue}
-                  onChange={(e) => setCommercialGoodsValue(e.target.value)}
+                  onChange={(e) => setCommercialGoodsValue(onlyDigits(e.target.value))}
                   className="w-full py-3 sm:py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F] text-sm sm:text-base pr-20 sm:pr-20"
                   placeholder="0"
                   aria-label="Valeur du stock"
@@ -488,9 +542,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
               <div className="relative">
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   id="debts-value-input"
                   value={debtsValue}
-                  onChange={(e) => setDebtsValue(e.target.value)}
+                  onChange={(e) => setDebtsValue(onlyDigits(e.target.value))}
                   className="w-full py-3 sm:py-4 px-4 rounded-xl bg-[#0A1515] border-2 border-[#8DD17F] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#8DD17F] text-sm sm:text-base pr-20 sm:pr-20"
                   placeholder="0"
                   aria-label="Valeur des dettes"
@@ -511,6 +567,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
 
       return (
         <div className="space-y-3 sm:space-y-4">
+          {submitError && (
+            <p className="text-red-400 text-sm bg-red-400/10 rounded-lg p-3" role="alert">
+              {submitError}
+            </p>
+          )}
           {/* Montant total des biens */}
           <div className="bg-[#101919] rounded-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
@@ -715,6 +776,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                     <button
                       onClick={currentStep === STEPS.length ? handleSave : handleNext}
                       disabled={
+                        submitLoading ||
                         currentStep === 1 && (hasGoldSilver === null || (hasGoldSilver === true && (!unit || !value))) ||
                         currentStep === 2 && (hasSavings === null || (hasSavings === true && !savingsValue)) ||
                         currentStep === 3 && (hasCommercialGoods === null || (hasCommercialGoods === true && !commercialGoodsValue)) ||
@@ -735,7 +797,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave }: ZakatC
                         }
                       }}
                     >
-                      <span>{currentStep === STEPS.length ? 'Sauvegarder' : 'Suivant'}</span>
+                      <span>
+                        {currentStep === STEPS.length
+                          ? submitLoading
+                            ? 'Création...'
+                            : 'Sauvegarder'
+                          : 'Suivant'}
+                      </span>
                       {currentStep !== STEPS.length && <ChevronRight size={18} className="sm:w-5 sm:h-5" />}
                     </button>
                   </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { 
@@ -23,6 +24,7 @@ import { getMyDonations, type Donation } from '@/services/donations';
 import { getMyTransactions, type Transaction } from '@/services/transactions';
 import { getMyZakats, type Zakat } from '@/services/zakat';
 import { getRankForScore } from '@/lib/rankRules';
+import PayZakatModal from '@/components/PayZakatModal';
 
 export default function Home() {
   const { isAuthenticated, user, accessToken } = useAuth();
@@ -38,7 +40,9 @@ export default function Home() {
   const [myDonations, setMyDonations] = useState<Donation[]>([]);
   const [myTransactions, setMyTransactions] = useState<Transaction[]>([]);
   const [myZakats, setMyZakats] = useState<Zakat[]>([]);
-
+  const [zakatToast, setZakatToast] = useState<string | null>(null);
+  const [showPayZakatModal, setShowPayZakatModal] = useState(false);
+  const router = useRouter();
   useEffect(() => {
     let cancelled = false;
     setCampaignsLoading(true);
@@ -173,12 +177,15 @@ export default function Home() {
   const monthlyDonationsCount = donationsThisMonth.length;
   const monthlyTotalBars = 10;
 
-  // Dernière zakat (la plus récente = premier de la liste API)
-  const lastZakat = myZakats[0] ?? null;
-  const zakatTotal = lastZakat?.totalAmount ?? 0;
+  // Zakats qui ont encore un reste à payer (> 0), triées par date (plus récente en premier)
+  const zakatsWithRemaining = myZakats
+    .filter((z) => (z.remainingAmount ?? 0) > 0)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  // Prochaine zakat à régler (première de la liste) ; après paiement, la suivante s'affichera
+  const currentZakatToPay = zakatsWithRemaining[0] ?? null;
+  const zakatTotal = currentZakatToPay?.totalAmount ?? 0;
   const zakatDue = zakatTotal * 0.025; // 2,5 % du totalAmount = montant de zakat à payer
-  const zakatRemaining = lastZakat?.remainingAmount ?? 0;
-  const zakatPaidAmount = zakatDue - zakatRemaining;
+  const zakatRemaining = currentZakatToPay?.remainingAmount ?? 0;  const zakatPaidAmount = zakatDue - zakatRemaining;
   const zakatPaidPercent = zakatDue > 0 ? Math.round((zakatPaidAmount / zakatDue) * 100) : 0;
 
   const currentActivityIndex = activities.length > 0 ? Math.min(currentSlide, activities.length - 1) : 0;
@@ -191,7 +198,7 @@ export default function Home() {
       location: 'Abidjan, Côte d\'Ivoire',
       content: 'Amane+ a transformé ma façon de gérer mes obligations religieuses. La simplicité et la transparence sont remarquables.',
       rating: 5,
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face'
+      initials: 'AK'
     },
     {
       name: 'Omar D.',
@@ -199,7 +206,7 @@ export default function Home() {
       location: 'Dakar, Sénégal',
       content: 'Grâce à Amane+, je peux investir en toute sérénité. La plateforme respecte mes principes islamiques tout en offrant de bons rendements.',
       rating: 5,
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
+      initials: 'OD'
     },
     {
       name: 'Fatima M.',
@@ -207,7 +214,7 @@ export default function Home() {
       location: 'Bamako, Mali',
       content: 'La protection Takaful d\'Amane+ me donne une vraie tranquillité d\'esprit. Une super app qui comprend mes besoins.',
       rating: 5,
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face'
+      initials: 'FM'
     }
   ];
 
@@ -798,6 +805,8 @@ export default function Home() {
                 <p className="text-[#5AB678] font-bold text-sm mb-4">{monthlyDonationsCount}/{monthlyTotalBars}</p>
                 
                 <motion.button
+                type='button'
+                onClick={() => router.push('/profil/scores')}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="w-fit bg-[#10191975] border border-white/20 text-white px-4 py-2 rounded-xl font-medium text-sm"
@@ -806,7 +815,7 @@ export default function Home() {
                 </motion.button>
               </motion.div>
 
-              {/* Statut Zakat (dernière zakat du user) */}
+              {/* Statut Zakat (prochaine zakat à régler : celles avec reste à payer > 0) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -814,7 +823,7 @@ export default function Home() {
                 viewport={{ once: true }}
                 className="bg-[#10191963] rounded-2xl p-6"
               >
-                {lastZakat ? (
+                {currentZakatToPay ? (
                   <>
                     <p className="text-white font-bold text-lg mb-2">
                       {zakatPaidPercent}% de votre zakat déjà réglée !
@@ -826,16 +835,16 @@ export default function Home() {
                       <p className="text-white/70 text-sm mb-1">Reste à payer</p>
                       <div className="flex items-center justify-between">
                         <p className="text-[#5AB678] font-bold text-xl">{zakatRemaining.toLocaleString('fr-FR')} F CFA</p>
-                        <Link href="/zakat">
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
-                          >
-                            <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
-                            <span>Payer ma zakat</span>
-                          </motion.button>
-                        </Link>
+                        <motion.button
+                          type="button"
+                          onClick={() => setShowPayZakatModal(true)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
+                        >
+                          <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
+                          <span>Payer ma zakat</span>
+                        </motion.button>
                       </div>
                     </div>
                   </>
@@ -844,22 +853,25 @@ export default function Home() {
                     <p className="text-white/80 text-sm mb-4 italic">
                       "Donner, c'est purifier vos biens et votre cœur."
                     </p>
-                    <Link href="/zakat">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
-                      >
-                        <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
-                        <span>Calculer ma zakat</span>
-                      </motion.button>
-                    </Link>
+                    <motion.button
+                      type="button"
+                      onClick={() => {
+                        setZakatToast('Connectez-vous pour accéder au calculateur de zakat.');
+                        setTimeout(() => setZakatToast(null), 3000);
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
+                    >
+                      <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
+                      <span>Calculer ma zakat</span>
+                    </motion.button>
                   </>
                 )}
               </motion.div>
 
               {/* Accomplissements */}
-              <motion.div
+              {/* <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
@@ -879,7 +891,7 @@ export default function Home() {
                     <p className="text-[#00644D] text-sm">15 repas distribués</p>
                   </div>
                 </div>
-              </motion.div>
+              </motion.div> */}
             </div>
           </div>
         </div>
@@ -1396,7 +1408,7 @@ export default function Home() {
 
       {/* Section "Ce que disent nos utilisateurs" */}
       {!isAuthenticated && (
-      <section className="py-20 text-white" style={{ background: 'linear-gradient(to top, #101919, #00644D)', backdropFilter: 'blur(10px)' }}>
+      <section className="py-20 text-white" style={{ background: 'linear-gradient(to bottom, #00644D, #226C3A)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -1408,7 +1420,7 @@ export default function Home() {
             <h2 className="text-3xl lg:text-4xl font-bold mb-6">
               Ce que disent nos utilisateurs
             </h2>
-            <p className="text-lg text-green-100 max-w-3xl mx-auto">
+            <p className="text-lg text-white/90 max-w-3xl mx-auto">
               Découvrez pourquoi des milliers d'utilisateurs font confiance à Amane+
             </p>
           </motion.div>
@@ -1421,23 +1433,24 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                className="bg-green-900/50 backdrop-blur-sm rounded-2xl p-8 border border-green-700"
+                className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20"
               >
                 <div className="flex items-center mb-6">
-                  <img
-                    src={testimonial.avatar}
-                    alt={testimonial.name}
-                    className="w-12 h-12 rounded-full mr-4"
-                  />
+                  <div
+                    className="w-12 h-12 rounded-full mr-4 flex items-center justify-center flex-shrink-0 text-sm font-bold bg-white/20 text-white border border-white/30"
+                    aria-hidden
+                  >
+                    {testimonial.initials}
+                  </div>
                   <div>
                     <h4 className="font-semibold">{testimonial.name}</h4>
-                    <p className="text-sm text-green-300">{testimonial.role}</p>
+                    <p className="text-sm text-white/80">{testimonial.role}</p>
                   </div>
                 </div>
-                <p className="text-green-100 mb-4 italic">"{testimonial.content}"</p>
+                <p className="text-white/95 mb-4 italic">"{testimonial.content}"</p>
                 <div className="flex items-center">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} size={16} className="text-yellow-400 fill-current" />
+                    <Star key={i} size={16} className="text-amber-300 fill-current" />
                   ))}
                 </div>
               </motion.div>
@@ -1690,6 +1703,35 @@ export default function Home() {
         </div>
       </section>
       )}
+
+      {/* Modal Payer ma zakat (même modal que "Verser ma zakat" sur la page Zakat) */}
+      <PayZakatModal
+        isOpen={showPayZakatModal}
+        onClose={() => setShowPayZakatModal(false)}
+        balance={user?.wallet?.balance ?? 0}
+        initialAmount={currentZakatToPay?.remainingAmount ?? 0}
+        zakatId={currentZakatToPay?.id ?? null}
+        accessToken={accessToken ?? null}
+        onSuccess={() => {
+          setShowPayZakatModal(false);
+          if (accessToken) getMyZakats(accessToken).then(setMyZakats).catch(() => {});
+        }}
+      />
+
+      {/* Toast "Calculer ma zakat" (utilisateur non connecté) */}
+      <AnimatePresence>
+        {zakatToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {zakatToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

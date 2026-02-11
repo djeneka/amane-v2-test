@@ -7,34 +7,53 @@ import { useRouter } from 'next/navigation';
 import { 
   ArrowRight, Heart, Users, Star, MapPin, Calendar,
   Smartphone, Apple, Play, ChevronDown, ChevronLeft, ChevronRight,
-  Info, Wallet as WalletIcon, HandCoins, TrendingUp, Circle, X, Share2
+  Eye, Wallet as WalletIcon, HandCoins, TrendingUp, Circle, X, Share2
 } from 'lucide-react';
 import CampaignCard from '@/components/CampaignCard';
 import Wallet from '@/components/Wallet';
-import { transactions as mockTransactions } from '@/data/mockData';
 import type { Campaign } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
-import { Transaction } from '@/data/mockData';
 import { getActiveCampaigns } from '@/services/campaigns';
+import { getMyDonations, type Donation as ApiDonation } from '@/services/donations';
 import { getDonationsStatistics } from '@/services/statistics';
+import { getMyTransactions, type Transaction as ApiTransaction } from '@/services/transactions';
+import { getRankForScore } from '@/lib/rankRules';
+
+/** Format d’affichage d’une transaction (après formatTransaction) */
+interface FormattedTransaction {
+  id: string;
+  reference: string;
+  date: string;
+  type: string;
+  amount: number;
+  total: number;
+  status: string;
+  statusColor: string;
+  originalPurpose: ApiTransaction['purpose'];
+  originalStatus: string;
+}
 
 export default function TransactionsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, accessToken, authReady, user } = useAuth();
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState('tout');
   const [selectedStatus, setSelectedStatus] = useState('tout');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedTransaction, setSelectedTransaction] = useState<ReturnType<typeof formatTransaction> | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<FormattedTransaction | null>(null);
   const [featuredCampaigns, setFeaturedCampaigns] = useState<Campaign[]>([]);
   const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
+  const [apiTransactions, setApiTransactions] = useState<ApiTransaction[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [transactionsError, setTransactionsError] = useState<string | null>(null);
+  const [myDonations, setMyDonations] = useState<ApiDonation[]>([]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (authReady && !isAuthenticated) {
       router.push('/connexion');
     }
-  }, [isAuthenticated, router]);
+  }, [authReady, isAuthenticated, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,26 +81,54 @@ export default function TransactionsPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Fonction pour transformer les transactions de mockData en format d'affichage
-  const formatTransaction = (transaction: Transaction) => {
-    // Mapper les types
-    const typeMap: Record<string, string> = {
-      'donation': 'Don',
-      'zakat': 'Zakat',
-      'investment': 'Investissement',
-      'takaful': 'Takaful'
-    };
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setTransactionsLoading(false);
+      setApiTransactions([]);
+      return;
+    }
+    let cancelled = false;
+    setTransactionsLoading(true);
+    setTransactionsError(null);
+    getMyTransactions(accessToken)
+      .then((list) => { if (!cancelled) setApiTransactions(list); })
+      .catch(() => { if (!cancelled) setTransactionsError('impossible de recuperer vos transaction actuellement'); })
+      .finally(() => { if (!cancelled) setTransactionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
 
-    // Mapper les statuts
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setMyDonations([]);
+      return;
+    }
+    let cancelled = false;
+    getMyDonations(accessToken)
+      .then((list) => { if (!cancelled) setMyDonations(list); })
+      .catch(() => { if (!cancelled) setMyDonations([]); });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
+  // Transformer une transaction API en format d'affichage (purpose = type métier)
+  const formatTransaction = (transaction: ApiTransaction): FormattedTransaction => {
+    const typeMap: Record<ApiTransaction['purpose'], string> = {
+      DONATION: 'Don',
+      DEPOSIT: 'Dépôt',
+      TAKAFUL: 'Takaful',
+      ZAKAT: 'Zakat',
+      INVESTMENT: 'Investissement'
+    };
     const statusMap: Record<string, { label: string; color: string }> = {
-      'completed': { label: 'Effectué', color: '#1fcb4f' },
-      'pending': { label: 'En attente', color: '#ffbd2e' },
-      'failed': { label: 'Annulé', color: '#e14640' },
-      'in_progress': { label: 'En cours', color: '#ffbd2e' }
+      completed: { label: 'Effectué', color: '#1fcb4f' },
+      COMPLETED: { label: 'Effectué', color: '#1fcb4f' },
+      pending: { label: 'En attente', color: '#ffbd2e' },
+      PENDING: { label: 'En attente', color: '#ffbd2e' },
+      failed: { label: 'Annulé', color: '#e14640' },
+      FAILED: { label: 'Annulé', color: '#e14640' },
+      in_progress: { label: 'En cours', color: '#ffbd2e' },
+      IN_PROGRESS: { label: 'En cours', color: '#ffbd2e' }
     };
-
-    // Formater la date (format: "11 Sep, 2025, à 11:56")
-    const dateObj = new Date(transaction.date);
+    const dateObj = new Date(transaction.createdAt);
     const day = dateObj.getDate();
     const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
     const month = monthNames[dateObj.getMonth()];
@@ -89,74 +136,75 @@ export default function TransactionsPage() {
     const hours = dateObj.getHours().toString().padStart(2, '0');
     const minutes = dateObj.getMinutes().toString().padStart(2, '0');
     const formattedDate = `${day} ${month}, ${year}, à ${hours}:${minutes}`;
-
-    const statusInfo = statusMap[transaction.status] || statusMap['pending'];
-    const total = transaction.amount + transaction.fees;
-
-    // Formater la référence (si c'est un nombre, le transformer en format AMN)
-    let formattedReference = transaction.reference;
-    if (/^\d+$/.test(transaction.reference)) {
-      // Si c'est juste des chiffres, créer un format AMN
-      formattedReference = `AMN${transaction.reference.slice(-6).padStart(6, '0')}`;
+    const statusNorm = (transaction.status || '').toLowerCase();
+    const statusInfo = statusMap[transaction.status] ?? statusMap[statusNorm] ?? statusMap['pending'];
+    const total = transaction.amount + transaction.fee;
+    // Référence : referenceId pour les dépôts, sinon transactionNumber
+    let formattedReference =
+      transaction.purpose === 'DEPOSIT'
+        ? (transaction.referenceId ?? '')
+        : (transaction.transactionNumber ?? '');
+    if (formattedReference && /^\d+$/.test(formattedReference)) {
+      formattedReference = `AMN${formattedReference.slice(-6).padStart(6, '0')}`;
     }
-
     return {
       id: transaction.id,
       reference: formattedReference,
       date: formattedDate,
-      type: typeMap[transaction.type] || transaction.type,
+      type: typeMap[transaction.purpose] ?? transaction.purpose,
       amount: transaction.amount,
-      fees: transaction.fees,
-      total: total,
-      status: statusInfo.label,
+      total,
+      status: transaction.status ?? '',
       statusColor: statusInfo.color,
-      originalType: transaction.type,
-      originalStatus: transaction.status
+      originalPurpose: transaction.purpose,
+      originalStatus: statusNorm || 'pending'
     };
   };
 
-  // Transformer toutes les transactions
-  const allTransactions = mockTransactions.map(formatTransaction);
+  const allTransactions: FormattedTransaction[] = apiTransactions.map(formatTransaction);
 
-  // Fonction de filtrage
-  const getFilteredTransactions = () => {
+  const getFilteredTransactions = (): FormattedTransaction[] => {
     let filtered = [...allTransactions];
-
-    // Filtrer par type
     if (selectedFilter !== 'tout') {
-      const filterMap: Record<string, string> = {
-        'depots': 'depot', // Pas dans les données actuelles, on peut l'ignorer ou ajouter
-        'dons': 'donation',
-        'zakats': 'zakat',
-        'investissements': 'investment',
-        'takaful': 'takaful'
+      const purposeByFilter: Record<string, ApiTransaction['purpose']> = {
+        depots: 'DEPOSIT',
+        dons: 'DONATION',
+        zakats: 'ZAKAT',
+        investissements: 'INVESTMENT',
+        takaful: 'TAKAFUL'
       };
-
-      const filterType = filterMap[selectedFilter];
-      if (filterType) {
-        filtered = filtered.filter(t => t.originalType === filterType);
-      }
+      const purpose = purposeByFilter[selectedFilter];
+      if (purpose) filtered = filtered.filter((t) => t.originalPurpose === purpose);
     }
-
-    // Filtrer par statut
     if (selectedStatus !== 'tout') {
-      const statusMap: Record<string, string> = {
-        'effectue': 'completed',
-        'en_attente': 'pending',
-        'en_cours': 'in_progress',
-        'annule': 'failed'
+      const statusByFilter: Record<string, string> = {
+        effectue: 'completed',
+        en_attente: 'pending',
+        en_cours: 'in_progress',
+        annule: 'failed'
       };
-
-      const filterStatus = statusMap[selectedStatus];
-      if (filterStatus) {
-        filtered = filtered.filter(t => t.originalStatus === filterStatus);
-      }
+      const status = statusByFilter[selectedStatus];
+      if (status) filtered = filtered.filter((t) => t.originalStatus === status);
     }
-
     return filtered;
   };
 
   const filteredTransactions = getFilteredTransactions();
+
+  const dateRangeLabel = (() => {
+    if (apiTransactions.length === 0) return '—';
+    const sorted = [...apiTransactions].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+    const first = new Date(sorted[0].createdAt);
+    const last = new Date(sorted[sorted.length - 1].createdAt);
+    const fmt = (d: Date) => {
+      const day = d.getDate();
+      const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+      return `${day} ${months[d.getMonth()]}, ${d.getFullYear()}`;
+    };
+    return `${fmt(first)} - ${fmt(last)}`;
+  })();
 
   // Pagination : 5 transactions par page
   const itemsPerPage = 5;
@@ -218,11 +266,15 @@ export default function TransactionsPage() {
   ];
 
   // Mock data for dashboard
-  const walletBalance = 125000;
-  const sadaqahScore = 320;
-  const donationsCount = 12;
-  const spentAmount = 125000;
-  const campaignsCount = 15;
+  // Données dashboard compte principal (même logique que page d'accueil)
+  const walletBalance = user?.wallet?.balance ?? 0;
+  const sadaqahScore = user?.score?.score ?? 0;
+  const donationsCount = myDonations.length;
+  const spentAmount = apiTransactions
+    .filter((t) => t.purpose !== 'DEPOSIT')
+    .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+  const campaignsCount = new Set(myDonations.map((d) => d.campaignId).filter(Boolean)).size;
+  const rankInfo = getRankForScore(sadaqahScore);
 
   return (
     <>
@@ -266,7 +318,6 @@ export default function TransactionsPage() {
                   <p>Date et heure</p>
                   <p>Type</p>
                   <p>Montant</p>
-                  <p>Frais</p>
                   <p>Montant total</p>
                   <p>Statut</p>
                 </div>
@@ -277,7 +328,6 @@ export default function TransactionsPage() {
                   <p>{selectedTransaction.date}</p>
                   <p>{selectedTransaction.type}</p>
                   <p>{selectedTransaction.amount.toLocaleString('fr-FR')} F CFA</p>
-                  <p>{selectedTransaction.fees.toLocaleString('fr-FR')} F CFA</p>
                   <p>{selectedTransaction.total.toLocaleString('fr-FR')} F CFA</p>
                   <div className="flex justify-end">
                     <div
@@ -327,7 +377,8 @@ export default function TransactionsPage() {
                 <Wallet 
                   balance={walletBalance}
                   sadaqahScore={sadaqahScore}
-                  rank="Argent"
+                  rank={rankInfo.label}
+                  rankBadge={rankInfo.badge}
                   donationsCount={donationsCount}
                   spentAmount={spentAmount}
                   campaignsCount={campaignsCount}
@@ -342,10 +393,10 @@ export default function TransactionsPage() {
                 Historique des transactions
               </h2>
 
-              {/* Sélecteur de date */}
+              {/* Sélecteur de date (intervalle 1ère → dernière transaction) */}
               <div className="bg-[rgba(250,250,250,0.1)] w-fit flex gap-2 h-12 items-center justify-between px-4 py-2.5 rounded-[20px]">
                 <p className="text-base text-white">
-                  09 Septembre, 2024 <span className="text-white/70">-</span> 09 Septembre, 2025
+                  {dateRangeLabel}
                 </p>
                 <Calendar size={24} className="text-white" />
               </div>
@@ -402,19 +453,25 @@ export default function TransactionsPage() {
               <div className="bg-black/10 rounded-[32px] overflow-hidden">
                 <div className="overflow-x-auto">
                   {/* En-tête du tableau */}
-                  <div className="bg-[#fafafa]/10 grid grid-cols-[98px_155px_98px_125px_98px_164px_98px_61px] gap-[52px] items-center px-6 py-6 rounded-t-[32px] min-w-[1000px]">
-                    <p className="text-base font-medium text-white">Référence</p>
-                    <p className="text-base font-medium text-white">Date de transaction</p>
-                    <p className="text-base font-medium text-white">Type</p>
-                    <p className="text-base font-medium text-white">Montant (F CFA)</p>
-                    <p className="text-base font-medium text-white">Frais (1%)</p>
-                    <p className="text-base font-medium text-white">Montant total (F CFA)</p>
-                    <p className="text-base font-medium text-white">Statut</p>
-                    <p className="text-base font-medium text-white">Actions</p>
+                  <div className="bg-[#fafafa]/10 grid grid-cols-[180px_220px_140px_160px_140px_80px] gap-x-8 gap-y-6 items-center justify-items-center px-6 py-6 rounded-t-[32px] min-w-[1000px]">
+                    <p className="text-base font-medium text-white text-center w-full">Référence</p>
+                    <p className="text-base font-medium text-white text-center w-full whitespace-nowrap">Date de transaction</p>
+                    <p className="text-base font-medium text-white text-center w-full">Type</p>
+                    <p className="text-base font-medium text-white text-center w-full">Montant (F CFA)</p>
+                    <p className="text-base font-medium text-white text-center w-full">Statut</p>
+                    <p className="text-base font-medium text-white text-center w-full">Actions</p>
                   </div>
 
                 {/* Corps du tableau */}
-                {filteredTransactions.length === 0 ? (
+                {transactionsError ? (
+                  <div className="min-w-[1000px] px-6 py-12 text-center">
+                    <p className="text-white/90 text-base">{transactionsError}</p>
+                  </div>
+                ) : transactionsLoading ? (
+                  <div className="min-w-[1000px] px-6 py-12 text-center">
+                    <p className="text-white/70 text-base">Chargement des transactions...</p>
+                  </div>
+                ) : filteredTransactions.length === 0 ? (
                   <div className="min-w-[1000px] px-6 py-12 text-center">
                     <p className="text-white/70 text-base">Aucune transaction trouvée avec les filtres sélectionnés</p>
                   </div>
@@ -425,100 +482,91 @@ export default function TransactionsPage() {
                     <div
                       key={index}
                       className="absolute left-0 right-0 h-px bg-white/20"
-                      style={{ top: `${67 + index * 83}px` }}
+                      style={{ top: `${24 + index * 64}px` }}
                     />
                   ))}
 
-                  {/* Données du tableau */}
-                  <div className="grid grid-cols-[98px_155px_98px_125px_98px_164px_98px_61px] gap-[52px] items-start px-6 py-6">
+                  {/* Données du tableau - même espacement vertical pour aligner les lignes */}
+                  <div className="grid grid-cols-[180px_220px_140px_160px_140px_80px] gap-x-8 px-6 py-6 items-stretch justify-items-center">
                     {/* Référence */}
-                    <div className="flex flex-col" style={{ gap: '56px' }}>
+                    <div className="flex flex-col min-w-0 gap-0">
                       {paginatedTransactions.map((transaction) => (
-                        <p key={transaction.id} className="text-base font-medium text-white">
-                          {transaction.reference}
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Date */}
-                    <div className="flex flex-col" style={{ gap: '64px' }}>
-                      {paginatedTransactions.map((transaction) => (
-                        <p key={transaction.id} className="text-base font-medium text-white">
-                          {transaction.date}
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Type */}
-                    <div className="flex flex-col" style={{ gap: '64px' }}>
-                      {paginatedTransactions.map((transaction) => (
-                        <p key={transaction.id} className="text-base font-medium text-white">
-                          {transaction.type}
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Montant */}
-                    <div className="flex flex-col" style={{ gap: '64px' }}>
-                      {paginatedTransactions.map((transaction, index) => (
-                        <p key={transaction.id} className={`text-base ${index === 0 ? 'font-semibold' : 'font-medium'} text-white`}>
-                          {transaction.amount.toLocaleString('fr-FR')}
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Frais */}
-                    <div className="flex flex-col" style={{ gap: '64px' }}>
-                      {paginatedTransactions.map((transaction) => (
-                        <p key={transaction.id} className="text-base font-medium text-white">
-                          {transaction.fees}
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Montant total */}
-                    <div className="flex flex-col" style={{ gap: '64px' }}>
-                      {paginatedTransactions.map((transaction, index) => (
-                        <p key={transaction.id} className={`text-base ${index === 0 ? 'font-semibold' : 'font-medium'} text-white`}>
-                          {transaction.total.toLocaleString('fr-FR')}
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Statut */}
-                    <div className="flex flex-col" style={{ gap: '48px' }}>
-                      {paginatedTransactions.map((transaction) => (
-                        <div
-                          key={transaction.id}
-                          className="flex items-center justify-center px-2 py-2 rounded"
-                          style={{
-                            backgroundColor: transaction.statusColor === '#1fcb4f' ? 'rgba(31,203,79,0.04)' :
-                                            transaction.statusColor === '#ffbd2e' ? 'rgba(255,189,46,0.04)' :
-                                            'rgba(225,70,64,0.04)'
-                          }}
-                        >
-                          <p
-                            className="text-base font-medium"
-                            style={{ color: transaction.statusColor }}
-                          >
-                            {transaction.status}
+                        <div key={transaction.id} className="flex items-center justify-center min-h-[64px] px-1">
+                          <p className="text-base font-medium text-white text-center break-words leading-tight">
+                            {transaction.reference}
                           </p>
                         </div>
                       ))}
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex flex-col items-center" style={{ gap: '59px' }}>
+                    {/* Date */}
+                    <div className="flex flex-col min-w-0 gap-0">
                       {paginatedTransactions.map((transaction) => (
-                        <button
+                        <div key={transaction.id} className="flex items-center justify-center min-h-[64px]">
+                          <p className="text-base font-medium text-white text-center whitespace-nowrap">
+                            {transaction.date}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Type */}
+                    <div className="flex flex-col gap-0">
+                      {paginatedTransactions.map((transaction) => (
+                        <div key={transaction.id} className="flex items-center justify-center min-h-[64px]">
+                          <p className="text-base font-medium text-white text-center whitespace-nowrap">
+                            {transaction.type}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Montant */}
+                    <div className="flex flex-col gap-0">
+                      {paginatedTransactions.map((transaction, index) => (
+                        <div key={transaction.id} className="flex items-center justify-center min-h-[64px]">
+                          <p className={`text-base ${index === 0 ? 'font-semibold' : 'font-medium'} text-white text-center whitespace-nowrap`}>
+                            {transaction.amount.toLocaleString('fr-FR')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Statut (valeur du champ status de l'API) */}
+                    <div className="flex flex-col gap-0">
+                      {paginatedTransactions.map((transaction) => (
+                        <div
                           key={transaction.id}
-                          onClick={() => setSelectedTransaction(transaction)}
-                          className="w-6 h-6 flex items-center justify-center hover:opacity-70 transition-opacity"
-                          aria-label={`Voir les détails de la transaction ${transaction.reference}`}
-                          title={`Voir les détails de la transaction ${transaction.reference}`}
+                          className="flex items-center justify-center min-h-[64px]"
                         >
-                          <Info size={24} className="text-white" />
-                        </button>
+                          <span
+                            className="inline-flex items-center justify-center px-3 py-2 rounded text-base font-medium text-center"
+                            style={{
+                              backgroundColor: transaction.statusColor === '#1fcb4f' ? 'rgba(31,203,79,0.04)' :
+                                              transaction.statusColor === '#ffbd2e' ? 'rgba(255,189,46,0.04)' :
+                                              'rgba(225,70,64,0.04)',
+                              color: transaction.statusColor
+                            }}
+                          >
+                            {transaction.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-0">
+                      {paginatedTransactions.map((transaction) => (
+                        <div key={transaction.id} className="flex items-center justify-center min-h-[64px]">
+                          <button
+                            onClick={() => setSelectedTransaction(transaction)}
+                            className="w-8 h-8 flex items-center justify-center rounded hover:opacity-70 transition-opacity"
+                            aria-label={`Voir les détails de la transaction ${transaction.reference}`}
+                            title={`Voir les détails de la transaction ${transaction.reference}`}
+                          >
+                            <Eye size={24} className="text-white" />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </div>
