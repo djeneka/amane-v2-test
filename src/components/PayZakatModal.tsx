@@ -730,7 +730,7 @@ export default function PayZakatModal({
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ duration: 0.3 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#101919] rounded-none md:rounded-2xl w-full h-full md:h-auto max-w-4xl md:max-h-[90vh] overflow-hidden relative border-0 md:border border-white/10 flex flex-col"
+              className="bg-[#101919] rounded-none md:rounded-2xl w-full h-full md:min-h-0 md:max-h-[90vh] max-w-4xl overflow-hidden relative border-0 md:border border-white/10 flex flex-col"
             >
               {/* Close Button */}
               <button
@@ -878,7 +878,7 @@ export default function PayZakatModal({
                 {/* Content - Right Side */}
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
                   <div 
-                    className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar"
+                    className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 custom-scrollbar"
                     style={{
                       scrollbarWidth: 'thin',
                       scrollbarColor: '#43B48F #0A1515',

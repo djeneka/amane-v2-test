@@ -6,13 +6,14 @@ import {
   Search, Filter, Shield, Users, Target, Calendar, MapPin, 
   Star, Eye, Share2, Globe, Zap,
   ChevronDown, ChevronUp, ArrowRight, Play, Pause, Calculator,
-  Heart, Car, Home, User, CheckCircle, X, Apple
+  Heart, Car, Home, User, CheckCircle, X, Apple, Mail, Phone
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import MakeTakafulModal from '@/components/MakeTakafulModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTakafulPlans, getMyTakafulSubscriptions, type TakafulPlan, type MyTakafulSubscription } from '@/services/takaful-plans';
+import { subscribeNewsletter } from '@/services/newsletter';
 
 const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
 
@@ -67,6 +68,123 @@ function formatSubscriptionDate(iso: string | null): string {
   }
 }
 
+/** Formulaire liste d'attente (design Figma - affiché quand displayPromoteContent) */
+function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success' | 'error') => void }) {
+  const [email, setEmail] = useState('');
+  const [phonePrefix, setPhonePrefix] = useState('+225');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const fullPhone = `${phonePrefix}${phoneNumber.replace(/\s/g, '')}`;
+      await subscribeNewsletter({ email, phoneNumber: fullPhone, name: fullName });
+      onToast?.('Inscription réussie ! Vous serez notifié en priorité.', 'success');
+      setEmail('');
+      setPhoneNumber('');
+      setFullName('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Une erreur est survenue. Veuillez réessayer.';
+      onToast?.(message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="relative">
+        <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="email"
+          placeholder="Votre Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#5AB678] focus:border-[#5AB678] outline-none transition-all"
+          required
+        />
+      </div>
+
+      <div className="flex rounded-xl overflow-hidden border border-gray-200 bg-white">
+        <div className="flex items-center bg-gray-50 border-r border-gray-200 px-4">
+          <select
+            value={phonePrefix}
+            onChange={(e) => setPhonePrefix(e.target.value)}
+            className="bg-transparent text-gray-600 font-medium py-4 pr-2 focus:ring-0 focus:outline-none cursor-pointer appearance-none"
+            aria-label="Indicatif pays"
+          >
+            <optgroup label="Afrique de l'Ouest">
+              <option value="+225">🇨🇮 +225</option>
+              <option value="+221">🇸🇳 +221</option>
+              <option value="+223">🇲🇱 +223</option>
+              <option value="+226">🇧🇫 +226</option>
+              <option value="+227">🇳🇪 +227</option>
+              <option value="+228">🇹🇬 +228</option>
+              <option value="+229">🇧🇯 +229</option>
+              <option value="+233">🇬🇭 +233</option>
+              <option value="+234">🇳🇬 +234</option>
+              <option value="+224">🇬🇳 +224</option>
+              <option value="+231">🇱🇷 +231</option>
+              <option value="+232">🇸🇱 +232</option>
+              <option value="+238">🇨🇻 +238</option>
+            </optgroup>
+            <optgroup label="Europe">
+              <option value="+33">🇫🇷 +33</option>
+              <option value="+32">🇧🇪 +32</option>
+              <option value="+41">🇨🇭 +41</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+49">🇩🇪 +49</option>
+              <option value="+34">🇪🇸 +34</option>
+              <option value="+39">🇮🇹 +39</option>
+              <option value="+31">🇳🇱 +31</option>
+              <option value="+351">🇵🇹 +351</option>
+              <option value="+48">🇵🇱 +48</option>
+            </optgroup>
+            <optgroup label="Amérique du Nord">
+              <option value="+1">🇺🇸 🇨🇦 +1</option>
+            </optgroup>
+          </select>
+        </div>
+        <div className="flex-1 flex items-center">
+          <Phone size={20} className="ml-4 text-gray-400 flex-shrink-0" />
+          <input
+            type="tel"
+            placeholder="Exemple : 0123456789"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            className="w-full pl-3 pr-4 py-4 bg-white text-gray-900 placeholder-gray-400 focus:ring-0 focus:outline-none border-0"
+          />
+        </div>
+      </div>
+
+      <div className="relative">
+        <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Nom et prénom"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#5AB678] focus:border-[#5AB678] outline-none transition-all"
+          required
+        />
+      </div>
+
+      <motion.button
+        type="submit"
+        disabled={submitting}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className="w-full py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-[#5AB678] to-[#20B6B3] hover:from-[#20B6B3] hover:to-[#00644d] transition-all duration-200 disabled:opacity-70"
+      >
+        {submitting ? 'Inscription...' : "M'inscrire sur la liste d'attente"}
+      </motion.button>
+    </form>
+  );
+}
+
 export default function TakafulPage() {
   const { accessToken, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,6 +199,7 @@ export default function TakafulPage() {
     | null
   >(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error' | null>(null);
   const [activeTab, setActiveTab] = useState<'solutions' | 'subscriptions'>('solutions');
   const [showSubscriptionDetails, setShowSubscriptionDetails] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<MyTakafulSubscription | null>(null);
@@ -90,6 +209,9 @@ export default function TakafulPage() {
   const [subscriptions, setSubscriptions] = useState<MyTakafulSubscription[]>([]);
   const [subscriptionsLoading, setSubscriptionsLoading] = useState(false);
   const [subscriptionsError, setSubscriptionsError] = useState<string | null>(null);
+
+  /** Affiche le design "promote" (hero, principes, opportunités) au lieu des onglets + filtres + listes */
+  const displayPromoteContent = process.env.NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE === 'true';
 
   useEffect(() => {
     let cancelled = false;
@@ -357,90 +479,217 @@ export default function TakafulPage() {
             </nav>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center"
-          >
-            <motion.div
-              whileHover={{ scale: 1.05, rotate: 5 }}
-              className="inline-block mb-8"
-            >
-              <div className=" bg-[#00644d] rounded-full flex items-center justify-center shadow-2xl">
-                <Image src="/images/Image(9).png" alt="Shield" width={100} height={100} className="object-contain" />
+          {displayPromoteContent ? (
+            <>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="text-center"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  className="inline-block mb-8"
+                >
+                  <div className="bg-[#00644d] rounded-full flex items-center justify-center shadow-2xl">
+                    <Image src="/images/Image(9).png" alt="Takaful" width={100} height={100} className="object-contain" />
+                  </div>
+                </motion.div>
+                <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
+                  Produits <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-green-600">Takaful</span>
+                </h1>
+                <p className="text-xl text-white mb-12 max-w-3xl mx-auto leading-relaxed">
+                  Découvrez nos solutions d&apos;assurance islamique éthique. Protégez-vous et votre famille selon les principes de la mutualité islamique.
+                </p>
+              </motion.div>
+
+
+              <div className="relative w-full min-h-[400px] rounded-2xl overflow-hidden mb-16 bg-[#0d1414]">
+                <Image
+                  src="/images/tk-bg.png"
+                  alt="Assurance islamique"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1200px) 100vw, 1200px"
+                />
               </div>
-            </motion.div>
-            
-            <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
-              Produits de <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-green-600">Protection</span>
-            </h1>
-            <p className="text-xl text-white mb-12 max-w-3xl mx-auto leading-relaxed">
-              Découvrez nos solutions d'assurance islamique éthique. Protégez-vous et votre famille selon les principes de la mutualité islamique.
-            </p>
 
-            {/* Onglets Solutions takaful / Mes souscriptions */}
-            <div className="flex justify-center gap-4 mb-8">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveTab('solutions')}
-                className={`px-6 py-3 rounded-lg font-bold transition-all duration-200 ${
-                  activeTab === 'solutions'
-                    ? 'bg-[#192D2D] text-[#5FB678]'
-                    : 'text-[#D9D9D9]'
-                }`}
-              >
-                Solutions takaful
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveTab('subscriptions')}
-                className={`px-6 py-3 rounded-full font-bold transition-all duration-200 ${
-                  activeTab === 'subscriptions'
-                    ? 'bg-[#192D2D] text-[#5FB678]'
-                    : 'text-[#D9D9D9]'
-                }`}
-              >
-                Mes souscriptions
-              </motion.button>
-            </div>
+              {/* Principes Takaful */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="bg-[#101919]/10 rounded-2xl p-6 border border-white/10"
+                >
+                  <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center mb-4">
+                    <p>🤝</p>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-3">Solidarité (Tabarru&apos;)</h3>
+                  <p className="text-white/80 leading-relaxed">
+                    Ici, on ne vend pas de risque. Les membres cotisent dans un fonds commun pour s&apos;entraider en cas de coup dur.
+                  </p>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="bg-[#101919]/10 rounded-2xl p-6 border border-white/10"
+                >
+                  <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mb-4">
+                    <p>🚫</p>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-3">Zéro Incertitude (Gharar)</h3>
+                  <p className="text-white/80 leading-relaxed">
+                    Transparence totale sur l&apos;utilisation des fonds. Vous savez exactement comment votre contribution est gérée.
+                  </p>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="bg-[#101919]/10 rounded-2xl p-6 border border-white/10"
+                >
+                  <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4">
+                    <p>💰</p>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-3">Partage des Excédents</h3>
+                  <p className="text-white/80 leading-relaxed">
+                    La différence majeure : Si le fonds fait des bénéfices en fin d&apos;année, une partie peut vous être redistribuée (Cashback).
+                  </p>
+                </motion.div>
+              </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
-              {statsData.map((stat, index) => {
-                const IconComponent = stat.icon;
-                return (
+              <h2 className="text-3xl lg:text-4xl font-bold text-white text-center mb-10">
+                Nos opportunités à venir
+              </h2>
+
+              {/* Cartes produits - images à remplacer */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-12">
+                {[
+                  { title: 'Takaful Santé', desc: 'Pour une rentabilité stable et sécurisée', image: '/images/tk-sante.png' },
+                  { title: 'Takaful Auto', desc: 'Financez des entrepreneurs talentueux et partagez leurs succès.', image: '/images/tk-auto.png' },
+                  { title: 'Takaful Famille', desc: 'Investissez dans la pierre et recevez des loyers périodiques.', image: '/images/tk-famille.png' },
+                ].map((card, index) => (
                   <motion.div
-                    key={index}
-                    whileHover={{ y: -5, rotate: stat.hoverRotate }}
-                    animate={{ rotate: [0, stat.hoverRotate, -stat.hoverRotate, 0] }}
-                    transition={{ 
-                      rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-                      y: { duration: 0.2 }
-                    }}
-                    className="bg-[#00644d]/20 rounded-2xl p-6 shadow-lg"
+                    key={card.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
+                    whileHover={{ y: -4 }}
+                    className="group relative rounded-2xl overflow-hidden shadow-xl"
                   >
-                    <div className="text-center">
-                      <motion.div 
-                        className={`w-12 h-12 ${stat.iconBgColor} rounded-full flex items-center justify-center mx-auto mb-3`}
-                        animate={{ rotate: [0, 360 * stat.rotateDirection] }}
-                        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                      >
-                        <IconComponent size={24} className={stat.iconColor} />
-                      </motion.div>
-                      <p className="text-2xl font-bold text-white">{stat.value}</p>
-                      <p className="text-sm text-white">{stat.label}</p>
+                    <div className="relative w-full aspect-[4/5]">
+                      <Image
+                        src={card.image}
+                        alt={card.title}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        onError={(e) => {
+                          const t = e.target as HTMLImageElement;
+                          t.style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                        <h3 className="text-xl font-bold mb-2">{card.title}</h3>
+                        <p className="text-white/90 text-sm">{card.desc}</p>
+                      </div>
                     </div>
                   </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="text-center"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  className="inline-block mb-8"
+                >
+                  <div className=" bg-[#00644d] rounded-full flex items-center justify-center shadow-2xl">
+                    <Image src="/images/Image(9).png" alt="Shield" width={100} height={100} className="object-contain" />
+                  </div>
+                </motion.div>
+                
+                <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
+                  Produits de <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-green-600">Protection</span>
+                </h1>
+                <p className="text-xl text-white mb-12 max-w-3xl mx-auto leading-relaxed">
+                  Découvrez nos solutions d'assurance islamique éthique. Protégez-vous et votre famille selon les principes de la mutualité islamique.
+                </p>
+
+                {/* Onglets Solutions takaful / Mes souscriptions */}
+                <div className="flex justify-center gap-4 mb-8">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setActiveTab('solutions')}
+                    className={`px-6 py-3 rounded-lg font-bold transition-all duration-200 ${
+                      activeTab === 'solutions'
+                        ? 'bg-[#192D2D] text-[#5FB678]'
+                        : 'text-[#D9D9D9]'
+                    }`}
+                  >
+                    Solutions takaful
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setActiveTab('subscriptions')}
+                    className={`px-6 py-3 rounded-full font-bold transition-all duration-200 ${
+                      activeTab === 'subscriptions'
+                        ? 'bg-[#192D2D] text-[#5FB678]'
+                        : 'text-[#D9D9D9]'
+                    }`}
+                  >
+                    Mes souscriptions
+                  </motion.button>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
+                  {statsData.map((stat, index) => {
+                    const IconComponent = stat.icon;
+                    return (
+                      <motion.div
+                        key={index}
+                        whileHover={{ y: -5, rotate: stat.hoverRotate }}
+                        animate={{ rotate: [0, stat.hoverRotate, -stat.hoverRotate, 0] }}
+                        transition={{ 
+                          rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                          y: { duration: 0.2 }
+                        }}
+                        className="bg-[#00644d]/20 rounded-2xl p-6 shadow-lg"
+                      >
+                        <div className="text-center">
+                          <motion.div 
+                            className={`w-12 h-12 ${stat.iconBgColor} rounded-full flex items-center justify-center mx-auto mb-3`}
+                            animate={{ rotate: [0, 360 * stat.rotateDirection] }}
+                            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                          >
+                            <IconComponent size={24} className={stat.iconColor} />
+                          </motion.div>
+                          <p className="text-2xl font-bold text-white">{stat.value}</p>
+                          <p className="text-sm text-white">{stat.label}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </>
+          )}
         </div>
       </section>
 
+      {!displayPromoteContent && (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         {/* Filters Section - Visible pour les deux onglets */}
         <motion.div
@@ -882,6 +1131,7 @@ export default function TakafulPage() {
           </motion.div>
         )}
       </div>
+      )}
 
       {/* Why Takaful Section */}
       <section className="py-20 bg-[#101919]">
@@ -962,6 +1212,36 @@ export default function TakafulPage() {
         </div>
       </section>
 
+      {/* Section liste d'attente - visible uniquement quand displayPromoteContent */}
+      {displayPromoteContent && (
+      <section className="py-20 bg-[#101919]">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-center"
+          >
+            <h2 className="text-2xl lg:text-3xl font-bold text-white mb-10 leading-tight">
+              Soyez averti en priorité dès le lancement des premières opportunités.
+            </h2>
+
+            <WaitlistForm
+              onToast={(msg, type) => {
+                setToastMessage(msg);
+                setToastType(type ?? 'success');
+                setTimeout(() => {
+                  setToastMessage(null);
+                  setToastType(null);
+                }, 4000);
+              }}
+            />
+          </motion.div>
+        </div>
+      </section>
+      )}
+
       {/* Section "Emportez Amane+ partout avec vous" */}
       <section className="py-20" style={{ background: 'linear-gradient(to top, #d6fcf6, #229693)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1040,7 +1320,11 @@ export default function TakafulPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
-            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+            style={{
+              background: toastType === 'error'
+                ? 'linear-gradient(90deg, #dc2626 0%, #b91c1c 100%)'
+                : 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)',
+            }}
           >
             {toastMessage}
           </motion.div>

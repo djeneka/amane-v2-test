@@ -33,7 +33,7 @@ const STEPS = [
 ];
 
 const POLL_INTERVAL_MS = 2000;
-const POLL_TIMEOUT_MS = 120000; // 2 min
+const POLL_TIMEOUT_MS = 180000; // 3 min
 
 export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalProps) {
   const { user, accessToken, refreshUser } = useAuth();
@@ -51,7 +51,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [unavailableToast, setUnavailableToast] = useState<string | null>(null);
-  /** Après initiation sans payment_url : on poll le statut toutes les 2s pendant 2 min */
+  /** Après initiation sans payment_url : on poll le statut toutes les 2s pendant 3 min */
   const [waitingForPayment, setWaitingForPayment] = useState(false);
   const [pendingTransactionNumber, setPendingTransactionNumber] = useState<string | null>(null);
   const [pendingAmount, setPendingAmount] = useState<number>(0);
@@ -69,11 +69,11 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
   // Montants prédéfinis
   const defaultAmounts = [10000, 50000, 100000];
   
-  // Montant et frais en entiers (pas de décimales)
+  // Montant et frais en entiers (pas de décimales) — frais à 2,5 %
+  const FEE_RATE = 0.025;
   const baseAmount = amount ? Math.round(parseFloat(amount)) : 0;
-  const transactionFee = amount ? Math.round(baseAmount * 0.02) : 0;
+  const transactionFee = amount ? Math.round(baseAmount * FEE_RATE) : 0;
   const totalAmount = payFees ? baseAmount + transactionFee : baseAmount;
-
   // Empêcher le scroll du body quand le modal est ouvert
   useEffect(() => {
     if (isOpen) {
@@ -126,7 +126,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
     return () => clearTimeout(t);
   }, [unavailableToast]);
 
-  // Polling du statut de paiement toutes les 2s pendant 2 min (quand pas de redirection payment_url)
+  // Polling du statut de paiement toutes les 2s pendant 3 min (quand pas de redirection payment_url)
   useEffect(() => {
     if (!waitingForPayment || !pendingTransactionNumber || !accessToken) return;
     pendingTxnRef.current = pendingTransactionNumber;
@@ -236,14 +236,14 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
   const handleSubmit = async () => {
     setPaymentError(null);
 
-    // Mobile money : appeler l'API de paiement direct
-    if (selectedPaymentMethod === 'mobile-money' && serviceCode && depositNumber.trim() && baseAmount > 0) {
+    // Mobile money : appeler l'API de paiement direct (montant total = base + frais si "Payer les frais" coché)
+    if (selectedPaymentMethod === 'mobile-money' && serviceCode && depositNumber.trim() && totalAmount > 0) {
       if (!accessToken) {
         setPaymentError('Vous devez être connecté pour effectuer un dépôt.');
         return;
       }
       const phoneNumber = depositNumber.trim().startsWith('0') ? depositNumber.trim() : `0${depositNumber.trim()}`;
-      const amountNum = baseAmount;
+      const amountNum = totalAmount;
       setPaymentLoading(true);
       try {
         const res = await initiatePayment(
@@ -655,7 +655,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
             {/* Résumé de la transaction */}
             <div className="bg-[#101919] rounded-xl p-4 md:p-6 mx-4 md:mx-12">
               <div className="flex justify-between items-center">
-                <span className="text-white/60">Frais d'opération (2 %) :</span>
+                <span className="text-white/60">Frais d'opération (2,5 %) :</span>
                 <span className="text-white font-semibold">
                   {transactionFee > 0 ? `${transactionFee.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
                 </span>
@@ -780,7 +780,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
                 <span className="text-white font-medium">{baseAmount.toLocaleString('fr-FR')} F CFA</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/60">Frais d'opération (2 %) :</span>
+                <span className="text-white/60">Frais d'opération (2,5 %) :</span>
                 <span className="text-white font-semibold">
                   {transactionFee > 0 ? `${transactionFee.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
                 </span>
@@ -805,7 +805,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
               <div className="flex flex-col items-center justify-center py-6 space-y-4">
                 <Loader2 className="text-[#5AB678] w-10 h-10 animate-spin" />
                 <p className="text-white text-center">En attente de la confirmation du paiement...</p>
-                <p className="text-white/60 text-sm text-center">Vous avez 2min pour confirmer le paiement</p>
+                <p className="text-white/60 text-sm text-center">Vous avez 3 min pour confirmer le paiement</p>
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
