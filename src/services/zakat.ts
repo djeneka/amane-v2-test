@@ -49,6 +49,9 @@ const MY_ZAKATS_URL = '/api/zakats/my-zakats';
 const ZAKATS_URL = '/api/zakats';
 const ZAKAT_CONTRIBUTIONS_URL = '/api/zakat-contributions';
 
+/** Clé sessionStorage pour une zakat en attente (sauvegarde après connexion/inscription) */
+export const PENDING_ZAKAT_STORAGE_KEY = 'amane-pending-zakat';
+
 /** Corps de la requête POST /api/zakats (création d'une zakat) */
 export interface CreateZakatBody {
   calculationDate: string;
