@@ -1,13 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Calculator, HandCoins, Apple, Play, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calculator, HandCoins, Apple, Play, Trash2, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import Image from 'next/image';
 import ZakatCalculatorModal from '@/components/ZakatCalculatorModal';
 import PayZakatModal from '@/components/PayZakatModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMyZakats, deleteZakat, type Zakat } from '@/services/zakat';
+import { getMyZakats, deleteZakat, createZakat, PENDING_ZAKAT_STORAGE_KEY, type Zakat, type CreateZakatBody } from '@/services/zakat';
+
+/** Citations et hadiths affichés dans les bulles d'info */
+const ZAKAT_QUOTES: { text: string; source: string }[] = [
+  { text: "La richesse d'une personne ne diminue pas lorsqu'elle paie la Zakat", source: "Sahih Bukhari" },
+  { text: "Celui qui s'acquitte de la Zakat, Allah augmentera sa richesse.", source: "Sahih Bukhari" },
+  { text: "La meilleure aumône consiste à s'acquitter de la Zakat sur ses biens", source: "Sahih Muslim" },
+  { text: "La zakat est un droit que les pauvres ont sur les riches", source: "Sahih Bukhari" },
+  { text: "L'aumône légale (Zakat) est plus aimée d'Allah que toutes les œuvres de charité faites durant toute l'année.", source: "Sahih Bukhari" },
+  { text: "Accomplissez la prière et acquittez-vous de la Zakat. Tout bien que vous aurez accompli pour vous-mêmes, vous le retrouverez auprès d'Allah.", source: "2:110 Coran" },
+  { text: "Ô Muhammad, prélève sur leurs biens une aumône qui les purifie et leur permette de prospérer, et invoque sur eux la bénédiction d'Allah. Tes invocations sont pour eux une source de réconfort. Allah est Celui qui entend et qui sait.", source: "9:103 Coran" },
+];
 
 // Composant pour l'icône personnalisée de la main tenant une bourse avec "2,5"
 const ZakatIcon = () => {
@@ -79,7 +91,8 @@ const ZakatIcon = () => {
 };
 
 export default function ZakatPage() {
-  const { accessToken, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const { accessToken } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [myZakats, setMyZakats] = useState<Zakat[]>([]);
   const [zakatsLoading, setZakatsLoading] = useState(true);
@@ -88,9 +101,25 @@ export default function ZakatPage() {
   const [zakatAmountToPay, setZakatAmountToPay] = useState<number | undefined>(undefined);
   const [zakatIdToPay, setZakatIdToPay] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastVariant, setToastVariant] = useState<'success' | 'error'>('success');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [zakatToDeleteId, setZakatToDeleteId] = useState<string | null>(null);
   const [expandedZakatIds, setExpandedZakatIds] = useState<Set<string>>(new Set());
+  const [openQuoteIndex, setOpenQuoteIndex] = useState<number | null>(null);
+  /** Positions aléatoires des bulles (pourcentages), générées une fois au montage */
+  const [bubblePositions, setBubblePositions] = useState<{ top: number; left: number }[]>([]);
+
+  useEffect(() => {
+    const positions: { top: number; left: number }[] = [];
+    const centerBand = { topMin: 18, topMax: 72, leftMin: 15, leftMax: 85 };
+    for (let i = 0; i < ZAKAT_QUOTES.length; i++) {
+      positions.push({
+        top: centerBand.topMin + Math.random() * (centerBand.topMax - centerBand.topMin),
+        left: centerBand.leftMin + Math.random() * (centerBand.leftMax - centerBand.leftMin),
+      });
+    }
+    setBubblePositions(positions);
+  }, []);
 
   const toggleZakatExpand = (id: string) => {
     setExpandedZakatIds((prev) => {
@@ -120,12 +149,48 @@ export default function ZakatPage() {
     return () => { cancelled = true; };
   }, [accessToken]);
 
+  // Après connexion/inscription : sauvegarder la zakat en attente (calcul ouverte sans être connecté)
+  useEffect(() => {
+    if (!mounted || !accessToken) return;
+    const raw = sessionStorage.getItem(PENDING_ZAKAT_STORAGE_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(PENDING_ZAKAT_STORAGE_KEY);
+    let body: CreateZakatBody;
+    try {
+      body = JSON.parse(raw) as CreateZakatBody;
+      if (typeof body?.year !== 'number' || typeof body?.totalAmount !== 'number' || !body?.calculationDate) return;
+    } catch {
+      return;
+    }
+    createZakat(accessToken, body)
+      .then(() => {
+        setToastVariant('success');
+        setToastMessage('Zakat créée avec succès');
+        getMyZakats(accessToken).then(setMyZakats).catch(() => {});
+        setTimeout(() => setToastMessage(null), 3000);
+      })
+      .catch((err: unknown) => {
+        setToastVariant('error');
+        const raw = err instanceof Error ? err.message : '';
+        let msg = 'Impossible de créer la zakat. Veuillez réessayer.';
+        try {
+          const data = JSON.parse(raw);
+          if (data && typeof data.message === 'string') msg = data.message;
+        } catch {
+          if (raw) msg = raw;
+        }
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 5000);
+      });
+  }, [mounted, accessToken]);
+
   const refetchZakats = () => {
     if (!accessToken) return;
     getMyZakats(accessToken).then(setMyZakats).catch(() => {});
   };
 
   const handleZakatCreated = () => {
+    setToastVariant('success');
     setToastMessage('Zakat créée avec succès');
     refetchZakats();
     setTimeout(() => setToastMessage(null), 3000);
@@ -138,11 +203,21 @@ export default function ZakatPage() {
     setDeletingId(id);
     try {
       await deleteZakat(accessToken, id);
+      setToastVariant('success');
       setToastMessage('Zakat supprimée');
       refetchZakats();
       setTimeout(() => setToastMessage(null), 3000);
-    } catch {
-      setToastMessage('Impossible de supprimer la zakat');
+    } catch (err: unknown) {
+      setToastVariant('error');
+      const raw = err instanceof Error ? err.message : '';
+      let msg = 'Impossible de supprimer la zakat';
+      try {
+        const data = JSON.parse(raw);
+        if (data && typeof data.message === 'string') msg = data.message;
+      } catch {
+        if (raw) msg = raw;
+      }
+      setToastMessage(msg);
       setTimeout(() => setToastMessage(null), 3000);
     } finally {
       setDeletingId(null);
@@ -164,12 +239,63 @@ export default function ZakatPage() {
   return (
     <>
       <div 
-        className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
+        className="min-h-screen flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden"
         style={{ 
           background: 'linear-gradient(to left, #101919, #00644D)' 
         }}
       >
-        <div className="max-w-2xl w-full text-center space-y-8">
+        {/* Animation clignotement des bulles */}
+        <style>{`
+          @keyframes zakat-bubble-blink {
+            0%, 100% { opacity: 0.75; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+          }
+          .zakat-bubble-blink {
+            animation: zakat-bubble-blink 2s ease-in-out infinite;
+          }
+        `}</style>
+
+        {/* Bulles d'info flottantes */}
+        {bubblePositions.length === ZAKAT_QUOTES.length && ZAKAT_QUOTES.map((quote, index) => (
+          <div
+            key={index}
+            className="absolute z-10 -translate-x-1/2 -translate-y-1/2"
+            style={{
+              top: `${bubblePositions[index].top}%`,
+              left: `${bubblePositions[index].left}%`,
+            }}
+          >
+            <motion.button
+              type="button"
+              onClick={() => setOpenQuoteIndex((prev) => (prev === index ? null : index))}
+              className="zakat-bubble-blink w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/25 hover:bg-white/40 border border-white/50 flex items-center justify-center transition-colors shadow-lg focus:outline-none focus:ring-2 focus:ring-[#8DD17F]"
+              style={{ animationPlayState: openQuoteIndex === index ? 'paused' : 'running' }}
+              aria-label="Voir une citation sur la Zakat"
+            >
+              <Info size={20} className="text-white" />
+            </motion.button>
+            {openQuoteIndex === index && (
+              <>
+                <div
+                  className="fixed inset-0 z-20"
+                  aria-hidden
+                  onClick={() => setOpenQuoteIndex(null)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="absolute z-30 mt-2 left-1/2 -translate-x-1/2 w-72 sm:w-80 p-4 rounded-xl bg-[#0F1F1F] border border-white/20 shadow-xl text-left"
+                >
+                  <p className="text-white/95 text-sm leading-relaxed italic">&laquo;&nbsp;{quote.text}&nbsp;&raquo;</p>
+                  <p className="text-[#8DD17F] text-xs mt-2 font-medium">{quote.source}</p>
+                </motion.div>
+              </>
+            )}
+          </div>
+        ))}
+
+        <div className="max-w-2xl w-full text-center space-y-8 relative z-0">
         {/* Icône principale */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
@@ -214,14 +340,7 @@ export default function ZakatPage() {
           transition={{ duration: 0.6, delay: 0.4 }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => {
-            if (!isAuthenticated) {
-              setToastMessage('Connectez-vous pour accéder au calculateur de zakat.');
-              setTimeout(() => setToastMessage(null), 3000);
-              return;
-            }
-            setIsModalOpen(true);
-          }}
+          onClick={() => setIsModalOpen(true)}
           className="w-full max-w-md mx-auto py-4 px-8 rounded-2xl text-white font-bold text-lg md:text-xl flex items-center justify-center space-x-3 shadow-xl"
           style={{
             background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)'
@@ -237,8 +356,8 @@ export default function ZakatPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
-            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+            className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg ${toastVariant === 'error' ? 'bg-red-600' : ''}`}
+            style={toastVariant === 'success' ? { background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' } : undefined}
           >
             {toastMessage}
           </motion.div>
@@ -473,6 +592,7 @@ export default function ZakatPage() {
         onSave={refetchZakats}
         accessToken={accessToken}
         onSuccess={handleZakatCreated}
+        onRequestAuth={() => router.push('/connexion?redirect=' + encodeURIComponent('/zakat'))}
       />
 
       {/* Modal de versement de zakat */}

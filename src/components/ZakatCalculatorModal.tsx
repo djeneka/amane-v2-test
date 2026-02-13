@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, Info, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
-import { createZakat } from '@/services/zakat';
+import Link from 'next/link';
+import { createZakat, PENDING_ZAKAT_STORAGE_KEY, type CreateZakatBody } from '@/services/zakat';
+import { getNissabByCountry } from '@/services/nissab';
 
 type AccordionKey = 'argent' | 'or' | 'argent_metal' | 'pierres';
 type AccordionKeyStep2 = 'investissements' | 'immobilier' | 'autres_actifs';
@@ -20,6 +22,8 @@ interface ZakatCalculatorModalProps {
   accessToken?: string | null;
   /** Appelé après création réussie via l’API (toast + redirection côté page) */
   onSuccess?: () => void;
+  /** Appelé quand l'utilisateur clique sur Sauvegarder sans être connecté : le calcul est stocké en sessionStorage, la page peut rediriger vers connexion/inscription */
+  onRequestAuth?: () => void;
 }
 
 export interface SavedZakat {
@@ -117,7 +121,7 @@ function onlyDigits(value: string): string {
   return value.replace(/[^0-9]/g, '');
 }
 
-export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessToken, onSuccess }: ZakatCalculatorModalProps) {
+export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessToken, onSuccess, onRequestAuth }: ZakatCalculatorModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   // Step 1 - Mes possessions (Liquidités & Valeurs)
@@ -171,6 +175,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
   const infoPopoverRef = useRef<HTMLDivElement>(null);
   // Info Nissab (étape Confirmation) — affiché au clic sur l’icône
   const [showNissabInfo, setShowNissabInfo] = useState(false);
+  // Nissab : montant récupéré selon le pays (géolocalisation ou défaut Côte d'Ivoire)
+  const [nissabAmount, setNissabAmount] = useState<number>(0);
+  const [nissabLoading, setNissabLoading] = useState(false);
 
   // Legacy (unused)
   const [hasGoldSilver, setHasGoldSilver] = useState<boolean | null>(null);
@@ -212,11 +219,66 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [infoPopoverStep]);
 
+  const DEFAULT_NISSAB_COUNTRY = "côte d'ivoire";
+
+  // Récupérer le nissab selon le pays : géolocalisation (avec demande d'autorisation si besoin) ou pays par défaut
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setNissabLoading(true);
+
+    const fetchNissabForCountry = async (country: string) => {
+      try {
+        const nissab = await getNissabByCountry(country);
+        if (!cancelled) setNissabAmount(nissab.amount);
+      } catch {
+        if (!cancelled) setNissabAmount(0);
+      } finally {
+        if (!cancelled) setNissabLoading(false);
+      }
+    };
+
+    const tryGeolocationThenNissab = () => {
+      if (typeof window === 'undefined' || !navigator.geolocation) {
+        fetchNissabForCountry(DEFAULT_NISSAB_COUNTRY);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+              { headers: { 'Accept-Language': 'fr' } }
+            );
+            const data = await res.json();
+            const country = data.address?.country?.trim();
+            const countryToUse = country || DEFAULT_NISSAB_COUNTRY;
+            await fetchNissabForCountry(countryToUse);
+          } catch {
+            await fetchNissabForCountry(DEFAULT_NISSAB_COUNTRY);
+          }
+        },
+        () => {
+          // Refus, erreur ou indisponible : utiliser le pays par défaut
+          fetchNissabForCountry(DEFAULT_NISSAB_COUNTRY);
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+      );
+    };
+
+    tryGeolocationThenNissab();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
   // Réinitialiser le formulaire quand le modal se ferme
   useEffect(() => {
     if (!isOpen) {
       setInfoPopoverStep(null);
       setShowNissabInfo(false);
+      setNissabAmount(0);
       setCurrentStep(1);
       setSelectedYear(currentYear);
       setOpenAccordion(null);
@@ -318,20 +380,19 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
       return;
     }
 
-    const now = new Date();
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    const savedZakat: SavedZakat = {
-      id: Date.now().toString(),
-      date: `${now.getDate()} ${months[now.getMonth()]}, ${now.getFullYear()}`,
-      totalAssets,
-      zakatAmount,
-      remainingToPay: zakatAmount,
+    // Non connecté : enregistrer le calcul en sessionStorage et demander connexion/inscription
+    const body: CreateZakatBody = {
+      calculationDate: new Date(selectedYear, 0, 1).toISOString(),
+      year: selectedYear,
+      totalAmount: Math.round(totalAssets),
     };
-    const savedZakats = localStorage.getItem('savedZakats');
-    const zakats: SavedZakat[] = savedZakats ? JSON.parse(savedZakats) : [];
-    zakats.unshift(savedZakat);
-    localStorage.setItem('savedZakats', JSON.stringify(zakats));
-    if (onSave) onSave();
+    try {
+      sessionStorage.setItem(PENDING_ZAKAT_STORAGE_KEY, JSON.stringify(body));
+    } catch {
+      setSubmitError('Impossible de mémoriser le calcul.');
+      return;
+    }
+    onRequestAuth?.();
     handleClose();
   };
 
@@ -1421,8 +1482,6 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
     if (currentStep === 6) {
       const totalAssets = calculateTotalAssets();
       const zakatAmount = calculateZakat();
-      // TODO: calcul du Nissab (seuil minimal) — logique à brancher ultérieurement
-      const nissabAmount = 0;
 
       return (
         <div className="space-y-3 sm:space-y-4">
@@ -1481,8 +1540,14 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               </div>
               <div className="text-left sm:text-right">
                 {/* TODO: brancher le calcul du Nissab (seuil minimal d’assujettissement à la Zakat) */}
-                <span className="text-white font-bold text-base sm:text-lg">{formatAmount(nissabAmount)}</span>
-                <span className="text-white ml-2 text-sm sm:text-base">F CFA</span>
+                {nissabLoading ? (
+                  <span className="text-white/70 text-sm">Chargement…</span>
+                ) : (
+                  <>
+                    <span className="text-white font-bold text-base sm:text-lg">{formatAmount(nissabAmount)}</span>
+                    <span className="text-white ml-2 text-sm sm:text-base">F CFA</span>
+                  </>
+                )}
               </div>
             </div>
             </div>
@@ -1507,6 +1572,18 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               )}
             </AnimatePresence>
           </div>
+
+          {/* Message si montant total < nissab : pas zakatable, proposer sadaqah */}
+          {!nissabLoading && totalAssets < nissabAmount && (
+            <div className="rounded-xl p-4 sm:p-6 bg-amber-500/10 border border-amber-500/30 space-y-3">
+              <p className="text-amber-200 text-sm sm:text-base">
+                Le montant total de vos biens n&apos;est pas zakatable car il est inférieur au nissab.
+              </p>
+              <p className="text-white/80 text-sm">
+                Vous pouvez néanmoins faire une <Link href="/campagnes" className="text-[#43B48F] font-bold underline-offset-2 underline" onClick={handleClose}>sadaqah</Link> en soutenant nos campagnes.
+              </p>
+            </div>
+          )}
         </div>
       );
     }
@@ -1521,6 +1598,8 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
       </div>
     );
   };
+
+  const isBelowNissab = currentStep === 6 && !nissabLoading && calculateTotalAssets() < nissabAmount;
 
   return (
     <AnimatePresence>
@@ -1687,7 +1766,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                     </button>
                     <button
                       onClick={currentStep === STEPS.length ? handleSave : handleNext}
-                      disabled={submitLoading}
+                      disabled={submitLoading || isBelowNissab}
                       className="w-full sm:flex-1 py-2 px-4 sm:py-4 sm:px-6 rounded-2xl sm:rounded-3xl text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:space-x-2 text-xs sm:text-base"
                       style={{
                         background: 'linear-gradient(90deg, #8FC99E 0%, #20B6B3 100%)'

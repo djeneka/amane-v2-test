@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Heart, Phone } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
 
@@ -38,6 +38,7 @@ function digitsOnly(value: string): string {
 
 export default function ConnexionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, isAuthenticated, authReady } = useAuth();
   const [loginValue, setLoginValue] = useState("");
   const [countryCode, setCountryCode] = useState("+225");
@@ -73,7 +74,8 @@ export default function ConnexionPage() {
 
       const success = await login(credentials);
       if (success) {
-        router.push('/');
+        const redirectTo = searchParams.get('redirect');
+        router.push(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/');
       } else {
         setError('Email / numéro ou mot de passe incorrect.');
       }
