@@ -8,7 +8,7 @@ import {
   Apple, Play, TrendingUp, Bookmark
 } from 'lucide-react';
 import { getTakafulPlans, type TakafulPlan } from '@/services/takaful-plans';
-import type { Campaign } from '@/data/mockData';
+import { takafulProducts, type Campaign, type TakafulProduct } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { getActiveCampaigns } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
@@ -16,6 +16,36 @@ import { getActivities, type Activity } from '@/services/activities';
 
 const DEFAULT_ACTIVITY_IMAGE = '/images/no-picture.png';
 const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
+
+/** Convertit un TakafulProduct (mockData) en TakafulPlan pour affichage (si NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE=true) */
+function mockTakafulProductToPlan(p: TakafulProduct): TakafulPlan {
+  const categoryToApi: Record<string, string[]> = {
+    sante: ['HEALTH'],
+    automobile: ['AUTO'],
+    habitation: ['HOME'],
+    vie: ['FAMILY'],
+  };
+  return {
+    id: p.id,
+    title: p.name,
+    picture: p.image || null,
+    description: p.description,
+    monthlyContribution: p.monthlyPremium,
+    categories: categoryToApi[p.category] ?? [],
+    benefits: p.features ?? [],
+    guarantees: [],
+    requiredDocuments: [],
+    whyChooseThis: '',
+    status: 'ACTIVE',
+    startDate: '',
+    endDate: '',
+    createdById: '',
+    createdAt: '',
+    updatedAt: '',
+    createdBy: { id: '', name: '', email: '' },
+    _count: { subscriptions: 0 },
+  };
+}
 
 export default function CommunautePage() {
   const { isAuthenticated } = useAuth();
@@ -32,6 +62,8 @@ export default function CommunautePage() {
   const [takafulPlans, setTakafulPlans] = useState<TakafulPlan[]>([]);
   const [takafulLoading, setTakafulLoading] = useState(true);
 
+  const takafulDisplayPromote = process.env.NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE === 'true';
+
   useEffect(() => {
     let cancelled = false;
     setCampaignsLoading(true);
@@ -44,6 +76,11 @@ export default function CommunautePage() {
   }, []);
 
   useEffect(() => {
+    if (takafulDisplayPromote) {
+      setTakafulPlans(takafulProducts.map(mockTakafulProductToPlan).slice(0, 3));
+      setTakafulLoading(false);
+      return;
+    }
     let cancelled = false;
     setTakafulLoading(true);
     getTakafulPlans()
@@ -663,7 +700,7 @@ export default function CommunautePage() {
                             <p className="text-white/90 text-sm mb-4 line-clamp-3">
                             {plan.description}
                             </p>
-                            <Link href={`/takaful/${plan.id}`}>
+                            <Link href={takafulDisplayPromote ? '/takaful' : `/takaful/${plan.id}`}>
                             <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
                                 En savoir plus
                             </button>

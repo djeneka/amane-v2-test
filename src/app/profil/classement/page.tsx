@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { Trophy, Medal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMyRank, type RankingEntry } from '@/services/statistics';
+import { getMyRank, passToAnonymous, type RankingEntry } from '@/services/statistics';
 
 function getInitials(name: string): string {
   return name
@@ -17,11 +17,30 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+/** Génère 1 chiffre + 1 lettre uniques et stables par userId */
+function getAnonymousSuffix(userId: string): string {
+  const hex = userId.replace(/-/g, '');
+  if (hex.length < 4) return '0A';
+  const digit = parseInt(hex.slice(0, 2), 16) % 10;
+  const letterIndex = parseInt(hex.slice(2, 4), 16) % 26;
+  const letter = String.fromCharCode(65 + letterIndex);
+  return `${digit}${letter}`;
+}
+
+function getDisplayName(entry: RankingEntry): string {
+  return entry.anonymous ? `Anonyme-${getAnonymousSuffix(entry.userId)}` : entry.name;
+}
+
+function getDisplayInitials(entry: RankingEntry): string {
+  return entry.anonymous ? getAnonymousSuffix(entry.userId) : getInitials(entry.name);
+}
+
 export default function ClassementPage() {
   const { isAuthenticated, accessToken, user } = useAuth();
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [anonymizeLoading, setAnonymizeLoading] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !accessToken) {
@@ -47,6 +66,24 @@ export default function ClassementPage() {
   }, [isAuthenticated, accessToken]);
 
   const myEntry = user?.id ? ranking.find((e) => e.userId === user.id) : null;
+
+  const handleToggleAnonymous = async () => {
+    if (!user?.id || !accessToken) return;
+    setAnonymizeLoading(true);
+    setError(null);
+    try {
+      await passToAnonymous(user.id, {
+        token: accessToken,
+        anonymous: !myEntry?.anonymous,
+      });
+      const list = await getMyRank({ token: accessToken });
+      setRanking(list);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du changement');
+    } finally {
+      setAnonymizeLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -110,29 +147,51 @@ export default function ClassementPage() {
                     )}
                   </div>
                   <div className="flex-shrink-0">
-                    {entry.profilePicture ? (
+                    {!entry.anonymous && entry.profilePicture ? (
                       <Image
                         src={entry.profilePicture}
-                        alt={entry.name}
+                        alt={getDisplayName(entry)}
                         width={44}
                         height={44}
                         className="rounded-full object-cover"
                       />
                     ) : (
                       <div className="w-11 h-11 rounded-full bg-[#00644D]/30 flex items-center justify-center text-white font-semibold text-sm">
-                        {getInitials(entry.name)}
+                        {getDisplayInitials(entry)}
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`font-medium truncate ${isMe ? 'text-[#00D9A5]' : 'text-white'}`}>
-                      {entry.name}
+                      {getDisplayName(entry)}
                       {isMe && (
                         <span className="ml-2 text-xs text-white/70 font-normal">(ma position)</span>
                       )}
                     </p>
                     <p className="text-white/60 text-sm">{entry.score.toLocaleString('fr-FR')} points</p>
                   </div>
+                  {isMe && (
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      <span className="text-white/60 text-xs whitespace-nowrap">Anonyme</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={myEntry?.anonymous ? 'true' : 'false'}
+                        aria-label={myEntry?.anonymous ? 'Afficher mon nom' : 'Passer en anonyme'}
+                        onClick={handleToggleAnonymous}
+                        disabled={anonymizeLoading}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#00D9A5] focus:ring-offset-2 focus:ring-offset-[#101919] disabled:opacity-50 ${
+                          myEntry?.anonymous ? 'bg-[#00D9A5]' : 'bg-white/20'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
+                            myEntry?.anonymous ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  )}
                   <div className="flex-shrink-0 text-right">
                     <span className="text-[#00D9A5] font-bold">{entry.score.toLocaleString('fr-FR')}</span>
                     <span className="text-white/60 text-sm ml-1">pts</span>

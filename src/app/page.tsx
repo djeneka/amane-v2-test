@@ -9,7 +9,8 @@ import {
   Users, Star, CheckCircle, Smartphone, Apple, Play, 
   Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin,
   Eye, EyeOff, Zap, Building, Leaf, Gift, Bookmark, ChevronDown, Globe, Calendar,
-  Camera, Megaphone, ArrowDown, Award, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight as ArrowRightIcon
+  Camera, Megaphone, ArrowDown, Award, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight as ArrowRightIcon,
+  Sparkles
 } from 'lucide-react';
 import CampaignCard from '@/components/CampaignCard';
 import Wallet from '@/components/Wallet';
@@ -18,6 +19,7 @@ import { takafulProducts } from '@/data/mockData';
 import type { Campaign } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { getActiveCampaigns } from '@/services/campaigns';
+import { getTakafulPlans } from '@/services/takaful-plans';
 import { getDonationsStatistics } from '@/services/statistics';
 import { getActivities, type Activity } from '@/services/activities';
 import { getMyDonations, type Donation } from '@/services/donations';
@@ -25,6 +27,7 @@ import { getMyTransactions, type Transaction } from '@/services/transactions';
 import { getMyZakats, type Zakat } from '@/services/zakat';
 import { getRankForScore } from '@/lib/rankRules';
 import PayZakatModal from '@/components/PayZakatModal';
+import ZakatCalculatorModal from '@/components/ZakatCalculatorModal';
 
 export default function Home() {
   const { isAuthenticated, user, accessToken } = useAuth();
@@ -40,9 +43,14 @@ export default function Home() {
   const [myDonations, setMyDonations] = useState<Donation[]>([]);
   const [myTransactions, setMyTransactions] = useState<Transaction[]>([]);
   const [myZakats, setMyZakats] = useState<Zakat[]>([]);
-  const [zakatToast, setZakatToast] = useState<string | null>(null);
   const [showPayZakatModal, setShowPayZakatModal] = useState(false);
+  const [showZakatCalculatorModal, setShowZakatCalculatorModal] = useState(false);
+  /** Plans takaful affichés sur la home : mockData si NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE=true, sinon API */
+  const [takafulPlans, setTakafulPlans] = useState<{ id: string; title: string; image: string; description: string }[]>([]);
+  const [takafulPlansLoading, setTakafulPlansLoading] = useState(true);
   const router = useRouter();
+
+  const TAKAFUL_DISPLAY_PROMOTE = process.env.NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE === 'true';
   useEffect(() => {
     let cancelled = false;
     setCampaignsLoading(true);
@@ -72,6 +80,43 @@ export default function Home() {
         setDonorCountByCampaignId(byId);
       })
       .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
+    if (TAKAFUL_DISPLAY_PROMOTE) {
+      setTakafulPlans(
+        takafulProducts.map((p) => ({
+          id: p.id,
+          title: p.name,
+          image: p.image || DEFAULT_TAKAFUL_IMAGE,
+          description: p.description,
+        }))
+      );
+      setTakafulPlansLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setTakafulPlansLoading(true);
+    getTakafulPlans()
+      .then((list) => {
+        if (cancelled) return;
+        setTakafulPlans(
+          list.map((plan) => ({
+            id: plan.id,
+            title: plan.title,
+            image: plan.picture && plan.picture.trim() ? plan.picture : DEFAULT_TAKAFUL_IMAGE,
+            description: plan.description || '',
+          }))
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setTakafulPlans([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTakafulPlansLoading(false);
+      });
     return () => { cancelled = true; };
   }, []);
 
@@ -853,10 +898,7 @@ export default function Home() {
                     </p>
                     <motion.button
                       type="button"
-                      onClick={() => {
-                        setZakatToast('Connectez-vous pour accéder au calculateur de zakat.');
-                        setTimeout(() => setZakatToast(null), 3000);
-                      }}
+                      onClick={() => setShowZakatCalculatorModal(true)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
@@ -1063,68 +1105,84 @@ export default function Home() {
               className="relative"
             >
               <div className="relative overflow-hidden">
-                <div 
-                  className="flex transition-transform duration-500 ease-in-out"
-                  style={{ transform: `translateX(-${currentTakafulSlide * 100}%)` }}
-                >
-                  {takafulProducts.map((product) => (
-                    <div key={product.id} className="min-w-full px-2">
-                      <div className="bg-white rounded-3xl overflow-hidden relative" style={{ height: '600px' }}>
-                        <div className="absolute inset-0">
-                          <img 
-                            src={product.image} 
-                            alt={product.name} 
-                            className="w-full h-full object-cover"
-                          />
+                {takafulPlansLoading ? (
+                  <div className="flex items-center justify-center min-h-[400px] text-white/80">
+                    Chargement des produits Takaful…
+                  </div>
+                ) : takafulPlans.length === 0 ? (
+                  <div className="flex items-center justify-center min-h-[400px] text-white/80">
+                    Aucun produit Takaful à afficher.
+                  </div>
+                ) : (
+                  <>
+                    <div 
+                      className="flex transition-transform duration-500 ease-in-out"
+                      style={{ transform: `translateX(-${currentTakafulSlide * 100}%)` }}
+                    >
+                      {takafulPlans.map((plan) => (
+                        <div key={plan.id} className="min-w-full px-2">
+                          <div className="bg-white rounded-3xl overflow-hidden relative" style={{ height: '600px' }}>
+                            <div className="absolute inset-0">
+                              <img 
+                                src={plan.image} 
+                                alt={plan.title} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const t = e.target as HTMLImageElement;
+                                  t.src = '/images/no-picture.png';
+                                }}
+                              />
+                            </div>
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
+                              <h3 className="text-white text-2xl font-bold mb-2">{plan.title}</h3>
+                              <p className="text-white/90 text-sm mb-4 line-clamp-3">
+                                {plan.description}
+                              </p>
+                              <Link href={TAKAFUL_DISPLAY_PROMOTE ? '/takaful' : `/takaful/${plan.id}`}>
+                                <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
+                                  En savoir plus
+                                </button>
+                              </Link>
+                            </div>
+                          </div>
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
-                          <h3 className="text-white text-2xl font-bold mb-2">{product.name}</h3>
-                          <p className="text-white/90 text-sm mb-4 line-clamp-3">
-                            {product.description}
-                          </p>
-                          <Link href={`/takaful/${product.id}`}>
-                            <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
-                              En savoir plus
-                            </button>
-                          </Link>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Navigation Buttons */}
-              <button
-                onClick={() => setCurrentTakafulSlide((prev) => Math.max(0, prev - 1))}
-                disabled={currentTakafulSlide === 0}
-                aria-label="Carte précédente"
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#00644D] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
-              >
-                <ArrowLeft size={28} className="text-white" />
-              </button>
-              <button
-                onClick={() => setCurrentTakafulSlide((prev) => Math.min(takafulProducts.length - 1, prev + 1))}
-                disabled={currentTakafulSlide === takafulProducts.length - 1}
-                aria-label="Carte suivante"
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
-              >
-                <ArrowRight size={28} className="text-white" />
-              </button>
+                    {/* Navigation Buttons */}
+                    <button
+                      onClick={() => setCurrentTakafulSlide((prev) => Math.max(0, prev - 1))}
+                      disabled={currentTakafulSlide === 0}
+                      aria-label="Carte précédente"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#00644D] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
+                    >
+                      <ArrowLeft size={28} className="text-white" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentTakafulSlide((prev) => Math.min(takafulPlans.length - 1, prev + 1))}
+                      disabled={currentTakafulSlide === takafulPlans.length - 1}
+                      aria-label="Carte suivante"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
+                    >
+                      <ArrowRight size={28} className="text-white" />
+                    </button>
 
-              {/* Pagination Dots */}
-              <div className="flex justify-center gap-2 mt-6">
-                {takafulProducts.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentTakafulSlide(index)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      currentTakafulSlide === index 
-                        ? 'bg-white w-8' 
-                        : 'bg-white/30'
-                    }`}
-                  />
-                ))}
+                    {/* Pagination Dots */}
+                    <div className="flex justify-center gap-2 mt-6">
+                      {takafulPlans.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentTakafulSlide(index)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            currentTakafulSlide === index 
+                              ? 'bg-white w-8' 
+                              : 'bg-white/30'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </motion.div>
           </div>
@@ -1184,8 +1242,43 @@ export default function Home() {
             <p className="text-white/80">Chargement des actualités…</p>
           </div>
         ) : activitiesError || activities.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#101919]">
-            <p className="text-white/80">{activitiesError || 'Aucune activité à afficher.'}</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#101919] gap-6 px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="relative"
+            >
+              <div className="w-32 h-32 rounded-full bg-[#00644D]/20 flex items-center justify-center border border-[#00D9A5]/30">
+                <Calendar size={48} className="text-[#00D9A5]" strokeWidth={1.5} />
+              </div>
+              <motion.div
+                className="absolute -top-1 -right-1 w-10 h-10 rounded-full bg-[#00D9A5]/20 flex items-center justify-center"
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, repeatType: 'loop' }}
+              >
+                <Sparkles size={20} className="text-[#00D9A5]" />
+              </motion.div>
+            </motion.div>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: [1, 0.5, 1], y: 0 }}
+              transition={{
+                opacity: { duration: 2, repeat: Infinity, repeatType: 'loop' },
+                y: { duration: 0.4, delay: 0.2 },
+              }}
+              className="text-xl font-semibold text-white"
+            >
+              Bientôt disponible
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="text-white/60 text-sm max-w-sm text-center"
+            >
+              Les actualités et activités seront affichées ici très prochainement.
+            </motion.p>
           </div>
         ) : (
           <>
@@ -1716,20 +1809,20 @@ export default function Home() {
         }}
       />
 
-      {/* Toast "Calculer ma zakat" (utilisateur non connecté) */}
-      <AnimatePresence>
-        {zakatToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
-            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
-          >
-            {zakatToast}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Modal Calculateur de zakat (ouvert depuis le dashboard) */}
+      <ZakatCalculatorModal
+        isOpen={showZakatCalculatorModal}
+        onClose={() => setShowZakatCalculatorModal(false)}
+        accessToken={accessToken ?? null}
+        onSuccess={() => {
+          setShowZakatCalculatorModal(false);
+          if (accessToken) getMyZakats(accessToken).then(setMyZakats).catch(() => {});
+        }}
+        onRequestAuth={() => {
+          setShowZakatCalculatorModal(false);
+          router.push('/connexion');
+        }}
+      />
     </div>
   );
 }

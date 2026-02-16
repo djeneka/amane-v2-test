@@ -14,8 +14,39 @@ import MakeTakafulModal from '@/components/MakeTakafulModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTakafulPlans, getMyTakafulSubscriptions, type TakafulPlan, type MyTakafulSubscription } from '@/services/takaful-plans';
 import { subscribeNewsletter } from '@/services/newsletter';
+import { takafulProducts, type TakafulProduct } from '@/data/mockData';
 
 const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
+
+/** Convertit un TakafulProduct (mockData) en TakafulPlan pour réutilisation du même UI */
+function mockTakafulProductToPlan(p: TakafulProduct): TakafulPlan {
+  const categoryToApi: Record<string, string[]> = {
+    sante: ['HEALTH'],
+    automobile: ['AUTO'],
+    habitation: ['HOME'],
+    vie: ['FAMILY'],
+  };
+  return {
+    id: p.id,
+    title: p.name,
+    picture: p.image || null,
+    description: p.description,
+    monthlyContribution: p.monthlyPremium,
+    categories: categoryToApi[p.category] ?? [],
+    benefits: p.features ?? [],
+    guarantees: [],
+    requiredDocuments: [],
+    whyChooseThis: '',
+    status: 'ACTIVE',
+    startDate: '',
+    endDate: '',
+    createdById: '',
+    createdAt: '',
+    updatedAt: '',
+    createdBy: { id: '', name: '', email: '' },
+    _count: { subscriptions: 0 },
+  };
+}
 
 /** Catégorie affichée à partir des categories API (HEALTH, FAMILY, HOME, etc.) */
 function getDisplayCategory(plan: TakafulPlan): 'sante' | 'automobile' | 'habitation' | 'vie' | 'autres' {
@@ -214,6 +245,13 @@ export default function TakafulPage() {
   const displayPromoteContent = process.env.NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE === 'true';
 
   useEffect(() => {
+    const displayPromote = process.env.NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE === 'true';
+    if (displayPromote) {
+      setPlans(takafulProducts.map(mockTakafulProductToPlan));
+      setPlansError(null);
+      setPlansLoading(false);
+      return;
+    }
     let cancelled = false;
     setPlansLoading(true);
     setPlansError(null);
@@ -564,15 +602,11 @@ export default function TakafulPage() {
                 Nos opportunités à venir
               </h2>
 
-              {/* Cartes produits - images à remplacer */}
+              {/* Cartes produits takaful (mockData lorsque NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE=true) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-12">
-                {[
-                  { title: 'Takaful Santé', desc: 'Pour une rentabilité stable et sécurisée', image: '/images/tk-sante.png' },
-                  { title: 'Takaful Auto', desc: 'Financez des entrepreneurs talentueux et partagez leurs succès.', image: '/images/tk-auto.png' },
-                  { title: 'Takaful Famille', desc: 'Investissez dans la pierre et recevez des loyers périodiques.', image: '/images/tk-famille.png' },
-                ].map((card, index) => (
+                {plans.map((plan, index) => (
                   <motion.div
-                    key={card.title}
+                    key={plan.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
@@ -581,8 +615,8 @@ export default function TakafulPage() {
                   >
                     <div className="relative w-full aspect-[4/5]">
                       <Image
-                        src={card.image}
-                        alt={card.title}
+                        src={plan.picture && plan.picture.trim() ? plan.picture : DEFAULT_TAKAFUL_IMAGE}
+                        alt={plan.title}
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="(max-width: 768px) 100vw, 33vw"
@@ -593,8 +627,11 @@ export default function TakafulPage() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                        <h3 className="text-xl font-bold mb-2">{card.title}</h3>
-                        <p className="text-white/90 text-sm">{card.desc}</p>
+                        <h3 className="text-xl font-bold mb-2">{plan.title}</h3>
+                        <p className="text-white/90 text-sm line-clamp-2">{plan.description}</p>
+                        <p className="text-white/80 text-sm mt-2">
+                          {plan.monthlyContribution != null && `${Number(plan.monthlyContribution).toLocaleString('fr-FR')} F / mois`}
+                        </p>
                       </div>
                     </div>
                   </motion.div>

@@ -7,6 +7,8 @@ import { ArrowLeftRight } from 'lucide-react';
 interface ScoreWalletProps {
   totalScore?: number;
   rank?: string;
+  /** URL du badge du rang (ex. /badges/argent.png) */
+  rankBadge?: string;
   nextLevel?: string;
   progressToNextLevel?: number;
   pointsNeeded?: number;
@@ -16,6 +18,7 @@ interface ScoreWalletProps {
 export default function ScoreWallet({ 
   totalScore = 320,
   rank = 'Argent',
+  rankBadge,
   nextLevel = 'Platine',
   progressToNextLevel = 320,
   pointsNeeded = 180,
@@ -65,8 +68,8 @@ export default function ScoreWallet({
             <p className="text-[#00644D] text-lg font-bold">{rank}</p>
           </div>
           <img 
-            src="/icons/Group 1000003179.png" 
-            alt="Rang" 
+            src={rankBadge ?? '/icons/Group 1000003179.png'} 
+            alt={rank} 
             className="w-10 h-10 object-contain"
           />
         </div>

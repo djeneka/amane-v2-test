@@ -14,6 +14,8 @@ export interface Zakat {
   calculationDate: string;
   year: number;
   totalAmount: number;
+  /** Zakat due à la création (ne change pas) */
+  zakatDue?: number;
   remainingAmount: number;
   createdAt: string;
   updatedAt: string;
@@ -57,6 +59,10 @@ export interface CreateZakatBody {
   calculationDate: string;
   year: number;
   totalAmount: number;
+  /** Zakat due à la création (agriculture = 10%/5%/7,5%, reste = 2,5%) — ne change pas */
+  zakatDue: number;
+  /** Montant restant à payer — initialement = zakatDue, diminue à chaque paiement */
+  remainingAmount: number;
 }
 
 /** Corps de la requête POST /api/zakat-contributions (paiement zakat) */
