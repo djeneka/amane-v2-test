@@ -121,6 +121,16 @@ function onlyDigits(value: string): string {
   return value.replace(/[^0-9]/g, '');
 }
 
+/** Garde chiffres et un séparateur décimal (point ou virgule) pour les champs poids. */
+function onlyDigitsAndDecimal(value: string): string {
+  const normalized = value.replace(',', '.');
+  const parts = normalized.split('.');
+  if (parts.length > 2) return value;
+  const int = parts[0].replace(/[^0-9]/g, '');
+  const dec = parts[1] ? parts[1].replace(/[^0-9]/g, '').slice(0, 4) : '';
+  return dec ? `${int}.${dec}` : int;
+}
+
 export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessToken, onSuccess, onRequestAuth }: ZakatCalculatorModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -136,6 +146,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
   const [or24Poids, setOr24Poids] = useState('');
   const [or22Poids, setOr22Poids] = useState('');
   const [or18Poids, setOr18Poids] = useState('');
+  const [orUnitePoids, setOrUnitePoids] = useState<'g' | 'kg'>('g');
   const [argentMetalMode, setArgentMetalMode] = useState<'valeur' | 'poids'>('valeur');
   const [argentMetalPrix, setArgentMetalPrix] = useState('');
   const [argentMetalPoids, setArgentMetalPoids] = useState('');
@@ -220,6 +231,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
   }, [infoPopoverStep]);
 
   const DEFAULT_NISSAB_COUNTRY = "côte d'ivoire";
+  const DEFAULT_NISSAB_AMOUNT = 1065050;
 
   // Récupérer le nissab selon le pays : géolocalisation (avec demande d'autorisation si besoin) ou pays par défaut
   useEffect(() => {
@@ -230,9 +242,10 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
     const fetchNissabForCountry = async (country: string) => {
       try {
         const nissab = await getNissabByCountry(country);
-        if (!cancelled) setNissabAmount(nissab.amount);
+        const amount = nissab?.amount;
+        if (!cancelled) setNissabAmount(amount != null && amount > 0 ? amount : DEFAULT_NISSAB_AMOUNT);
       } catch {
-        if (!cancelled) setNissabAmount(0);
+        if (!cancelled) setNissabAmount(DEFAULT_NISSAB_AMOUNT);
       } finally {
         if (!cancelled) setNissabLoading(false);
       }
@@ -292,6 +305,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
       setOr24Poids('');
       setOr22Poids('');
       setOr18Poids('');
+      setOrUnitePoids('g');
       setArgentMetalMode('valeur');
       setArgentMetalPrix('');
       setArgentMetalPoids('');
@@ -354,8 +368,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
   };
 
   const handleSave = () => {
-    const totalAssets = calculateTotalAssets();
-    const zakatAmount = calculateZakat();
+    const { totalAmount, remainingAmount } = getConfirmationValues();
 
     if (accessToken) {
       setSubmitLoading(true);
@@ -364,7 +377,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
       createZakat(accessToken, {
         calculationDate,
         year: selectedYear,
-        totalAmount: Math.round(totalAssets),
+        totalAmount,
+        zakatDue: remainingAmount,
+        remainingAmount,
       })
         .then(() => {
           onSuccess?.();
@@ -384,7 +399,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
     const body: CreateZakatBody = {
       calculationDate: new Date(selectedYear, 0, 1).toISOString(),
       year: selectedYear,
-      totalAmount: Math.round(totalAssets),
+      totalAmount,
+      zakatDue: remainingAmount,
+      remainingAmount,
     };
     try {
       sessionStorage.setItem(PENDING_ZAKAT_STORAGE_KEY, JSON.stringify(body));
@@ -416,11 +433,14 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
       total += parseFloat(or22Valeur || '0') || 0;
       total += parseFloat(or18Valeur || '0') || 0;
     } else {
-      const prix = parseFloat(orPrixGramme || '0') || 0;
-      const p24 = parseFloat(or24Poids || '0') || 0;
-      const p22 = parseFloat(or22Poids || '0') || 0;
-      const p18 = parseFloat(or18Poids || '0') || 0;
-      total += prix * (p24 + p22 + p18);
+      const prixSaisi = parseFloat((orPrixGramme || '0').replace(',', '.')) || 0;
+      const prixParGramme = orUnitePoids === 'kg' ? prixSaisi / 1000 : prixSaisi;
+      const toGrammes = (s: string) => (parseFloat((s || '0').replace(',', '.')) || 0) * (orUnitePoids === 'kg' ? 1000 : 1);
+      const p24g = toGrammes(or24Poids);
+      const p22g = toGrammes(or22Poids);
+      const p18g = toGrammes(or18Poids);
+      const poidsPurTotal = p24g * (24 / 24) + p22g * (22 / 24) + p18g * (18 / 24);
+      total += prixParGramme * poidsPurTotal;
     }
     if (argentMetalMode === 'valeur') {
       total += parseFloat(argentMetalValeur || '0') || 0;
@@ -444,6 +464,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
     total += parseFloat(betailVache || '0') || 0;
     total += parseFloat(betailChameau || '0') || 0;
     total += parseFloat(betailMouton || '0') || 0;
+    // Agriculture : montants bruts inclus dans le total des biens (mais pas soumis au 2,5%)
     total += parseFloat(agricultureEauPluie || '0') || 0;
     total += parseFloat(agricultureIrrigation || '0') || 0;
     total += parseFloat(agricultureIrrigationPluie || '0') || 0;
@@ -463,14 +484,70 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
     return Math.max(0, total); // S'assurer que le total n'est pas négatif
   };
 
-  // Résultat Or en mode poids (pour affichage)
-  const orResultatPoids = orMode === 'poids' ? (parseFloat(orPrixGramme || '0') || 0) * ((parseFloat(or24Poids || '0') || 0) + (parseFloat(or22Poids || '0') || 0) + (parseFloat(or18Poids || '0') || 0)) : 0;
+  /** Total des biens SANS les champs agriculture (utilisé pour le calcul du 2,5%). */
+  const calculateTotalAssetsSansAgriculture = () => {
+    const total = calculateTotalAssets();
+    const agriculture =
+      parseFloat(agricultureEauPluie || '0') +
+      parseFloat(agricultureIrrigation || '0') +
+      parseFloat(agricultureIrrigationPluie || '0');
+    return Math.max(0, total - agriculture);
+  };
+
+  /** Zakat sur l'agriculture : 10% eau de pluie, 5% irrigation, 7,5% mixte (hors 2,5%). */
+  const calculateZakatAgriculture = () => {
+    const eauPluie = parseFloat(agricultureEauPluie || '0') || 0;
+    const irrigation = parseFloat(agricultureIrrigation || '0') || 0;
+    const mixte = parseFloat(agricultureIrrigationPluie || '0') || 0;
+    return eauPluie * 0.1 + irrigation * 0.05 + mixte * 0.075;
+  };
+
+  /** Somme des valeurs agriculture (base pour le cas "agriculture seule"). */
+  const calculateAgricultureTotal = () =>
+    parseFloat(agricultureEauPluie || '0') +
+    parseFloat(agricultureIrrigation || '0') +
+    parseFloat(agricultureIrrigationPluie || '0');
+
+  /** Cas spécial : total hors agriculture < nissab mais il y a de l'agriculture → seule la zakat agricole est enregistrable. */
+  const isAgricultureOnlyCase = () => {
+    const totalSansAgriculture = calculateTotalAssetsSansAgriculture();
+    const zakatAgriculture = calculateZakatAgriculture();
+    return !nissabLoading && totalSansAgriculture < nissabAmount && zakatAgriculture > 0;
+  };
+
+  // Conversion poids en grammes selon l'unité (g ou kg)
+  const orPoidsEnGrammes = (poidsStr: string) => {
+    const p = parseFloat((poidsStr || '0').replace(',', '.')) || 0;
+    return orUnitePoids === 'kg' ? p * 1000 : p;
+  };
+  // Poids pur = poids réel × (carat/24) — en grammes pour chaque carat
+  const orPoidsPur24 = orMode === 'poids' ? orPoidsEnGrammes(or24Poids) * (24 / 24) : 0;
+  const orPoidsPur22 = orMode === 'poids' ? orPoidsEnGrammes(or22Poids) * (22 / 24) : 0;
+  const orPoidsPur18 = orMode === 'poids' ? orPoidsEnGrammes(or18Poids) * (18 / 24) : 0;
+  const orPoidsPurTotal = orPoidsPur24 + orPoidsPur22 + orPoidsPur18;
+  // Résultat Or en mode poids : prix × poids pur (prix en XOF/g ou XOF/kg selon orUnitePoids)
+  const orPrixParGramme = orUnitePoids === 'kg' ? (parseFloat(orPrixGramme || '0') || 0) / 1000 : (parseFloat(orPrixGramme || '0') || 0);
+  const orResultatPoids = orMode === 'poids' ? orPrixParGramme * orPoidsPurTotal : 0;
   const argentMetalResultatPoids = argentMetalMode === 'poids' ? (parseFloat(argentMetalPrix || '0') || 0) * (parseFloat(argentMetalPoids || '0') || 0) : 0;
 
-  // Calculer la zakat (2,5% du montant total)
+  // Calculer la zakat : 2,5% sur tous les biens SAUF agriculture + agriculture (10%/5%/7,5%)
   const calculateZakat = () => {
+    const totalSansAgriculture = calculateTotalAssetsSansAgriculture();
+    const zakatStandard = totalSansAgriculture * 0.025;
+    const zakatAgriculture = calculateZakatAgriculture();
+    return zakatStandard + zakatAgriculture;
+  };
+
+  /** Valeurs de confirmation (step 6) = valeurs envoyées à l'API (montant total + zakat à payer) */
+  const getConfirmationValues = () => {
     const totalAssets = calculateTotalAssets();
-    return totalAssets * 0.025; // 2,5%
+    const zakatAgriculture = calculateZakatAgriculture();
+    const isAgricultureOnly = isAgricultureOnlyCase();
+    const zakatAmount = isAgricultureOnly ? zakatAgriculture : calculateZakat();
+    return {
+      totalAmount: Math.round(totalAssets),
+      remainingAmount: Math.round(zakatAmount),
+    };
   };
 
   const renderStepContent = () => {
@@ -504,6 +581,34 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
         >
           {label}
         </button>
+      );
+      const toggleUnitePoids = (unite: 'g' | 'kg') => (
+        <button
+          type="button"
+          onClick={() => setOrUnitePoids(unite)}
+          className={`w-auto shrink-0 py-2 px-4 rounded-2xl font-medium text-sm transition-all ${
+            orUnitePoids === unite ? 'bg-[#43B48F] text-[#101919]' : 'bg-[#101919] text-white border border-white/10'
+          }`}
+        >
+          {unite === 'g' ? 'g' : 'kg'}
+        </button>
+      );
+      const inputWrapPoids = (s: string, set: (v: string) => void, label: string, resultatXof: number) => (
+        <div className="space-y-1">
+          <label className="text-white/80 text-xs sm:text-sm">{label}</label>
+          <div className="relative">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={s}
+              onChange={(e) => set(onlyDigitsAndDecimal(e.target.value))}
+              className={inputBase}
+              placeholder="0"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5ab678] font-bold text-xs">{orUnitePoids}</span>
+          </div>
+          <p className="text-[#5ab678] text-xs">Résultat : {formatAmount(resultatXof)} XOF</p>
+        </div>
       );
 
       return (
@@ -677,7 +782,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                                 className={inputBase}
                                 placeholder="0"
                               />
-                              <span className="absolute right-10 top-1/2 -translate-y-1/2 text-[#5ab678] font-bold text-xs">XOF</span>
+                              <span className="absolute right-10 top-1/2 -translate-y-1/2 text-[#5ab678] font-bold text-xs">XOF/{orUnitePoids}</span>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -693,11 +798,15 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                               </button>
                             </div>
                           </div>
-                          <div className="w-12 text-white/60 text-base">g</div>
                         </div>
-                        {inputWrap(or24Poids, setOr24Poids, 'Or 24 Carats (g)')}
-                        {inputWrap(or22Poids, setOr22Poids, 'Or 22 Carats (g)')}
-                        {inputWrap(or18Poids, setOr18Poids, 'Or 18 Carats (g)')}
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-white/80 text-xs">Unité du poids</span>
+                          {toggleUnitePoids('g')}
+                          {toggleUnitePoids('kg')}
+                        </div>
+                        {inputWrapPoids(or24Poids, setOr24Poids, `Or 24 Carats (${orUnitePoids})`, orPoidsPur24 * orPrixParGramme)}
+                        {inputWrapPoids(or22Poids, setOr22Poids, `Or 22 Carats (${orUnitePoids})`, orPoidsPur22 * orPrixParGramme)}
+                        {inputWrapPoids(or18Poids, setOr18Poids, `Or 18 Carats (${orUnitePoids})`, orPoidsPur18 * orPrixParGramme)}
                         <div className="flex justify-between items-center pt-2">
                           <span className="text-white/80 text-sm">Résultat</span>
                           <span className="text-[#5ab678] font-bold">{formatAmount(orResultatPoids)} XOF</span>
@@ -1040,6 +1149,31 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           </div>
         </div>
       );
+      /** Champ agriculture avec résultat en bas : 10% eau de pluie, 5% irrigation, 7,5% mixte. */
+      const inputWrapStep3Agriculture = (s: string, set: (v: string) => void, label: string, taux: number) => {
+        const montant = parseFloat(s || '0') || 0;
+        const zakatChamp = montant * taux;
+        const tauxLabel = taux === 0.1 ? '10%' : taux === 0.05 ? '5%' : '7,5%';
+        return (
+          <div className="space-y-1">
+            <label className="text-white/80 text-xs sm:text-sm">{label}</label>
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={s}
+                onChange={(e) => set(onlyDigits(e.target.value))}
+                className={inputBase}
+                placeholder="0"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5ab678] font-bold text-xs">XOF</span>
+            </div>
+            <p className="text-[#5ab678] text-xs">
+              Zakat ({tauxLabel}) : {formatAmount(zakatChamp)} XOF
+            </p>
+          </div>
+        );
+      };
 
       return (
         <div className="space-y-4 sm:space-y-6">
@@ -1162,9 +1296,12 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-4">
-                    {inputWrapStep3(agricultureEauPluie, setAgricultureEauPluie, 'À l\'eau de pluie')}
-                    {inputWrapStep3(agricultureIrrigation, setAgricultureIrrigation, 'À l\'irrigation')}
-                    {inputWrapStep3(agricultureIrrigationPluie, setAgricultureIrrigationPluie, 'Irrigation & pluie')}
+                    <p className="text-white/60 text-xs mb-2">
+                      Les 2,5&nbsp;% ne s&apos;appliquent pas à ces champs. Taux selon le type d&apos;irrigation :
+                    </p>
+                    {inputWrapStep3Agriculture(agricultureEauPluie, setAgricultureEauPluie, 'À l\'eau de pluie', 0.1)}
+                    {inputWrapStep3Agriculture(agricultureIrrigation, setAgricultureIrrigation, 'À l\'irrigation', 0.05)}
+                    {inputWrapStep3Agriculture(agricultureIrrigationPluie, setAgricultureIrrigationPluie, 'Irrigation & pluie (mixte)', 0.075)}
                   </div>
                 </motion.div>
               )}
@@ -1478,10 +1615,12 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
       );
     }
 
-    // Step 6 - Confirmation (récap + Sauvegarder)
+    // Step 6 - Confirmation (récap + Sauvegarder) — valeurs identiques à celles envoyées
     if (currentStep === 6) {
-      const totalAssets = calculateTotalAssets();
-      const zakatAmount = calculateZakat();
+      const { totalAmount, remainingAmount } = getConfirmationValues();
+      const totalSansAgriculture = calculateTotalAssetsSansAgriculture();
+      const zakatAgriculture = calculateZakatAgriculture();
+      const isAgricultureOnly = isAgricultureOnlyCase();
 
       return (
         <div className="space-y-3 sm:space-y-4">
@@ -1490,7 +1629,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               {submitError}
             </p>
           )}
-          {/* Montant total des biens */}
+          {/* Montant total des biens (valeur envoyée en totalAmount) */}
           <div className="bg-[#101919] rounded-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
               <span className="text-white font-medium text-sm sm:text-lg">
@@ -1498,14 +1637,14 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               </span>
               <div className="text-left sm:text-right">
                 <span className="text-white font-bold text-base sm:text-lg">
-                  {formatAmount(totalAssets)}
+                  {formatAmount(totalAmount)}
                 </span>
                 <span className="text-white ml-2 text-sm sm:text-base">F CFA</span>
               </div>
             </div>
           </div>
 
-          {/* Zakat à payer */}
+          {/* Zakat à payer (valeur envoyée en remainingAmount) */}
           <div className="bg-[#101919] rounded-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
               <span className="text-white font-medium text-sm sm:text-lg">
@@ -1516,11 +1655,16 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="font-bold text-base sm:text-lg"
                   style={{ color: '#8DD17F' }}
                 >
-                  {formatAmount(zakatAmount)}
+                  {formatAmount(remainingAmount)}
                 </span>
                 <span className="text-white ml-2 text-sm sm:text-base">F CFA</span>
               </div>
             </div>
+            {zakatAgriculture > 0 && !isAgricultureOnly && (
+              <p className="text-white/60 text-xs mt-2">
+                Inclut la zakat agricole (10&nbsp;% / 5&nbsp;% / 7,5&nbsp;%), les 2,5&nbsp;% ne s&apos;appliquant pas aux champs agriculture.
+              </p>
+            )}
           </div>
 
           {/* Ligne Nissab (node-id=77672-20992) — la logique du montant sera accordée ultérieurement */}
@@ -1573,8 +1717,20 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
             </AnimatePresence>
           </div>
 
-          {/* Message si montant total < nissab : pas zakatable, proposer sadaqah */}
-          {!nissabLoading && totalAssets < nissabAmount && (
+          {/* Cas agriculture seule : total hors agriculture < nissab mais zakat agricole enregistrable */}
+          {isAgricultureOnly && (
+            <div className="rounded-xl p-4 sm:p-6 bg-[#43B48F]/10 border border-[#43B48F]/30 space-y-3">
+              <p className="text-[#8DD17F] text-sm sm:text-base">
+                Seule la zakat de votre agriculture est enregistrable, car vos autres biens ({formatAmount(totalSansAgriculture)} F CFA) sont en dessous du seuil nissab ({formatAmount(nissabAmount)} F CFA).
+              </p>
+              <p className="text-white/80 text-sm">
+                La zakat agricole ({formatAmount(remainingAmount)} F CFA) sera sauvegardée. Pour que les 2,5&nbsp;% s&apos;appliquent à vos autres biens, votre patrimoine hors agriculture doit dépasser le nissab.
+              </p>
+            </div>
+          )}
+
+          {/* Message si montant total < nissab et pas d'agriculture : pas zakatable, proposer sadaqah */}
+          {!nissabLoading && calculateTotalAssets() < nissabAmount && !isAgricultureOnly && (
             <div className="rounded-xl p-4 sm:p-6 bg-amber-500/10 border border-amber-500/30 space-y-3">
               <p className="text-amber-200 text-sm sm:text-base">
                 Le montant total de vos biens n&apos;est pas zakatable car il est inférieur au nissab.
@@ -1599,7 +1755,12 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
     );
   };
 
-  const isBelowNissab = currentStep === 6 && !nissabLoading && calculateTotalAssets() < nissabAmount;
+  // Bloquer la sauvegarde si total < nissab, SAUF cas agriculture seule (où la zakat agricole est enregistrable)
+  const isBelowNissab =
+    currentStep === 6 &&
+    !nissabLoading &&
+    calculateTotalAssets() < nissabAmount &&
+    !isAgricultureOnlyCase();
 
   return (
     <AnimatePresence>

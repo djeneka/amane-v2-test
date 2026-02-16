@@ -6,12 +6,16 @@ export interface RankRule {
   badge: string;
 }
 
-/** Rangs par palier de points (badges dans public/badges/) */
+/**
+ * Rangs par palier de points (badges dans public/badges/).
+ * Fer 0–4, Bronze 5–19, Argent 20–49, Or 50–99, Platine 100+
+ */
 export const RANK_RULES: RankRule[] = [
-  { id: 'argent', label: 'Argent', minPoints: 0, badge: '/badges/argent.png' },
-  { id: 'platine', label: 'Platine', minPoints: 501, badge: '/badges/platine.png' },
-  { id: 'emeraude', label: 'Émeraude', minPoints: 1500, badge: '/badges/emeraude.png' },
-  { id: 'gold', label: 'Gold', minPoints: 2001, badge: '/badges/gold.png' },
+  { id: 'fer', label: 'Fer', minPoints: 0, badge: '/badges/fer.png' },
+  { id: 'bronze', label: 'Bronze', minPoints: 5, badge: '/badges/bronze.png' },
+  { id: 'argent', label: 'Argent', minPoints: 20, badge: '/badges/argent.png' },
+  { id: 'gold', label: 'Or', minPoints: 50, badge: '/badges/or.png' },
+  { id: 'platine', label: 'Platine', minPoints: 100, badge: '/badges/platinum.png' },
 ];
 
 /**

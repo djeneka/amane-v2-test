@@ -223,7 +223,7 @@ export const takafulProducts: TakafulProduct[] = [
   {
     id: '1',
     name: 'Takaful Santé Premium',
-    description: 'Couverture santé complète pour toute la famille',
+    description: 'Produits takaful santé bientôt disponible...',
     monthlyPremium: 45,
     coverage: 'Jusqu\'à 50,000XOF par an',
     features: ['Consultations illimitées', 'Hospitalisation', 'Médicaments', 'Chirurgie'],
@@ -233,7 +233,7 @@ export const takafulProducts: TakafulProduct[] = [
   {
     id: '2',
     name: 'Takaful Automobile',
-    description: 'Protection complète pour votre véhicule',
+    description: 'Produits takaful bientôt disponible...',
     monthlyPremium: 35,
     coverage: 'Valeur du véhicule',
     features: ['Accidents', 'Vol', 'Incendie', 'Assistance routière'],
@@ -243,10 +243,10 @@ export const takafulProducts: TakafulProduct[] = [
   {
     id: '3',
     name: 'Takaful Habitation',
-    description: 'Sécurisez votre logement',
+    description: 'Produits takaful bientôt disponible...',
     monthlyPremium: 25,
-    coverage: 'Valeur du bien',
-    features: ['Incendie', 'Vol', 'Dégâts des eaux', 'Responsabilité civile'],
+    coverage: 'Produits takaful habitation bientôt disponible.',
+    features: ['Produits takaful habitation bientôt disponible.'],
     category: 'habitation',
     image: '/images/img.png'
   }

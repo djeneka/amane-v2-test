@@ -10,6 +10,8 @@ export interface AuthWallet {
 /** Score utilisateur (réponse API) */
 export interface AuthScore {
   score: number;
+  category?: string;
+  anonymous?: boolean;
 }
 
 /** Utilisateur tel que renvoyé par l'API auth */
@@ -43,6 +45,20 @@ const LOGIN_URL = '/api/auth/login';
 const REGISTER_URL = '/api/auth/register';
 const FORGOT_PASSWORD_URL = '/api/auth/forgot-password';
 
+/** Genre pour l'inscription */
+export type RegisterGender = 'MALE' | 'FEMALE';
+
+/** Catégorie sociale (tranche de revenus mensuels) */
+export interface RegisterSocialCategory {
+  monthlyMinIncome: number;
+  monthlyMaxIncome: number;
+}
+
+/** Portefeuille (code PIN / mot de passe portefeuille) */
+export interface RegisterWallet {
+  code: string;
+}
+
 /** Corps de requête : inscription */
 export interface RegisterBody {
   email: string;
@@ -50,6 +66,10 @@ export interface RegisterBody {
   name: string;
   phoneNumber: string;
   profilePicture: string;
+  gender: RegisterGender;
+  interests: string[];
+  socialCategory: RegisterSocialCategory;
+  wallet: RegisterWallet;
 }
 
 /** Réponse POST /api/auth/register */
@@ -60,7 +80,7 @@ export interface RegisterResponse {
 /**
  * Inscription d'un nouvel utilisateur.
  * POST /api/auth/register
- * @param body - email, password, name, phoneNumber, profilePicture
+ * @param body - email, password, name, phoneNumber, profilePicture, gender, interests, socialCategory, wallet
  * @returns message indiquant qu'un code de vérification a été envoyé
  */
 export async function register(body: RegisterBody): Promise<RegisterResponse> {

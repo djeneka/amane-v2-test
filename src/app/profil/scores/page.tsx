@@ -249,6 +249,7 @@ export default function ScoresPage() {
           <ScoreWallet
             totalScore={sadaqahScore}
             rank={rankInfo.label}
+            rankBadge={rankInfo.badge}
             nextLevel={nextRank?.label ?? rankInfo.label}
             progressToNextLevel={sadaqahScore}
             pointsNeeded={pointsToNextLevel}

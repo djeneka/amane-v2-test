@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Eye, EyeOff, Mail, Lock, User, Phone, Calendar, ArrowRight, Shield, CheckCircle, Heart, Users, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Eye, EyeOff, Mail, Lock, User, Phone, Calendar, ArrowRight, Shield, CheckCircle, Heart, Users, CheckCircle2, Wallet, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { register as apiRegister, verifyAccount, resendOtp } from "@/services/auth";
+import { register as apiRegister, verifyAccount, resendOtp, type RegisterGender } from "@/services/auth";
 import AuthGuard from "@/components/AuthGuard";
 
 export default function InscriptionPage() {
@@ -16,6 +16,11 @@ export default function InscriptionPage() {
     email: "",
     phone: "",
     birthDate: "",
+    gender: "" as RegisterGender | "",
+    interests: [] as string[],
+    monthlyMinIncome: "",
+    monthlyMaxIncome: "",
+    walletCode: "",
     password: "",
     confirmPassword: "",
   });
@@ -23,6 +28,7 @@ export default function InscriptionPage() {
   const [phoneCountryCode, setPhoneCountryCode] = useState("+225");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showWalletCode, setShowWalletCode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -34,9 +40,40 @@ export default function InscriptionPage() {
   const [isResending, setIsResending] = useState(false);
   const [verificationError, setVerificationError] = useState('');
   const [resendSuccess, setResendSuccess] = useState(false);
+  /** Si l'utilisateur a des centres d'intérêt (affiche la liste des choix) */
+  const [hasInterests, setHasInterests] = useState(false);
+  /** Étape du formulaire d'inscription (1 = infos + centres d'intérêt, 2 = revenus + sécurité) */
+  const [formStep, setFormStep] = useState<1 | 2>(1);
 
-  /** Le bouton "Créer mon compte" est actif seulement si tous les champs sont renseignés et les conditions cochées */
-  const isFormComplete =
+  /** Tranches de revenus prédéfinies pour encourager l'estimation (min, max en XOF) */
+  const INCOME_PRESETS = [
+    { label: "50k - 150k", min: 50000, max: 150000 },
+    { label: "150k - 300k", min: 150000, max: 300000 },
+    { label: "300k - 600k", min: 300000, max: 600000 },
+    { label: "600k - 1M", min: 600000, max: 1000000 },
+    { label: "1M+", min: 1000000, max: 5000000 },
+  ] as const;
+
+  /** Options pour les centres d'intérêt (valeurs envoyées à l'API) */
+  const INTERESTS_OPTIONS = [
+    { value: "DONATION", label: "Don / Sadaqah" },
+    { value: "ZAKAT", label: "Zakat" },
+    { value: "BENEVOLAT", label: "Bénévolat / volontariat" },
+    { value: "ORPHELINS", label: "Orphelins" },
+    { value: "EDUCATION", label: "Éducation, écoles coraniques" },
+    { value: "SANTE", label: "Santé, hôpitaux" },
+    { value: "EAU_POTABLE", label: "Eau potable, puits" },
+    { value: "PAUVRETE", label: "Lutte contre la pauvreté" },
+    { value: "SECOURS_URGENCE", label: "Secours d'urgence, catastrophes" },
+    { value: "MOSQUEES", label: "Mosquées, lieux de culte" },
+    { value: "RAMADAN", label: "Actions Ramadan, iftar" },
+    { value: "AIDES_FAMILLES", label: "Aide aux familles, veuves" },
+    { value: "ENVIRONNEMENT", label: "Environnement (en lien avec la foi)" },
+    { value: "CULTURE_ISLAMIQUE", label: "Culture islamique" },
+  ] as const;
+
+  /** Étape 1 complète (infos personnelles + centres d'intérêt) — permet d'afficher "Suivant" */
+  const isStep1Complete =
     !!formData.firstName.trim() &&
     !!formData.lastName.trim() &&
     !!formData.email.trim() &&
@@ -44,6 +81,15 @@ export default function InscriptionPage() {
     !!formData.phone.trim() &&
     formData.phone.replace(/\D/g, "").length >= 8 &&
     !!formData.birthDate &&
+    (formData.gender === "MALE" || formData.gender === "FEMALE") &&
+    (!hasInterests || formData.interests.length > 0);
+
+  /** Le bouton "Créer mon compte" est actif seulement si tous les champs sont renseignés et les conditions cochées */
+  const isFormComplete =
+    isStep1Complete &&
+    !!formData.monthlyMinIncome.trim() &&
+    !!formData.monthlyMaxIncome.trim() &&
+    formData.walletCode.replace(/\D/g, "").length === 4 &&
     formData.password.length >= 8 &&
     formData.password === formData.confirmPassword &&
     !!formData.confirmPassword &&
@@ -58,10 +104,38 @@ export default function InscriptionPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: "" }));
+  };
+
+  const handleInterestToggle = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      interests: prev.interests.includes(value)
+        ? prev.interests.filter((i) => i !== value)
+        : [...prev.interests, value],
+    }));
+    if (errors.interests) setErrors(prev => ({ ...prev, interests: "" }));
+  };
+
+  const handleHasInterestsChange = (checked: boolean) => {
+    setHasInterests(checked);
+    if (!checked) setFormData(prev => ({ ...prev, interests: [] }));
+    if (errors.interests) setErrors(prev => ({ ...prev, interests: "" }));
+  };
+
+  const setIncomePreset = (min: number, max: number) => {
+    setFormData(prev => ({
+      ...prev,
+      monthlyMinIncome: String(min),
+      monthlyMaxIncome: String(max),
+    }));
+    setErrors(prev => ({ ...prev, monthlyMinIncome: "", monthlyMaxIncome: "" }));
+  };
+
+  const formatXof = (value: string) => {
+    const n = value.replace(/\D/g, "");
+    if (!n) return "";
+    return parseInt(n, 10).toLocaleString("fr-FR");
   };
 
   const validateForm = () => {
@@ -90,6 +164,30 @@ export default function InscriptionPage() {
 
     if (!formData.birthDate) {
       newErrors.birthDate = "La date de naissance est requise";
+    }
+
+    if (formData.gender !== "MALE" && formData.gender !== "FEMALE") {
+      newErrors.gender = "Veuillez sélectionner votre genre";
+    }
+
+    if (hasInterests && formData.interests.length === 0) {
+      newErrors.interests = "Veuillez sélectionner au moins un centre d'intérêt";
+    }
+
+    const minIncome = parseInt(formData.monthlyMinIncome.replace(/\D/g, ""), 10) || 0;
+    const maxIncome = parseInt(formData.monthlyMaxIncome.replace(/\D/g, ""), 10) || 0;
+    if (!formData.monthlyMinIncome.trim()) {
+      newErrors.monthlyMinIncome = "Revenu minimum requis";
+    }
+    if (!formData.monthlyMaxIncome.trim()) {
+      newErrors.monthlyMaxIncome = "Revenu maximum requis";
+    } else if (maxIncome < minIncome) {
+      newErrors.monthlyMaxIncome = "Le revenu max doit être supérieur au min";
+    }
+
+    const walletDigits = formData.walletCode.replace(/\D/g, "");
+    if (walletDigits.length !== 4) {
+      newErrors.walletCode = "Le code portefeuille doit contenir exactement 4 chiffres";
     }
 
     if (!formData.password) {
@@ -121,12 +219,23 @@ export default function InscriptionPage() {
     setErrors((prev) => ({ ...prev, general: '' }));
 
     try {
+      const minIncome = parseInt(formData.monthlyMinIncome.replace(/\D/g, ""), 10) || 0;
+      const maxIncome = parseInt(formData.monthlyMaxIncome.replace(/\D/g, ""), 10) || 0;
       await apiRegister({
         email: formData.email.trim(),
         password: formData.password,
         name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
         phoneNumber: toInternationalPhone(formData.phone.trim()),
-        profilePicture: '',
+        profilePicture: "",
+        gender: formData.gender as RegisterGender,
+        interests: formData.interests,
+        socialCategory: {
+          monthlyMinIncome: minIncome,
+          monthlyMaxIncome: maxIncome,
+        },
+        wallet: {
+          code: formData.walletCode.replace(/\D/g, ""),
+        },
       });
 
       // Stocker temporairement les données pour l'étape de vérification (et après succès)
@@ -420,7 +529,34 @@ export default function InscriptionPage() {
                       </motion.div>
                     </div>
 
+                    {/* Stepper : 2 étapes */}
+                    <div className="flex items-center justify-center gap-2 mb-6">
+                      <div className="flex items-center gap-2">
+                        <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+                          formStep >= 1 ? "bg-[#5AB678] text-white" : "bg-white/20 text-white/70"
+                        }`}>1</span>
+                        <span className="text-white/80 text-sm hidden sm:inline">Infos & centres d&apos;intérêt</span>
+                      </div>
+                      <div className="w-8 h-0.5 bg-white/30" />
+                      <div className="flex items-center gap-2">
+                        <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+                          formStep >= 2 ? "bg-[#5AB678] text-white" : "bg-white/20 text-white/70"
+                        }`}>2</span>
+                        <span className="text-white/80 text-sm hidden sm:inline">Revenus & sécurité</span>
+                      </div>
+                    </div>
+
                 <form onSubmit={handleSubmit} className="space-y-5">
+                  <AnimatePresence mode="wait">
+                    {formStep === 1 && (
+                      <motion.div
+                        key="step1"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ duration: 0.25 }}
+                        className="space-y-5"
+                      >
               <div className="grid md:grid-cols-2 gap-4">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -481,7 +617,7 @@ export default function InscriptionPage() {
                     className={`w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.email ? "ring-2 ring-red-500" : ""
                     }`}
-                    placeholder="Votre Email / Numéro de téléphone"
+                    placeholder="Votre Email"
                   />
                 </div>
                 {errors.email && (
@@ -557,18 +693,277 @@ export default function InscriptionPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.72 }}
+              >
+                <label className="block text-sm font-medium text-white/90 mb-2">Genre</label>
+                <select
+                  value={formData.gender}
+                  onChange={(e) => handleInputChange("gender", e.target.value as RegisterGender | "")}
+                  aria-label="Genre"
+                  className={`w-full pl-4 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 ${
+                    errors.gender ? "ring-2 ring-red-500" : ""
+                  }`}
+                >
+                  <option value="">Sélectionnez</option>
+                  <option value="MALE">Homme</option>
+                  <option value="FEMALE">Femme</option>
+                </select>
+                {errors.gender && (
+                  <p className="text-red-300 text-sm mt-1">{errors.gender}</p>
+                )}
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.74 }}
+                className="rounded-2xl border border-white/20 bg-white/5 backdrop-blur-sm overflow-hidden"
+              >
+                <label className="flex items-center gap-4 p-4 cursor-pointer hover:bg-white/5 transition-colors rounded-2xl">
+                  <input
+                    type="checkbox"
+                    checked={hasInterests}
+                    onChange={(e) => handleHasInterestsChange(e.target.checked)}
+                    className="w-5 h-5 rounded border-2 border-white/40 text-[#5AB678] focus:ring-[#5AB678]/50 focus:ring-2 bg-white/10"
+                  />
+                  <span className="text-white font-medium">Avez-vous des centres d&apos;intérêts ?</span>
+                </label>
+                {hasInterests && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="border-t border-white/10 px-4 pb-4 pt-2"
+                  >
+                    <p className="text-white/70 text-sm mb-3">Sélectionnez un ou plusieurs centres d&apos;intérêt :</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+                      {INTERESTS_OPTIONS.map((opt) => {
+                        const isChecked = formData.interests.includes(opt.value);
+                        return (
+                          <label
+                            key={opt.value}
+                            className={`flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer transition-all duration-200 border ${
+                              isChecked
+                                ? "bg-[#5AB678]/20 border-[#5AB678] text-white"
+                                : "bg-white/5 border-white/10 text-white/90 hover:bg-white/10 hover:border-white/20"
+                            }`}
+                          >
+                            <span className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                              isChecked ? "border-[#5AB678] bg-[#5AB678]" : "border-white/40"
+                            }`}>
+                              {isChecked && (
+                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleInterestToggle(opt.value)}
+                              className="sr-only"
+                            />
+                            <span className="text-sm font-medium">{opt.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {formData.interests.length > 0 && (
+                      <p className="text-[#5AB678] text-xs mt-2">
+                        {formData.interests.length} centre{formData.interests.length > 1 ? "s" : ""} sélectionné{formData.interests.length > 1 ? "s" : ""}
+                      </p>
+                    )}
+                    {errors.interests && (
+                      <p className="text-red-300 text-sm mt-2">{errors.interests}</p>
+                    )}
+                  </motion.div>
+                )}
+              </motion.div>
+
+                        <button
+                          type="button"
+                          onClick={() => setFormStep(2)}
+                          disabled={!isStep1Complete}
+                          className="w-full text-white py-4 px-6 rounded-2xl font-medium hover:opacity-90 focus:ring-4 focus:ring-white/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                          style={{ background: 'linear-gradient(to right, #8FC99E, #20B6B3)' }}
+                        >
+                          Suivant
+                          <ArrowRight className="ml-2 w-4 h-4" />
+                        </button>
+                      </motion.div>
+                    )}
+
+                    {formStep === 2 && (
+                      <motion.div
+                        key="step2"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.25 }}
+                        className="space-y-5"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setFormStep(1)}
+                          className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-medium transition-colors"
+                        >
+                          <ArrowRight className="w-4 h-4 rotate-180" />
+                          Précédent
+                        </button>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.76 }}
+                className="rounded-2xl border border-white/20 bg-white/5 backdrop-blur-sm overflow-hidden"
+              >
+                <div className="p-4 pb-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#5AB678]/20 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-[#5AB678]" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold">Revenus mensuels</h3>
+                      <p className="text-white/70 text-sm mt-0.5">
+                        Une estimation suffit — elle nous aide à personnaliser votre expérience sur Amane.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-4 pb-4 space-y-4">
+                  <div>
+                    <p className="text-white/80 text-xs font-medium mb-2">Choisissez une fourchette ou estimez la vôtre :</p>
+                    <div className="flex flex-wrap gap-2">
+                      {INCOME_PRESETS.map((preset) => {
+                        const isSelected =
+                          formData.monthlyMinIncome === String(preset.min) &&
+                          formData.monthlyMaxIncome === String(preset.max);
+                        return (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => setIncomePreset(preset.min, preset.max)}
+                            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                              isSelected
+                                ? "bg-[#5AB678] text-white shadow-lg shadow-[#5AB678]/25"
+                                : "bg-white/10 text-white/90 border border-white/20 hover:bg-white/15 hover:border-white/30"
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/60 text-sm">
+                    <span>Ou précisez :</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-white/70 text-xs mb-1.5">Minimum (XOF)</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formData.monthlyMinIncome}
+                        onChange={(e) => handleInputChange("monthlyMinIncome", e.target.value.replace(/\D/g, ""))}
+                        placeholder="Ex. 100 000"
+                        className={`w-full pl-3 pr-3 py-3 rounded-xl bg-white/90 text-gray-900 placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#5AB678]/50 focus:outline-none border ${
+                          errors.monthlyMinIncome ? "border-red-400" : "border-transparent"
+                        }`}
+                      />
+                      {formData.monthlyMinIncome && (
+                        <p className="text-[#5AB678] text-xs mt-1">{formatXof(formData.monthlyMinIncome)} XOF</p>
+                      )}
+                      {errors.monthlyMinIncome && (
+                        <p className="text-red-300 text-xs mt-1">{errors.monthlyMinIncome}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-white/70 text-xs mb-1.5">Maximum (XOF)</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formData.monthlyMaxIncome}
+                        onChange={(e) => handleInputChange("monthlyMaxIncome", e.target.value.replace(/\D/g, ""))}
+                        placeholder="Ex. 300 000"
+                        className={`w-full pl-3 pr-3 py-3 rounded-xl bg-white/90 text-gray-900 placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#5AB678]/50 focus:outline-none border ${
+                          errors.monthlyMaxIncome ? "border-red-400" : "border-transparent"
+                        }`}
+                      />
+                      {formData.monthlyMaxIncome && (
+                        <p className="text-[#5AB678] text-xs mt-1">{formatXof(formData.monthlyMaxIncome)} XOF</p>
+                      )}
+                      {errors.monthlyMaxIncome && (
+                        <p className="text-red-300 text-xs mt-1">{errors.monthlyMaxIncome}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Bloc dédié : code de sécurité pour les transactions (distinct du mot de passe) */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.78 }}
+                className="rounded-2xl border border-white/20 bg-white/5 backdrop-blur-sm p-4"
+              >
+                <label className="block text-sm font-medium text-white/90 mb-1">Code portefeuille</label>
+                <p className="text-white/80 text-xs mb-3">
+                  Ce code (4 chiffres) servira à confirmer vos transactions sur Amane. Il est distinct de votre mot de passe de connexion.
+                </p>
+                <div className="relative">
+                  <Wallet className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
+                  <input
+                    type={showWalletCode ? "text" : "password"}
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={formData.walletCode}
+                    onChange={(e) => handleInputChange("walletCode", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    className={`w-full pl-12 pr-12 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
+                      errors.walletCode ? "ring-2 ring-red-500" : ""
+                    }`}
+                    placeholder="4 chiffres"
+                    aria-label="Code portefeuille (4 chiffres)"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowWalletCode(!showWalletCode)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    aria-label={showWalletCode ? "Masquer le code" : "Afficher le code"}
+                  >
+                    {showWalletCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {errors.walletCode && (
+                  <p className="text-red-300 text-sm mt-1">{errors.walletCode}</p>
+                )}
+              </motion.div>
+
+              {/* Séparateur visuel : mot de passe de connexion */}
+              <div className="border-t border-white/20 pt-2 mt-1">
+                <p className="text-white/70 text-sm font-medium mb-3">Mot de passe de connexion</p>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
               >
+                <label htmlFor="inscription-password" className="block text-sm font-medium text-white/90 mb-2">Mot de passe</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                   <input
+                    id="inscription-password"
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
                     className={`w-full pl-12 pr-12 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.password ? "ring-2 ring-red-500" : ""
                     }`}
-                    placeholder="Mot de passe"
+                    placeholder="Minimum 8 caractères"
+                    aria-label="Mot de passe"
                   />
                   <button
                     type="button"
@@ -589,16 +984,19 @@ export default function InscriptionPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9 }}
               >
+                <label htmlFor="inscription-confirm-password" className="block text-sm font-medium text-white/90 mb-2">Confirmer le mot de passe</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                   <input
+                    id="inscription-confirm-password"
                     type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                     className={`w-full pl-12 pr-12 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.confirmPassword ? "ring-2 ring-red-500" : ""
                     }`}
-                    placeholder="Confirmer le mot de passe"
+                    placeholder="Resaisir le mot de passe"
+                    aria-label="Confirmer le mot de passe"
                   />
                   <button
                     type="button"
@@ -679,6 +1077,9 @@ export default function InscriptionPage() {
                   </>
                 )}
               </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
             </form>
 
             {/* Section "Ou s'inscrire avec" et boutons Google / Facebook — à réactiver plus tard */}
@@ -804,6 +1205,7 @@ export default function InscriptionPage() {
                           value={digit}
                           onChange={(e) => handleCodeChange(index, e.target.value)}
                           onKeyDown={(e) => handleCodeKeyDown(index, e)}
+                          aria-label={`Chiffre ${index + 1} du code`}
                           className="w-14 h-14 bg-transparent border border-white/30 rounded-xl text-center text-white text-2xl font-semibold focus:border-[#5AB678] focus:ring-2 focus:ring-[#5AB678]/50 transition-all"
                         />
                       ))}

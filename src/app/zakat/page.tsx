@@ -159,6 +159,8 @@ export default function ZakatPage() {
     try {
       body = JSON.parse(raw) as CreateZakatBody;
       if (typeof body?.year !== 'number' || typeof body?.totalAmount !== 'number' || !body?.calculationDate) return;
+      if (typeof body?.remainingAmount !== 'number') return;
+      if (typeof body?.zakatDue !== 'number') body.zakatDue = body.remainingAmount;
     } catch {
       return;
     }
@@ -380,7 +382,7 @@ export default function ZakatPage() {
                 </h2>
                 <div className="space-y-4">
                   {myZakats.map((zakat) => {
-                    const zakatDue = zakat.totalAmount * 0.025;
+                    const zakatDue = zakat.zakatDue;
                     const isExpanded = expandedZakatIds.has(zakat.id);
                     return (
                       <motion.div

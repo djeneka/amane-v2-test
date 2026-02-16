@@ -108,6 +108,16 @@ export default function Navigation() {
     return 'Utilisateur';
   };
 
+  const getInitials = () => {
+    const name = (user?.name || '').trim();
+    if (!name) return '?';
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
   return (
     <>
       <nav className={`shadow-sm border-b sticky top-0 z-50 ${
@@ -372,11 +382,20 @@ export default function Navigation() {
                     className="flex items-center space-x-2 transition-colors duration-200"
                   >
                     <div className="relative">
-                      <img
-                        src={user?.profilePicture || '/images/Ellipse 21(1).png'}
-                        alt={user?.name || 'Profil'}
-                        className="w-10 h-10 rounded-full border-2 border-[#5CD07D] object-cover"
-                      />
+                      {user?.profilePicture ? (
+                        <img
+                          src={user.profilePicture}
+                          alt={user?.name || 'Profil'}
+                          className="w-10 h-10 rounded-full border-2 border-[#5CD07D] object-cover"
+                        />
+                      ) : (
+                        <span
+                          className="w-10 h-10 rounded-full border-2 border-[#5CD07D] bg-[#5AB678] flex items-center justify-center text-white font-semibold text-sm"
+                          aria-label={user?.name || 'Profil'}
+                        >
+                          {getInitials()}
+                        </span>
+                      )}
                     </div>
                     <div className="text-left hidden lg:block">
                       <p className="text-sm font-bold text-white">
@@ -799,11 +818,17 @@ export default function Navigation() {
                   </motion.div>
 
                   <div className="flex items-center space-x-2 p-3 mb-4">
-                    <img
-                      src={user?.profilePicture || '/images/Ellipse 21(1).png'}
-                      alt={user?.name || 'Profil'}
-                      className="w-10 h-10 rounded-full border-2 border-[#5CD07D] object-cover"
-                    />
+                    {user?.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        alt={user?.name || 'Profil'}
+                        className="w-10 h-10 rounded-full border-2 border-[#5CD07D] object-cover"
+                      />
+                    ) : (
+                      <span className="w-10 h-10 rounded-full border-2 border-[#5CD07D] bg-[#5AB678] flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                        {getInitials()}
+                      </span>
+                    )}
                     <div className="flex-1">
                       <p className="text-sm font-medium text-white">
                         Salam, {getUserFirstName()}
