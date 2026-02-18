@@ -7,8 +7,12 @@ import Link from 'next/link';
 export default function TermesConditionsPage() {
   return (
     <div className="min-h-screen bg-[#0B302F]">
-      <section className="relative bg-gradient-to-br from-green-800 via-green-700 to-green-600 text-white overflow-hidden py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section
+        className="relative text-white overflow-hidden py-20 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: 'url(/images/contact/terme.png)' }}
+      >
+        <div className="absolute inset-0 bg-[#0B302F]/80" aria-hidden />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, Heart, Users, Target, Calendar, MapPin, 
   TrendingUp, Star, Eye, Share2, Bookmark, Globe, Zap,
-  ChevronDown, ChevronUp, ArrowRight, Play, Pause, Apple
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ArrowRight, Play, Pause, Apple
 } from 'lucide-react';
 import Link from 'next/link';
 import CampaignCard from '@/components/CampaignCard';
@@ -46,6 +46,12 @@ export default function CampagnesPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   /** Nombre de donateurs par campaignId (API statistics) */
   const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
+  /** Index du slide pour Programmes en vedette (quand > 3 éléments) */
+  const [featuredSlideIndex, setFeaturedSlideIndex] = useState(0);
+  /** Programmes ponctuels (duration = PONCTUAL), chargés via getActiveCampaigns avec filtre */
+  const [ponctualCampaigns, setPonctualCampaigns] = useState<Campaign[]>([]);
+  /** Index du slide pour Programmes ponctuels */
+  const [ponctualSlideIndex, setPonctualSlideIndex] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +61,14 @@ export default function CampagnesPage() {
       .then((list) => { if (!cancelled) setCampaigns(list); })
       .catch((err) => { if (!cancelled) setError(err?.message ?? 'Erreur chargement des campagnes'); })
       .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getActiveCampaigns({ duration: 'PONCTUAL' })
+      .then((list) => { if (!cancelled) setPonctualCampaigns(list); })
+      .catch(() => { if (!cancelled) setPonctualCampaigns([]); });
     return () => { cancelled = true; };
   }, []);
 
@@ -82,8 +96,22 @@ export default function CampagnesPage() {
     { id: 'sante', name: 'Santé', icon: Heart, color: 'bg-green-600' },
     { id: 'developpement', name: 'Développement', icon: TrendingUp, color: 'bg-green-700' },
     { id: 'refugies', name: 'Réfugiés', icon: Users, color: 'bg-orange-500' },
+    { id: 'special-ramadan', name: 'Spécial Ramadan', iconSrc: '/icons/moon-w.png', color: 'bg-amber-600' },
+    { id: 'special-tabaski', name: 'Spécial Tabaski', iconSrc: '/icons/moon-w.png', color: 'bg-amber-600' },
     { id: 'autres', name: 'Autre', icon: Star, color: 'bg-gray-500' },
   ];
+
+  const categoryLabels: Record<string, string> = {
+    urgence: 'Urgence', education: 'Éducation', sante: 'Santé',
+    developpement: 'Développement', refugies: 'Réfugiés',
+    'special-ramadan': 'Spécial Ramadan', 'special-tabaski': 'Spécial Tabaski',
+    autres: 'Autre',
+  };
+
+  const typeLabels: Record<string, string> = {
+    ZAKAT: 'Zakat',
+    SADAQAH: 'Sadaqah',
+  };
 
   const sortOptions = [
     { id: 'recent', name: 'Plus récentes' },
@@ -140,6 +168,11 @@ export default function CampagnesPage() {
     return Math.min(100, (current / target) * 100);
   };
 
+  const featuredCampaigns = campaigns.filter((c) => c.featured);
+  const featuredSlideMax = Math.max(0, Math.ceil(featuredCampaigns.length / 3) - 1);
+  const effectiveFeaturedSlideIndex = Math.min(featuredSlideIndex, featuredSlideMax);
+  const ponctualSlideMax = Math.max(0, Math.ceil(ponctualCampaigns.length / 3) - 1);
+  const effectivePonctualSlideIndex = Math.min(ponctualSlideIndex, ponctualSlideMax);
   const totalDonors = campaigns.reduce((sum, c) => sum + (donorCountByCampaignId[c.id] ?? 0), 0);
   const statsCards = [
     { icon: '/icons/volume-high.png', value: campaigns.length, label: 'Campagnes actives', rotateDirection: 1, cardRotate: 5 },
@@ -423,7 +456,11 @@ export default function CampagnesPage() {
                     {selectedCategory === category.id && (
                       <div className="w-2 h-2 bg-white rounded-full"></div>
                     )}
-                    <category.icon size={16} className={selectedCategory === category.id ? 'text-white' : 'text-[#00644D]'} />
+                    {'iconSrc' in category && category.iconSrc ? (
+                      <Image src={category.iconSrc} alt="" width={16} height={16} className="object-contain" />
+                    ) : (
+                      'icon' in category && category.icon && <category.icon size={16} className={selectedCategory === category.id ? 'text-white' : 'text-[#00644D]'} />
+                    )}
                     <span>{category.name === 'Toutes' ? 'Tout' : category.name}</span>
                   </motion.button>
                 ))}
@@ -469,6 +506,329 @@ export default function CampagnesPage() {
           </div>
         </motion.div>
 
+        {/* Section Programmes en vedette (featured) */}
+        {featuredCampaigns.length > 0 && (
+          <section className="mb-12">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <h2 className="text-xl lg:text-2xl font-bold text-white text-left">
+                Programmes en vedette
+              </h2>
+              <Link
+                href="#programmes"
+                className="text-[#5AB678] hover:text-[#5AB678]/80 font-semibold inline-flex items-center gap-1"
+              >
+                Voir plus
+                <ArrowRight size={18} className="inline" />
+              </Link>
+            </div>
+
+            {featuredCampaigns.length <= 3 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuredCampaigns.map((campaign, index) => {
+                  const categoryConfig = categories.find((c) => c.id === campaign.category);
+                  return (
+                    <motion.div
+                      key={campaign.id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: index * 0.08 }}
+                    >
+                      <Link href={`/campagnes/${campaign.id}`}>
+                        <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
+                          <img
+                            src={campaign.image || '/images/no-picture.png'}
+                            alt={campaign.title}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                          <div className="absolute inset-0 flex flex-col justify-end p-5">
+                            <div className="absolute top-4 left-4">
+                              <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
+                                {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                                  <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                                ) : (categoryConfig && 'icon' in categoryConfig && categoryConfig.icon) ? (
+                                  <categoryConfig.icon size={14} className="text-white" />
+                                ) : (
+                                  <Star size={14} className="text-white" />
+                                )}
+                                {categoryLabels[campaign.category] ?? campaign.category}
+                              </span>
+                            </div>
+                            <div className="relative">
+                              <h3 className="text-xl font-bold text-white leading-tight">
+                                {campaign.title}
+                              </h3>
+                              {campaign.description?.trim() && (
+                                <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
+                                  ({campaign.description})
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="overflow-hidden">
+                  <motion.div
+                    className="flex"
+                    style={{ width: `${Math.ceil(featuredCampaigns.length / 3) * 100}%` }}
+                    animate={{ x: `-${effectiveFeaturedSlideIndex * (100 / Math.ceil(featuredCampaigns.length / 3))}%` }}
+                    transition={{ type: 'tween', duration: 0.35, ease: 'easeInOut' }}
+                  >
+                    {Array.from({ length: Math.ceil(featuredCampaigns.length / 3) }).map((_, pageIndex) => (
+                      <div
+                        key={pageIndex}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-shrink-0 px-1"
+                        style={{ width: `${100 / Math.ceil(featuredCampaigns.length / 3)}%` }}
+                      >
+                        {featuredCampaigns.slice(pageIndex * 3, pageIndex * 3 + 3).map((campaign, index) => {
+                          const categoryConfig = categories.find((c) => c.id === campaign.category);
+                          return (
+                            <Link key={campaign.id} href={`/campagnes/${campaign.id}`}>
+                              <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
+                                <img
+                                  src={campaign.image || '/images/no-picture.png'}
+                                  alt={campaign.title}
+                                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                                <div className="absolute inset-0 flex flex-col justify-end p-5">
+                                  <div className="absolute top-4 left-4">
+                                    <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
+                                      {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                                        <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                                      ) : (categoryConfig && 'icon' in categoryConfig && categoryConfig.icon) ? (
+                                        <categoryConfig.icon size={14} className="text-white" />
+                                      ) : (
+                                        <Star size={14} className="text-white" />
+                                      )}
+                                      {categoryLabels[campaign.category] ?? campaign.category}
+                                    </span>
+                                  </div>
+                                  <div className="relative">
+                                    <h3 className="text-xl font-bold text-white leading-tight">
+                                      {campaign.title}
+                                    </h3>
+                                    {campaign.description?.trim() && (
+                                      <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
+                                        ({campaign.description})
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </motion.div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFeaturedSlideIndex((i) => Math.max(0, i - 1))}
+                  disabled={effectiveFeaturedSlideIndex === 0}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 lg:-translate-x-4 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-[#00644D] shadow-lg flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  aria-label="Programmes précédents"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFeaturedSlideIndex((i) => Math.min(featuredSlideMax, i + 1))}
+                  disabled={effectiveFeaturedSlideIndex >= featuredSlideMax}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 lg:translate-x-4 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-[#00644D] shadow-lg flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  aria-label="Programmes suivants"
+                >
+                  <ChevronRight size={24} />
+                </button>
+                <div className="flex justify-center gap-2 mt-4">
+                  {Array.from({ length: Math.ceil(featuredCampaigns.length / 3) }).map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setFeaturedSlideIndex(i)}
+                      className={`w-2.5 h-2.5 rounded-full transition-all ${
+                        i === effectiveFeaturedSlideIndex ? 'bg-[#5AB678] scale-110' : 'bg-white/50 hover:bg-white/70'
+                      }`}
+                      aria-label={`Page ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Section Programmes ponctuels (duration = PONCTUAL) */}
+        {ponctualCampaigns.length > 0 && (
+          <section className="mb-12">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <h2 className="text-xl lg:text-2xl font-bold text-white text-left">
+                Programmes ponctuels
+              </h2>
+              <Link
+                href="#programmes"
+                className="text-[#5AB678] hover:text-[#5AB678]/80 font-semibold inline-flex items-center gap-1"
+              >
+                Voir plus
+                <ArrowRight size={18} className="inline" />
+              </Link>
+            </div>
+
+            {ponctualCampaigns.length <= 3 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {ponctualCampaigns.map((campaign, index) => {
+                  const categoryConfig = categories.find((c) => c.id === campaign.category);
+                  return (
+                    <motion.div
+                      key={campaign.id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: index * 0.08 }}
+                    >
+                      <Link href={`/campagnes/${campaign.id}`}>
+                        <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
+                          <img
+                            src={campaign.image || '/images/no-picture.png'}
+                            alt={campaign.title}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                          <div className="absolute inset-0 flex flex-col justify-end p-5">
+                            <div className="absolute top-4 left-4">
+                              <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
+                                {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                                  <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                                ) : (categoryConfig && 'icon' in categoryConfig && categoryConfig.icon) ? (
+                                  <categoryConfig.icon size={14} className="text-white" />
+                                ) : (
+                                  <Star size={14} className="text-white" />
+                                )}
+                                {categoryLabels[campaign.category] ?? campaign.category}
+                              </span>
+                            </div>
+                            <div className="relative">
+                              <h3 className="text-xl font-bold text-white leading-tight">
+                                {campaign.title}
+                              </h3>
+                              {campaign.description?.trim() && (
+                                <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
+                                  ({campaign.description})
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="overflow-hidden">
+                  <motion.div
+                    className="flex"
+                    style={{ width: `${Math.ceil(ponctualCampaigns.length / 3) * 100}%` }}
+                    animate={{ x: `-${effectivePonctualSlideIndex * (100 / Math.ceil(ponctualCampaigns.length / 3))}%` }}
+                    transition={{ type: 'tween', duration: 0.35, ease: 'easeInOut' }}
+                  >
+                    {Array.from({ length: Math.ceil(ponctualCampaigns.length / 3) }).map((_, pageIndex) => (
+                      <div
+                        key={pageIndex}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-shrink-0 px-1"
+                        style={{ width: `${100 / Math.ceil(ponctualCampaigns.length / 3)}%` }}
+                      >
+                        {ponctualCampaigns.slice(pageIndex * 3, pageIndex * 3 + 3).map((campaign, index) => {
+                          const categoryConfig = categories.find((c) => c.id === campaign.category);
+                          return (
+                            <Link key={campaign.id} href={`/campagnes/${campaign.id}`}>
+                              <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
+                                <img
+                                  src={campaign.image || '/images/no-picture.png'}
+                                  alt={campaign.title}
+                                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                                <div className="absolute inset-0 flex flex-col justify-end p-5">
+                                  <div className="absolute top-4 left-4">
+                                    <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
+                                      {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                                        <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                                      ) : (categoryConfig && 'icon' in categoryConfig && categoryConfig.icon) ? (
+                                        <categoryConfig.icon size={14} className="text-white" />
+                                      ) : (
+                                        <Star size={14} className="text-white" />
+                                      )}
+                                      {categoryLabels[campaign.category] ?? campaign.category}
+                                    </span>
+                                  </div>
+                                  <div className="relative">
+                                    <h3 className="text-xl font-bold text-white leading-tight">
+                                      {campaign.title}
+                                    </h3>
+                                    {campaign.description?.trim() && (
+                                      <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
+                                        ({campaign.description})
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </motion.div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPonctualSlideIndex((i) => Math.max(0, i - 1))}
+                  disabled={effectivePonctualSlideIndex === 0}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 lg:-translate-x-4 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-[#00644D] shadow-lg flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  aria-label="Programmes ponctuels précédents"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPonctualSlideIndex((i) => Math.min(ponctualSlideMax, i + 1))}
+                  disabled={effectivePonctualSlideIndex >= ponctualSlideMax}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 lg:translate-x-4 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-[#00644D] shadow-lg flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  aria-label="Programmes ponctuels suivants"
+                >
+                  <ChevronRight size={24} />
+                </button>
+                <div className="flex justify-center gap-2 mt-4">
+                  {Array.from({ length: Math.ceil(ponctualCampaigns.length / 3) }).map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setPonctualSlideIndex(i)}
+                      className={`w-2.5 h-2.5 rounded-full transition-all ${
+                        i === effectivePonctualSlideIndex ? 'bg-[#5AB678] scale-110' : 'bg-white/50 hover:bg-white/70'
+                      }`}
+                      aria-label={`Page ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Titre section programmes */}
+        <h2 id="programmes" className="text-xl lg:text-2xl font-bold text-white mb-6 text-left scroll-mt-6">
+          Tous les programmes
+        </h2>
+
         {/* Campaigns Grid */}
         <AnimatePresence mode="wait">
           {loading ? (
@@ -480,19 +840,16 @@ export default function CampagnesPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10"
             >
               {filteredCampaigns.map((campaign, index) => {
-                const hasTarget = campaign.targetAmount > 0;
-                const progressPercent = hasTarget ? getProgressPercentage(campaign.currentAmount, campaign.targetAmount) : 0;
-                const hasEndDate = campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime());
-                const formattedDate = hasEndDate
-                  ? new Date(campaign.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-                  : 'En cours';
-                const categoryLabels: Record<string, string> = {
-                  urgence: 'Urgence', education: 'Éducation', sante: 'Santé',
-                  developpement: 'Développement', refugies: 'Réfugiés', autres: 'Autre',
-                };
+                const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
+                const amountSpent = campaign.amountSpent ?? 0;
+                const currentAmount = campaign.currentAmount;
+                const totalForBar = Math.max(currentAmount, amountSpent, 1);
+                const spentPercent = totalForBar > 0 ? (amountSpent / totalForBar) * 100 : 0;
+                const categoryConfig = categories.find((c) => c.id === campaign.category);
+                const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
                 return (
                   <motion.div
                     key={campaign.id}
@@ -501,73 +858,83 @@ export default function CampagnesPage() {
                     transition={{ duration: 0.6, delay: index * 0.1 }}
                     viewport={{ once: true }}
                   >
-                    <div className="bg-[#101919] rounded-2xl overflow-hidden shadow-lg">
-                      <div className="relative">
-                        <img
-                          src={campaign.image || '/images/no-picture.png'}
-                          alt={campaign.title}
-                          className="w-full h-48 object-cover"
-                        />
-                        <div className="absolute top-4 left-4 bg-[#10191983] text-white px-3 py-1 rounded-full text-xs font-semibold">
-                          {categoryLabels[campaign.category] || campaign.category}
+                    <Link href={`/campagnes/${campaign.id}`}>
+                      <div className="relative rounded-2xl overflow-hidden shadow-lg min-h-[480px] sm:min-h-[520px] flex flex-col">
+                        {/* Image de fond avec overlay */}
+                        <div className="absolute inset-0">
+                          <img
+                            src={campaign.image || '/images/no-picture.png'}
+                            alt={campaign.title}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
                         </div>
-                      </div>
-                      <div className="p-6">
-                        <h3 className="text-xl lg:text-2xl font-bold text-white mb-3">
-                          {campaign.title}
-                        </h3>
-                        <p className="text-white/70 text-sm mb-2 leading-relaxed">
-                          {campaign.description}
-                        </p>
-                        {/* <p className="text-white/70 text-sm mb-4 leading-relaxed">{campaign.impact}</p> */}
-                        <div className="flex justify-between items-center mb-4 text-sm text-white/70">
-                          <div className="flex items-center space-x-2">
-                            <MapPin size={16} className="text-green-800" />
-                            <span>{campaign.location || '—'}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Calendar size={16} className="text-green-800" />
-                            <span>Fin: {formattedDate}</span>
-                          </div>
-                        </div>
-                        {hasTarget && (
-                        <div className="mb-4">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-white font-bold">
-                              {campaign.currentAmount.toLocaleString('fr-FR')} F CFA / {campaign.targetAmount.toLocaleString('fr-FR')} F CFA
+
+                        {/* Contenu superposé */}
+                        <div className="relative flex flex-col flex-1 p-5 sm:p-6">
+                          {/* Ligne des tags: catégorie (gauche) + type (droite) */}
+                          <div className="flex justify-between items-start gap-2 mb-3">
+                            <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium">
+                              {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                                <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                              ) : (categoryConfig && 'icon' in categoryConfig && categoryConfig.icon) ? (
+                                <categoryConfig.icon size={14} className="text-white" />
+                              ) : (
+                                <Star size={14} className="text-white" />
+                              )}
+                              {categoryLabels[campaign.category] ?? campaign.category}
                             </span>
-                            <span className="text-white">{progressPercent.toFixed(1)}%</span>
+                            <span className="inline-flex items-center gap-1.5 bg-[#ffffff] border border-[#00644D] text-[#5ab678] px-3 py-1.5 rounded-full text-xs font-bold">
+                              {typeLabel}
+                            </span>
                           </div>
-                          <div className="w-full bg-white/20 rounded-full h-2">
-                            <div
-                              className="h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${progressPercent}%`, background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
-                            />
+
+                          <div className="flex-1 min-h-[2rem]" />
+
+                          {/* Donateurs (vert) + Titre (blanc) — juste au-dessus de la barre */}
+                          <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
+                            {donorCount.toLocaleString('fr-FR')} donateurs
+                          </p>
+                          <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
+                            {campaign.title}
+                          </h3>
+
+                          {/* Montants + barre de progression */}
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center gap-2 text-sm">
+                              <span className="text-[#5AB678] font-semibold">
+                                {formatAmount(amountSpent)} déboursés
+                              </span>
+                              <span className="text-white font-medium">
+                                {formatAmount(currentAmount)} collectés
+                              </span>
+                            </div>
+                            <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
+                              <div
+                                className="h-full rounded-l-full bg-[#5AB678] transition-all duration-300"
+                                style={{ width: `${Math.min(100, spentPercent)}%` }}
+                              />
+                              <div
+                                className="h-full flex-1 bg-white/40"
+                                style={{ width: `${Math.max(0, 100 - spentPercent)}%` }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                        )}
 
-                        {/* Donateurs */}
-                        <div className="flex items-center space-x-2 mb-6 text-sm text-white/70">
-                          <Users size={16} className="text-green-800" />
-                          <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString('fr-FR')} donateurs</span>
-                        </div>
-
-                        {/* CTA Button */}
-                        <Link href={`/campagnes/${campaign.id}`}>
-                          <motion.button
+                          {/* Bouton CTA */}
+                          <motion.div
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className="w-full text-white py-3 rounded-2xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
+                            className="mt-4 w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
                             style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                           >
                             <Heart size={18} className="fill-white" />
                             <span>Soutenir cette campagne</span>
                             <ArrowRight size={18} />
-                          </motion.button>
-                        </Link>
+                          </motion.div>
+                        </div>
                       </div>
-                    </div>
+                    </Link>
                   </motion.div>
                 );
               })}
@@ -599,16 +966,20 @@ export default function CampagnesPage() {
                             alt={campaign.title}
                             className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
                           />
-                          <div className="absolute top-2 left-2">
+                          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${
                               campaign.category === 'urgence' ? 'bg-red-500' :
                               campaign.category === 'education' ? 'bg-blue-500' :
                               campaign.category === 'sante' ? 'bg-green-500' :
                               campaign.category === 'developpement' ? 'bg-purple-500' :
                               campaign.category === 'refugies' ? 'bg-orange-500' :
+                              campaign.category === 'special-ramadan' || campaign.category === 'special-tabaski' ? 'bg-amber-600' :
                               'bg-gray-500'
                             }`}>
-                              {campaign.category === 'autres' ? 'Autre' : campaign.category.charAt(0).toUpperCase() + campaign.category.slice(1)}
+                              {categoryLabels[campaign.category] ?? campaign.category}
+                            </span>
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold text-white bg-[#00644D]">
+                              {typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah'}
                             </span>
                           </div>
                         </div>
@@ -623,12 +994,12 @@ export default function CampagnesPage() {
 
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-xs sm:text-sm text-white/70 mb-4">
                             <div className="flex items-center space-x-1">
-                              <MapPin size={14} className="sm:w-4 sm:h-4" />
-                              <span className="truncate">{campaign.location || '—'}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
                               <Users size={14} className="sm:w-4 sm:h-4" />
                               <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString()} donateurs</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <MapPin size={14} className="sm:w-4 sm:h-4" />
+                              <span className="truncate">{campaign.location || '—'}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Calendar size={14} className="sm:w-4 sm:h-4" />
@@ -641,38 +1012,26 @@ export default function CampagnesPage() {
                           </div>
 
                           <div className="space-y-3">
-                            {campaign.targetAmount > 0 && (
-                            <div>
-                              <div className="flex justify-between text-xs sm:text-sm mb-1">
-                                <span className="text-white/70">Progression</span>
-                                <span className="font-semibold text-white">
-                                  {getProgressPercentage(campaign.currentAmount, campaign.targetAmount).toFixed(1)}%
-                                </span>
-                              </div>
-                              <div className="w-full bg-white/20 rounded-full h-2 sm:h-3">
-                                <motion.div
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${getProgressPercentage(campaign.currentAmount, campaign.targetAmount)}%` }}
-                                  transition={{ duration: 1, delay: index * 0.1 }}
-                                  className={`h-2 sm:h-3 rounded-full ${
-                                    getProgressPercentage(campaign.currentAmount, campaign.targetAmount) > 80 ? 'bg-green-500' :
-                                    getProgressPercentage(campaign.currentAmount, campaign.targetAmount) > 50 ? 'bg-[#00a63e]' :
-                                    'bg-blue-500'
-                                  }`}
-                                />
-                              </div>
+                            <div className="flex justify-between text-sm gap-4">
+                              <span className="text-[#5AB678] font-semibold">
+                                {formatAmount(campaign.amountSpent ?? 0)} déboursés
+                              </span>
+                              <span className="text-white font-medium">
+                                {formatAmount(campaign.currentAmount)} collectés
+                              </span>
+                            </div>
+                            {(campaign.targetAmount > 0 || (campaign.currentAmount > 0 || (campaign.amountSpent ?? 0) > 0)) && (
+                            <div className="w-full bg-white/20 rounded-full h-2 sm:h-3 overflow-hidden flex">
+                              <div
+                                className="h-full bg-[#5AB678]"
+                                style={{ width: `${Math.min(100, ((campaign.amountSpent ?? 0) / Math.max(campaign.currentAmount, campaign.amountSpent ?? 0, 1)) * 100)}%` }}
+                              />
+                              <div className="h-full flex-1 bg-white/40" />
                             </div>
                             )}
 
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                              <div>
-                                <p className="text-lg sm:text-2xl font-bold text-white">
-                                  {formatAmount(campaign.currentAmount)}
-                                </p>
-                                <p className="text-xs sm:text-sm text-white/70">
-                                  collecté sur {formatAmount(campaign.targetAmount)}
-                                </p>
-                              </div>
+                              <div />
                               <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}

@@ -233,7 +233,7 @@ export default function ConnexionPage() {
                   className="w-24 h-24 mx-auto mb-6 flex items-center justify-center bg-gray-100/10 rounded-2xl"
                 >
                   <img 
-                    src="/amane-logo.png" 
+                    src="/logo/AMANE%201.svg" 
                     alt="Amane+ Logo" 
                     className="w-full h-full object-contain shadow-2xl rounded-2xl"
                   />

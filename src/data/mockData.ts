@@ -7,12 +7,41 @@ export interface Campaign {
   video?: string;
   targetAmount: number;
   currentAmount: number;
-  category: 'urgence' | 'education' | 'sante' | 'developpement' | 'refugies' | 'autres';
+  /** Montant déjà déboursé (API: amountSpent) */
+  amountSpent?: number;
+  /** Type API (ZAKAT, SADAQAH, etc.) */
+  type?: string;
+  category: 'urgence' | 'education' | 'sante' | 'developpement' | 'refugies' | 'special-ramadan' | 'special-tabaski' | 'autres';
   location: string;
   endDate: string;
   impact: string;
   beneficiaries: number;
+  /** Liste des libellés bénéficiaires (API: beneficiaries array) */
+  beneficiariesList?: string[];
   status: 'active' | 'completed' | 'upcoming';
+  /** Campagne mise en avant (API: featured) */
+  featured?: boolean;
+  /** Budget prévisionnel (API: provisionalBudget) */
+  provisionalBudget?: string | null;
+  /** Relevé / état financier (API: financialStatement) */
+  financialStatement?: string | null;
+  /** Processus de décaissement (HTML, API: process) */
+  process?: string | null;
+  /** Activités de la campagne (API: activities) – titre, description, amountSpent, result, videos/images */
+  activities?: CampaignActivity[];
+  /** Durée / type de programme (API: duration), ex. PONCTUAL pour programmes ponctuels */
+  duration?: string;
+}
+
+/** Une activité d'une campagne (impact, réalisation) */
+export interface CampaignActivity {
+  id?: string;
+  title?: string;
+  description?: string;
+  amountSpent?: number;
+  result?: string;
+  videos?: string[];
+  images?: string[];
 }
 
 export interface User {

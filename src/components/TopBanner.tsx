@@ -15,7 +15,7 @@ interface TopBannerProps {
 }
 
 export default function TopBanner({
-  text = "Participez à un projet qui change des vies 🙌🙌",
+  text = "Participez à un projet qui change des vies.",
   buttonText = "Participer",
   buttonHref = "/campagnes",
   dismissible = true,

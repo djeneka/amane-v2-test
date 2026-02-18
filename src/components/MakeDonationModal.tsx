@@ -284,6 +284,9 @@ export default function MakeDonationModal({
           donorName: displayDonorName,
           recipientName,
           amount: numAmount,
+          ...(campaignId && typeof window !== 'undefined'
+            ? { impactUrl: `${window.location.origin}/campagnes/${campaignId}` }
+            : {}),
         });
         const file = new File([blob], 'certificat-khatma-don.pdf', { type: 'application/pdf' });
         const certificatUrl = await uploadCertificatePdf(file);
@@ -365,7 +368,14 @@ export default function MakeDonationModal({
     setDownloadingCertificate(true);
     try {
       await generateCertificatePdf(
-        { donorName: displayDonorName, recipientName, amount: amountValue },
+        {
+          donorName: displayDonorName,
+          recipientName,
+          amount: amountValue,
+          ...(campaignId && typeof window !== 'undefined'
+            ? { impactUrl: `${window.location.origin}/campagnes/${campaignId}` }
+            : {}),
+        },
         'certificat-khatma-don'
       );
     } catch (err) {
