@@ -5,13 +5,22 @@ export interface Activity {
   id: string;
   title: string;
   description: string;
+  /** URL de la première vidéo (dérivé de videos[0] pour compatibilité) */
   video: string;
+  /** Liste des URLs vidéo (format API) */
+  videos: string[];
   result: string;
   images: string[];
+  /** Montant déboursé pour cette activité (optionnel) */
+  amountSpent?: number;
   createdById: string;
   status: string;
   createdAt: string;
   updatedAt: string;
+  /** ID de la campagne liée (si présent, "En savoir plus" redirige vers la page détail campagne) */
+  campaignId?: string;
+  /** Campagne embarquée (optionnel, retour API) */
+  campaign?: Record<string, unknown>;
 }
 
 /** Messages de retour explicites du service */
@@ -29,17 +38,28 @@ export type GetActivitiesResult =
   | { success: false; error: string; code: string };
 
 function normalizeActivity(item: Record<string, unknown>): Activity {
+  const videos = Array.isArray(item.videos)
+    ? (item.videos as string[]).filter((v): v is string => typeof v === 'string')
+    : [];
+  const videoUrl =
+    videos[0] ?? (typeof item.video === 'string' ? item.video : '');
   return {
     id: typeof item.id === 'string' ? item.id : '',
     title: typeof item.title === 'string' ? item.title : '',
     description: typeof item.description === 'string' ? item.description : '',
-    video: typeof item.video === 'string' ? item.video : '',
+    video: videoUrl,
+    videos,
     result: typeof item.result === 'string' ? item.result : '',
-    images: Array.isArray(item.images) ? (item.images as string[]) : [],
+    images: Array.isArray(item.images) ? (item.images as string[]).filter((u): u is string => typeof u === 'string') : [],
+    amountSpent: typeof item.amountSpent === 'number' ? item.amountSpent : undefined,
     createdById: typeof item.createdById === 'string' ? item.createdById : '',
     status: typeof item.status === 'string' ? item.status : '',
     createdAt: typeof item.createdAt === 'string' ? item.createdAt : '',
     updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : '',
+    campaignId: typeof item.campaignId === 'string' && item.campaignId ? item.campaignId : undefined,
+    campaign: item.campaign && typeof item.campaign === 'object' && !Array.isArray(item.campaign)
+      ? (item.campaign as Record<string, unknown>)
+      : undefined,
   };
 }
 

@@ -47,7 +47,7 @@ export default function Footer() {
             <div className="flex items-center space-x-2 mb-4">
               <div className="w-16 h-16 rounded-lg flex items-center justify-center">
                 <img 
-                  src="/amane-logo.png" 
+                  src="/logo/AMANE%201.svg" 
                   alt="Amane+ Logo" 
                   className="w-full h-full object-contain"
                 />
@@ -64,15 +64,23 @@ export default function Footer() {
             <div className="space-y-3">
               <div className="flex items-center space-x-3 text-gray-300">
                 <Mail size={16} />
-                <span>contact@amane-plus.com</span>
+                <span>contact@amane.ci</span>
+              </div>
+              <div className="flex items-center space-x-3 text-gray-300">
+                <Mail size={16} />
+                <span>infos@amane.ci</span>
               </div>
               <div className="flex items-center space-x-3 text-gray-300">
                 <Phone size={16} />
-                <span>+225 27 22 49 89 00</span>
+                <span>+225 07 20 00 00 06</span>
+              </div>
+              <div className="flex items-center space-x-3 text-gray-300">
+                <Phone size={16} />
+                <span>+225 27 22 22 34 64</span>
               </div>
               <div className="flex items-center space-x-3 text-gray-300">
                 <MapPin size={16} />
-                <span>Abidjan, Côte d'Ivoire</span>
+                <span>Siège social : Abidjan-Cocody, La Villa Nova Rue B5, Corniche</span>
               </div>
             </div>
           </motion.div>
@@ -174,7 +182,7 @@ export default function Footer() {
           </div>
           
           <div className="mt-6 text-center text-gray-400 text-sm">
-            <p>&copy; 2024 Amane+. Tous droits réservés.</p>
+            <p>&copy; 2026 Amane+. Tous droits réservés.</p>
           </div>
         </motion.div>
       </div>

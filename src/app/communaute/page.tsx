@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { 
   ArrowRight, Heart, Users, MapPin, Calendar, ArrowLeft, ChevronDown,
-  Apple, Play, TrendingUp, Bookmark
+  Apple, Play, TrendingUp, Bookmark, Star
 } from 'lucide-react';
+import Image from 'next/image';
 import { getTakafulPlans, type TakafulPlan } from '@/services/takaful-plans';
 import { takafulProducts, type Campaign, type TakafulProduct } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,7 +51,7 @@ function mockTakafulProductToPlan(p: TakafulProduct): TakafulPlan {
 export default function CommunautePage() {
   const { isAuthenticated } = useAuth();
   const [currentTakafulSlide, setCurrentTakafulSlide] = useState(0);
-  const [featuredCampaigns, setFeaturedCampaigns] = useState<Campaign[]>([]);
+  const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
   const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
@@ -69,7 +70,7 @@ export default function CommunautePage() {
     setCampaignsLoading(true);
     setCampaignsError(null);
     getActiveCampaigns()
-      .then((list) => { if (!cancelled) setFeaturedCampaigns(list.slice(0, 3)); })
+      .then((list) => { if (!cancelled) setAllCampaigns(list); })
       .catch((err) => { if (!cancelled) setCampaignsError(err?.message ?? 'Erreur chargement des campagnes'); })
       .finally(() => { if (!cancelled) setCampaignsLoading(false); });
     return () => { cancelled = true; };
@@ -126,6 +127,31 @@ export default function CommunautePage() {
   const currentActivity = activities[currentSlide];
   const slideImage = currentActivity?.images?.[0] || DEFAULT_ACTIVITY_IMAGE;
 
+  const formatAmount = (amount: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
+
+  const categories = [
+    { id: 'urgence', name: 'Urgence', icon: Star },
+    { id: 'education', name: 'Éducation', icon: Bookmark },
+    { id: 'sante', name: 'Santé', icon: Heart },
+    { id: 'developpement', name: 'Développement', icon: TrendingUp },
+    { id: 'refugies', name: 'Réfugiés', icon: Users },
+    { id: 'special-ramadan', name: 'Spécial Ramadan', iconSrc: '/icons/moon-w.png' },
+    { id: 'special-tabaski', name: 'Spécial Tabaski', iconSrc: '/icons/moon-w.png' },
+    { id: 'autres', name: 'Autre', icon: Star },
+  ] as const;
+  const categoryLabels: Record<string, string> = {
+    urgence: 'Urgence', education: 'Éducation', sante: 'Santé',
+    developpement: 'Développement', refugies: 'Réfugiés',
+    'special-ramadan': 'Spécial Ramadan', 'special-tabaski': 'Spécial Tabaski',
+    autres: 'Autre', HEALTH: 'Santé', EDUCATION: 'Éducation', FOOD: 'Alimentation', OTHER: 'Autre',
+  };
+  const typeLabels: Record<string, string> = { ZAKAT: 'Zakat', SADAQAH: 'Sadaqah' };
+
+  const latestCampaigns = allCampaigns.slice(0, 3);
+  const popularCampaigns = [...allCampaigns]
+    .sort((a, b) => (donorCountByCampaignId[b.id] ?? 0) - (donorCountByCampaignId[a.id] ?? 0))
+    .slice(0, 6);
 
   if (!isAuthenticated) {
     return null;
@@ -327,7 +353,7 @@ export default function CommunautePage() {
                     className="flex transition-transform duration-500 ease-in-out"
                     style={{ transform: `translateX(-${currentCagnotteSlide * 100}%)` }}
                 >
-                    {featuredCampaigns.map((campaign) => (
+                    {latestCampaigns.map((campaign) => (
                     <div key={campaign.id} className="min-w-full px-2">
                         <div className="bg-white rounded-3xl overflow-hidden relative" style={{ height: '600px' }}>
                         <div className="absolute inset-0">
@@ -355,7 +381,7 @@ export default function CommunautePage() {
                 </div>
 
                 {/* Navigation Buttons */}
-                {featuredCampaigns.length > 0 && (
+                {latestCampaigns.length > 0 && (
                 <>
                 <button
                 onClick={() => setCurrentCagnotteSlide((prev) => Math.max(0, prev - 1))}
@@ -366,8 +392,8 @@ export default function CommunautePage() {
                 <ArrowLeft size={28} className="text-white" />
                 </button>
                 <button
-                onClick={() => setCurrentCagnotteSlide((prev) => Math.min(featuredCampaigns.length - 1, prev + 1))}
-                disabled={currentCagnotteSlide === featuredCampaigns.length - 1}
+                onClick={() => setCurrentCagnotteSlide((prev) => Math.min(latestCampaigns.length - 1, prev + 1))}
+                disabled={currentCagnotteSlide === latestCampaigns.length - 1}
                 aria-label="Carte suivante"
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
                 >
@@ -376,7 +402,7 @@ export default function CommunautePage() {
 
                 {/* Pagination Dots */}
                 <div className="flex justify-center gap-2 mt-6">
-                {featuredCampaigns.map((campaign, index) => (
+                {latestCampaigns.map((campaign, index) => (
                     <button
                     key={campaign.id}
                     onClick={() => setCurrentCagnotteSlide(index)}
@@ -429,27 +455,21 @@ export default function CommunautePage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             {campaignsLoading && (
               <div className="col-span-full text-center text-white/80 py-8">Chargement des campagnes...</div>
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
             )}
-            {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
-              const hasTarget = campaign.targetAmount > 0;
-              const progressPercent = hasTarget
-                ? Math.min(100, (campaign.currentAmount / campaign.targetAmount) * 100)
-                : 0;
-              const hasEndDate = campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime());
-              const formattedDate = hasEndDate
-                ? new Date(campaign.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-                : 'En cours';
-              const categoryLabels: Record<string, string> = {
-                'urgence': 'Urgence', 'education': 'Éducation', 'sante': 'Santé',
-                'developpement': 'Développement', 'refugies': 'Réfugiés',
-                HEALTH: 'Santé', EDUCATION: 'Éducation', FOOD: 'Alimentation', OTHER: 'Autre'
-              };
+            {!campaignsLoading && !campaignsError && popularCampaigns.map((campaign, index) => {
+              const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
+              const amountSpent = campaign.amountSpent ?? 0;
+              const currentAmount = campaign.currentAmount;
+              const totalForBar = Math.max(currentAmount, amountSpent, 1);
+              const spentPercent = totalForBar > 0 ? (amountSpent / totalForBar) * 100 : 0;
+              const categoryConfig = categories.find((c) => c.id === campaign.category);
+              const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
               return (
                 <motion.div
                   key={campaign.id}
@@ -458,68 +478,72 @@ export default function CommunautePage() {
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   viewport={{ once: true }}
                 >
-                  <div className="bg-[#101919] rounded-2xl overflow-hidden shadow-lg">
-                    <div className="relative">
-                      <img
-                        src={campaign.image || '/images/no-picture.png'}
-                        alt={campaign.title}
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute top-4 left-4 bg-[#10191983] text-white px-3 py-1 rounded-full text-xs font-semibold">
-                        {categoryLabels[campaign.category] || campaign.category}
+                  <Link href={`/campagnes/${campaign.id}`}>
+                    <div className="relative rounded-2xl overflow-hidden shadow-lg min-h-[480px] sm:min-h-[520px] flex flex-col">
+                      <div className="absolute inset-0">
+                        <img
+                          src={campaign.image || '/images/no-picture.png'}
+                          alt={campaign.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
                       </div>
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-xl lg:text-2xl font-bold text-white mb-3">
-                        {campaign.title}
-                      </h3>
-                      <p className="text-white/70 text-sm mb-2 leading-relaxed">
-                        {campaign.description}
-                      </p>
-                      <div className="flex justify-between items-center mb-4 text-sm text-white/70">
-                        <div className="flex items-center space-x-2">
-                          <MapPin size={16} className="text-green-800" />
-                          <span>{campaign.location || '—'}</span>
+                      <div className="relative flex flex-col flex-1 p-5 sm:p-6">
+                        <div className="flex justify-between items-start gap-2 mb-3">
+                          <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium">
+                            {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                              <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                            ) : categoryConfig && 'icon' in categoryConfig && categoryConfig.icon ? (
+                              <categoryConfig.icon size={14} className="text-white" />
+                            ) : (
+                              <Star size={14} className="text-white" />
+                            )}
+                            {categoryLabels[campaign.category] ?? campaign.category}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 bg-white border border-[#00644D] text-[#5ab678] px-3 py-1.5 rounded-full text-xs font-bold">
+                            {typeLabel}
+                          </span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar size={16} className="text-green-800" />
-                          <span>Fin: {formattedDate}</span>
-                        </div>
-                      </div>
-                      {hasTarget && (
-                        <div className="mb-4">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-white font-bold">
-                              {campaign.currentAmount.toLocaleString('fr-FR')} F CFA / {campaign.targetAmount.toLocaleString('fr-FR')} F CFA
+                        <div className="flex-1 min-h-[2rem]" />
+                        <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
+                          {donorCount.toLocaleString('fr-FR')} donateurs
+                        </p>
+                        <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
+                          {campaign.title}
+                        </h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center gap-2 text-sm">
+                            <span className="text-[#5AB678] font-semibold">
+                              {formatAmount(amountSpent)} déboursés
                             </span>
-                            <span className="text-white">{progressPercent.toFixed(1)}%</span>
+                            <span className="text-white font-medium">
+                              {formatAmount(currentAmount)} collectés
+                            </span>
                           </div>
-                          <div className="w-full bg-white/20 rounded-full h-2">
+                          <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
                             <div
-                              className="h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${progressPercent}%`, background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                              className="h-full rounded-l-full bg-[#5AB678] transition-all duration-300"
+                              style={{ width: `${Math.min(100, spentPercent)}%` }}
+                            />
+                            <div
+                              className="h-full flex-1 bg-white/40"
+                              style={{ width: `${Math.max(0, 100 - spentPercent)}%` }}
                             />
                           </div>
                         </div>
-                      )}
-                      <div className="flex items-center space-x-2 mb-6 text-sm text-white/70">
-                        <Users size={16} className="text-green-800" />
-                        <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString('fr-FR')} donateurs</span>
-                      </div>
-                      <Link href={`/campagnes/${campaign.id}`}>
-                        <motion.button
+                        <motion.div
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          className="w-full text-white py-3 rounded-2xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
+                          className="mt-4 w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
                           style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                         >
                           <Heart size={18} className="fill-white" />
                           <span>Soutenir cette campagne</span>
                           <ArrowRight size={18} />
-                        </motion.button>
-                      </Link>
+                        </motion.div>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 </motion.div>
               );
             })}
@@ -905,10 +929,22 @@ export default function CommunautePage() {
             <h2 className="text-3xl lg:text-4xl font-bold mb-12">
               Ils nous font confiance
             </h2>
-            <div className="grid grid-cols-4 md:grid-cols-8 gap-8 opacity-60">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="bg-white/20 rounded-lg h-16 flex items-center justify-center">
-                  <span className="text-white/50 text-sm">Logo {i}</span>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center justify-items-center">
+              {[
+                { src: '/logo/partenaire/LOGO IAT 3.png', alt: 'IAT' },
+                { src: '/logo/partenaire/Logo Infinity Africa Group paysage.png', alt: 'Infinity Africa Group' },
+                { src: '/logo/partenaire/Logo Infinity Africa Ventures_fond_noir.png', alt: 'Infinity Africa Ventures' },
+                { src: '/logo/partenaire/Logo Leadway.png', alt: 'Leadway' },
+                { src: '/logo/partenaire/Maconi Horizontal PNG.png', alt: 'Maconi' },
+              ].map((logo) => (
+                <div key={logo.alt} className="relative h-16 w-full max-w-[180px] bg-white/20 rounded-lg flex items-center justify-center p-3">
+                  <Image
+                    src={logo.src}
+                    alt={logo.alt}
+                    fill
+                    className="object-contain"
+                    sizes="(max-width: 768px) 50vw, 20vw"
+                  />
                 </div>
               ))}
             </div>

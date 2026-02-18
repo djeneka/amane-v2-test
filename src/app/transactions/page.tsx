@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { 
-  ArrowRight, Heart, Users, Star, MapPin, Calendar,
+  ArrowRight, Heart, Users, Star, MapPin, Calendar, Bookmark, Zap,
   Smartphone, Apple, Play, ChevronDown, ChevronLeft, ChevronRight,
   Eye, Wallet as WalletIcon, HandCoins, TrendingUp, Circle, X, Share2
 } from 'lucide-react';
@@ -40,8 +41,27 @@ export default function TransactionsPage() {
   const [selectedStatus, setSelectedStatus] = useState('tout');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState<FormattedTransaction | null>(null);
-  const [featuredCampaigns, setFeaturedCampaigns] = useState<Campaign[]>([]);
+  const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
   const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
+
+  const campaignCategoryLabels: Record<string, string> = {
+    urgence: 'Urgence', education: 'Éducation', sante: 'Santé',
+    developpement: 'Développement', refugies: 'Réfugiés',
+    'special-ramadan': 'Spécial Ramadan', 'special-tabaski': 'Spécial Tabaski',
+    autres: 'Autre', HEALTH: 'Santé', EDUCATION: 'Éducation', FOOD: 'Alimentation', OTHER: 'Autre',
+  };
+  const campaignTypeLabels: Record<string, string> = { ZAKAT: 'Zakat', SADAQAH: 'Sadaqah' };
+  const campaignCategoriesForCards = [
+    { id: 'urgence', icon: Zap }, { id: 'education', icon: Bookmark }, { id: 'sante', icon: Heart },
+    { id: 'developpement', icon: TrendingUp }, { id: 'refugies', icon: Users },
+    { id: 'special-ramadan', iconSrc: '/icons/moon-w.png' }, { id: 'special-tabaski', iconSrc: '/icons/moon-w.png' },
+    { id: 'autres', icon: Star },
+  ];
+  const formatCampaignAmount = (amount: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
+  const popularCampaigns = [...allCampaigns]
+    .sort((a, b) => (donorCountByCampaignId[b.id] ?? 0) - (donorCountByCampaignId[a.id] ?? 0))
+    .slice(0, 6);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
   const [apiTransactions, setApiTransactions] = useState<ApiTransaction[]>([]);
@@ -60,7 +80,7 @@ export default function TransactionsPage() {
     setCampaignsLoading(true);
     setCampaignsError(null);
     getActiveCampaigns()
-      .then((list) => { if (!cancelled) setFeaturedCampaigns(list.slice(0, 3)); })
+      .then((list) => { if (!cancelled) setAllCampaigns(list); })
       .catch((err) => { if (!cancelled) setCampaignsError(err?.message ?? 'Erreur chargement des campagnes'); })
       .finally(() => { if (!cancelled) setCampaignsLoading(false); });
     return () => { cancelled = true; };
@@ -686,27 +706,21 @@ export default function TransactionsPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 mb-12">
             {campaignsLoading && (
               <div className="col-span-full text-center text-white/80 py-8">Chargement des campagnes...</div>
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
             )}
-            {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
-              const hasTarget = campaign.targetAmount > 0;
-              const progressPercent = hasTarget
-                ? Math.min(100, (campaign.currentAmount / campaign.targetAmount) * 100)
-                : 0;
-              const hasEndDate = campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime());
-              const formattedDate = hasEndDate
-                ? new Date(campaign.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-                : 'En cours';
-              const categoryLabels: Record<string, string> = {
-                'urgence': 'Urgence', 'education': 'Éducation', 'sante': 'Santé',
-                'developpement': 'Développement', 'refugies': 'Réfugiés',
-                HEALTH: 'Santé', EDUCATION: 'Éducation', FOOD: 'Alimentation', OTHER: 'Autre'
-              };
+            {!campaignsLoading && !campaignsError && popularCampaigns.map((campaign, index) => {
+              const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
+              const amountSpent = campaign.amountSpent ?? 0;
+              const currentAmount = campaign.currentAmount;
+              const totalForBar = Math.max(currentAmount, amountSpent, 1);
+              const spentPercent = totalForBar > 0 ? (amountSpent / totalForBar) * 100 : 0;
+              const categoryConfig = campaignCategoriesForCards.find((c) => c.id === campaign.category);
+              const typeLabel = campaignTypeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
               return (
                 <motion.div
                   key={campaign.id}
@@ -715,71 +729,72 @@ export default function TransactionsPage() {
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   viewport={{ once: true }}
                 >
-                  <div className="bg-[#101919] rounded-2xl overflow-hidden shadow-lg">
-                    <div className="relative">
-                      <img
-                        src={campaign.image || '/images/no-picture.png'}
-                        alt={campaign.title}
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute top-4 left-4 bg-[#10191983] text-white px-3 py-1 rounded-full text-xs font-semibold">
-                        {categoryLabels[campaign.category] || campaign.category}
+                  <Link href={`/campagnes/${campaign.id}`}>
+                    <div className="relative rounded-2xl overflow-hidden shadow-lg min-h-[480px] sm:min-h-[520px] flex flex-col">
+                      <div className="absolute inset-0">
+                        <img
+                          src={campaign.image || '/images/no-picture.png'}
+                          alt={campaign.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
                       </div>
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-xl lg:text-2xl font-bold text-white mb-3">
-                        {campaign.title}
-                      </h3>
-                      <p className="text-white/70 text-sm mb-2 leading-relaxed">
-                        {campaign.description}
-                      </p>
-                      <div className="flex justify-between items-center mb-4 text-sm text-white/70">
-                        <div className="flex items-center space-x-2">
-                          <MapPin size={16} className="text-green-800" />
-                          <span>{campaign.location || '—'}</span>
+                      <div className="relative flex flex-col flex-1 p-5 sm:p-6">
+                        <div className="flex justify-between items-start gap-2 mb-3">
+                          <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium">
+                            {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                              <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                            ) : categoryConfig && 'icon' in categoryConfig && categoryConfig.icon ? (
+                              <categoryConfig.icon size={14} className="text-white" />
+                            ) : (
+                              <Star size={14} className="text-white" />
+                            )}
+                            {campaignCategoryLabels[campaign.category] ?? campaign.category}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 bg-[#00644D] border border-[#00644D] text-white px-3 py-1.5 rounded-full text-xs font-medium">
+                            {typeLabel}
+                          </span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar size={16} className="text-green-800" />
-                          <span>Fin: {formattedDate}</span>
-                        </div>
-                      </div>
-                      {hasTarget && (
-                        <div className="mb-4">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-white font-bold">
-                              {campaign.currentAmount.toLocaleString('fr-FR')} F CFA / {campaign.targetAmount.toLocaleString('fr-FR')} F CFA
+                        <div className="flex-1 min-h-[2rem]" />
+                        <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
+                          {donorCount.toLocaleString('fr-FR')} donateurs
+                        </p>
+                        <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
+                          {campaign.title}
+                        </h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center gap-2 text-sm">
+                            <span className="text-[#5AB678] font-semibold">
+                              {formatCampaignAmount(amountSpent)} déboursés
                             </span>
-                            <span className="text-white">{progressPercent.toFixed(1)}%</span>
+                            <span className="text-white font-medium">
+                              {formatCampaignAmount(currentAmount)} collectés
+                            </span>
                           </div>
-                          <div className="w-full bg-white/20 rounded-full h-2">
+                          <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
                             <div
-                              className="h-2 rounded-full transition-all duration-300"
-                              style={{
-                                width: `${progressPercent}%`,
-                                background: 'linear-gradient(to right, #5AB678, #20B6B3)'
-                              }}
+                              className="h-full rounded-l-full bg-[#5AB678] transition-all duration-300"
+                              style={{ width: `${Math.min(100, spentPercent)}%` }}
+                            />
+                            <div
+                              className="h-full flex-1 bg-white/40"
+                              style={{ width: `${Math.max(0, 100 - spentPercent)}%` }}
                             />
                           </div>
                         </div>
-                      )}
-                      <div className="flex items-center space-x-2 mb-6 text-sm text-white/70">
-                        <Users size={16} className="text-green-800" />
-                        <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString('fr-FR')} donateurs</span>
-                      </div>
-                      <Link href={`/campagnes/${campaign.id}`}>
-                        <motion.button
+                        <motion.div
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          className="w-full text-white py-3 rounded-2xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
+                          className="mt-4 w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
                           style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                         >
                           <Heart size={18} className="fill-white" />
                           <span>Soutenir cette campagne</span>
                           <ArrowRight size={18} />
-                        </motion.button>
-                      </Link>
+                        </motion.div>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 </motion.div>
               );
             })}
@@ -861,10 +876,22 @@ export default function TransactionsPage() {
             <h2 className="text-3xl lg:text-4xl font-bold mb-12">
               Ils nous font confiance
             </h2>
-            <div className="grid grid-cols-4 md:grid-cols-8 gap-8 opacity-60">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="bg-white/20 rounded-lg h-16 flex items-center justify-center">
-                  <span className="text-white/50 text-sm">Logo {i}</span>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center justify-items-center">
+              {[
+                { src: '/logo/partenaire/LOGO IAT 3.png', alt: 'IAT' },
+                { src: '/logo/partenaire/Logo Infinity Africa Group paysage.png', alt: 'Infinity Africa Group' },
+                { src: '/logo/partenaire/Logo Infinity Africa Ventures_fond_noir.png', alt: 'Infinity Africa Ventures' },
+                { src: '/logo/partenaire/Logo Leadway.png', alt: 'Leadway' },
+                { src: '/logo/partenaire/Maconi Horizontal PNG.png', alt: 'Maconi' },
+              ].map((logo) => (
+                <div key={logo.alt} className="relative h-16 w-full max-w-[180px] bg-white/20 rounded-lg flex items-center justify-center p-3">
+                  <Image
+                    src={logo.src}
+                    alt={logo.alt}
+                    fill
+                    className="object-contain"
+                    sizes="(max-width: 768px) 50vw, 20vw"
+                  />
                 </div>
               ))}
             </div>

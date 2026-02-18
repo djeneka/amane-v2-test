@@ -102,7 +102,7 @@ function ReinitialiserMotDePasseContent() {
               className="w-24 h-24 mx-auto mb-6 flex items-center justify-center"
             >
               <img
-                src="/amane-logo.png"
+                src="/logo/AMANE%201.svg"
                 alt="Amane+ Logo"
                 className="w-full h-full object-contain"
               />

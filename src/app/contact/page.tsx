@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Send, ArrowLeft } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { sendContactEmail } from '@/services/email';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -12,13 +13,34 @@ export default function ContactPage() {
     subject: '',
     message: ''
   });
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implémenter l'envoi du formulaire
-    console.log('Formulaire soumis:', formData);
-    alert('Votre message a été envoyé avec succès !');
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    setSubmitError(null);
+    setSubmitSuccess(null);
+    setSending(true);
+    try {
+      const res = await sendContactEmail({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        subject: formData.subject.trim(),
+        message: formData.message.trim(),
+      });
+      if (res.success) {
+        setSubmitSuccess(res.message || 'Votre message a bien été envoyé.');
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        setSubmitError(res.message || 'L\'envoi a échoué. Veuillez réessayer.');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Impossible d\'envoyer le message. Vérifiez votre connexion ou réessayez plus tard.';
+      setSubmitError(msg);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -31,8 +53,12 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-[#0B302F]">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-green-800 via-green-700 to-green-600 text-white overflow-hidden py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section
+        className="relative text-white overflow-hidden py-20 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: 'url(/images/contact/contactt.png)' }}
+      >
+        <div className="absolute inset-0 bg-[#101919]/70" aria-hidden />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -72,9 +98,9 @@ export default function ContactPage() {
                     <Mail size={24} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">Email</h3>
-                    <p className="text-white/70">contact@amane.plus</p>
-                    <p className="text-white/70">support@amane.plus</p>
+                    {/* <h3 className="text-lg font-semibold text-white mb-1">Email</h3> */}
+                    <p className="text-white/70">contact@amane.ci</p>
+                    <p className="text-white/70">infos@amane.ci</p>
                   </div>
                 </div>
 
@@ -83,9 +109,9 @@ export default function ContactPage() {
                     <Phone size={24} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">Téléphone</h3>
-                    <p className="text-white/70">+33 1 23 45 67 89</p>
-                    <p className="text-white/70">Lun - Ven: 9h - 18h</p>
+                    {/* <h3 className="text-lg font-semibold text-white mb-1">Téléphone</h3> */}
+                    <p className="text-white/70">+225 07 20 00 00 06</p>
+                    <p className="text-white/70">+225 27 22 22 34 64</p>
                   </div>
                 </div>
 
@@ -95,8 +121,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-1">Adresse</h3>
-                    <p className="text-white/70">123 Avenue de la Finance Islamique</p>
-                    <p className="text-white/70">75001 Paris, France</p>
+                    <p className="text-white/70">Siège social : Abidjan-Cocody, La Villa Nova Rue B5, Corniche</p>
                   </div>
                 </div>
               </div>
@@ -113,6 +138,16 @@ export default function ContactPage() {
                   Envoyez-nous un message
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {submitSuccess && (
+                    <p className="text-[#5AB678] text-sm text-center bg-[#5AB678]/10 rounded-lg p-3">
+                      {submitSuccess}
+                    </p>
+                  )}
+                  {submitError && (
+                    <p className="text-red-400 text-sm text-center bg-red-400/10 rounded-lg p-3">
+                      {submitError}
+                    </p>
+                  )}
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-white/80 mb-2">
                       Nom complet
@@ -179,12 +214,22 @@ export default function ContactPage() {
 
                   <motion.button
                     type="submit"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full bg-[#5AB678] text-white px-8 py-4 rounded-xl font-semibold hover:bg-[#4a9565] transition-all duration-200 flex items-center justify-center space-x-2"
+                    disabled={sending}
+                    whileHover={{ scale: sending ? 1 : 1.02 }}
+                    whileTap={{ scale: sending ? 1 : 0.98 }}
+                    className="w-full bg-[#5AB678] text-white px-8 py-4 rounded-xl font-semibold hover:bg-[#4a9565] transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <Send size={20} />
-                    <span>Envoyer le message</span>
+                    {sending ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        <span>Envoi en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={20} />
+                        <span>Envoyer le message</span>
+                      </>
+                    )}
                   </motion.button>
                 </form>
               </div>

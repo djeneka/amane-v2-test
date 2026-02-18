@@ -688,7 +688,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
             </div>
 
             {/* Boutons de navigation */}
-            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-8 sm:mb-0">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

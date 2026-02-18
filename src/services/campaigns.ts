@@ -1,13 +1,25 @@
 import { apiGet } from '@/lib/api';
-import type { Campaign } from '@/data/mockData';
+import type { Campaign, CampaignActivity } from '@/data/mockData';
 
-/** Réponse campagne telle que renvoyée par l'API backend */
+/** Activité d'une campagne (réponse API) */
+export interface ApiCampaignActivity {
+  id?: string;
+  title?: string;
+  description?: string;
+  videos?: string[];
+  images?: string[];
+  amountSpent?: number;
+  result?: string;
+  [key: string]: unknown;
+}
+
+/** Réponse campagne telle que renvoyée par l'API backend (getCampaignById / list) */
 export interface ApiCampaign {
   id: string;
   title: string;
   description: string;
-  goals: string;
-  beneficiaries: string[];
+  goals?: string;
+  beneficiaries?: string[];
   picture: string | null;
   startDate: string | null;
   endDate: string | null;
@@ -16,7 +28,21 @@ export interface ApiCampaign {
   status: string;
   targetAmount: number;
   currentAmount: number;
+  amountSpent?: number;
   location: string | null;
+  featured?: boolean;
+  /** Process / étapes (HTML possible) */
+  process?: string;
+  /** Activités avec médias (videos, images) */
+  activities?: ApiCampaignActivity[];
+  /** Budget prévisionnel (URL ou document) */
+  provisionalBudget?: string | null;
+  /** Relevé / état financier (URL ou document) */
+  financialStatement?: string | null;
+  /** Durée du programme (ex. PONCTUAL pour programmes ponctuels) */
+  duration?: string;
+  project?: unknown;
+  createdBy?: unknown;
   [key: string]: unknown;
 }
 
@@ -27,44 +53,90 @@ const API_CATEGORY_TO_FRONT: Record<string, Campaign['category']> = {
   OTHER: 'autres',
   URGENCE: 'urgence',
   REFUGIES: 'refugies',
+  SPECIAL_RAMADAN: 'special-ramadan',
+  SPECIAL_TABASKI: 'special-tabaski',
+  DEVELOPMENT: 'developpement',
 };
 
 const DEFAULT_CAMPAIGN_IMAGE = '/images/no-picture.png';
 
 function mapApiCampaignToCampaign(api: ApiCampaign): Campaign {
   const category =
-    API_CATEGORY_TO_FRONT[api.category.toUpperCase()] ?? 'autres';
+    API_CATEGORY_TO_FRONT[api.category?.toUpperCase?.() ?? ''] ?? 'autres';
+  const mainImage =
+    api.picture && typeof api.picture === 'string' && api.picture.trim()
+      ? api.picture
+      : DEFAULT_CAMPAIGN_IMAGE;
+  const activityImages =
+    Array.isArray(api.activities) ?
+      api.activities.flatMap((a) => (Array.isArray(a.images) ? a.images : [])) :
+      [];
+  const allImages = [mainImage, ...activityImages].filter(Boolean);
+  const firstVideo =
+    Array.isArray(api.activities) &&
+    api.activities[0]?.videos?.length
+      ? api.activities[0].videos[0]
+      : undefined;
+
+  const activities: CampaignActivity[] = Array.isArray(api.activities)
+    ? api.activities.map((a) => ({
+        id: typeof a.id === 'string' ? a.id : undefined,
+        title: typeof a.title === 'string' ? a.title : undefined,
+        description: typeof a.description === 'string' ? a.description : undefined,
+        amountSpent: typeof a.amountSpent === 'number' ? a.amountSpent : undefined,
+        result: typeof a.result === 'string' ? a.result : undefined,
+        videos: Array.isArray(a.videos) ? a.videos.filter((v): v is string => typeof v === 'string') : undefined,
+        images: Array.isArray(a.images) ? a.images.filter((v): v is string => typeof v === 'string') : undefined,
+      }))
+    : [];
+
   return {
     id: api.id,
     title: api.title,
     description: api.description,
-    image: (api.picture && api.picture.trim()) ? api.picture : DEFAULT_CAMPAIGN_IMAGE,
+    image: mainImage,
+    images: allImages.length > 0 ? allImages : undefined,
+    video: typeof firstVideo === 'string' ? firstVideo : undefined,
     targetAmount: typeof api.targetAmount === 'number' ? api.targetAmount : 0,
     currentAmount: typeof api.currentAmount === 'number' ? api.currentAmount : 0,
+    amountSpent: typeof api.amountSpent === 'number' ? api.amountSpent : 0,
+    type: api.type ?? 'SADAQAH',
     category,
     location: api.location ?? '',
     endDate: api.endDate ?? new Date().toISOString(),
     impact: api.goals ?? '',
     beneficiaries: Array.isArray(api.beneficiaries) ? api.beneficiaries.length : 0,
+    beneficiariesList: Array.isArray(api.beneficiaries)
+      ? api.beneficiaries.filter((b): b is string => typeof b === 'string')
+      : undefined,
     status: api.status === 'ACTIVE' ? 'active' : api.status === 'COMPLETED' ? 'completed' : 'upcoming',
+    featured: Boolean(api.featured),
+    provisionalBudget: api.provisionalBudget ?? null,
+    financialStatement: api.financialStatement ?? null,
+    process: api.process ?? null,
+    activities: activities.length > 0 ? activities : undefined,
+    duration: typeof api.duration === 'string' ? api.duration : undefined,
   };
 }
 
 /**
  * Récupère toutes les campagnes actives depuis l'API (données brutes avec category API).
- * GET /api/campaigns?status=ACTIVE
+ * GET /api/campaigns?status=ACTIVE ou avec &duration=PONCTUAL
  */
-export async function getActiveCampaignsRaw(): Promise<ApiCampaign[]> {
-  const list = await apiGet<ApiCampaign[]>('/api/campaigns?status=ACTIVE');
+export async function getActiveCampaignsRaw(options?: { duration?: string }): Promise<ApiCampaign[]> {
+  const params = new URLSearchParams({ status: 'ACTIVE' });
+  if (options?.duration) params.set('duration', options.duration);
+  const list = await apiGet<ApiCampaign[]>(`/api/campaigns?${params.toString()}`);
   return Array.isArray(list) ? list : [];
 }
 
 /**
  * Récupère toutes les campagnes actives depuis l'API.
  * GET /api/campaigns?status=ACTIVE
+ * @param options.duration - Filtre optionnel (ex. "PONCTUAL" pour programmes ponctuels)
  */
-export async function getActiveCampaigns(): Promise<Campaign[]> {
-  const list = await getActiveCampaignsRaw();
+export async function getActiveCampaigns(options?: { duration?: string }): Promise<Campaign[]> {
+  const list = await getActiveCampaignsRaw(options);
   return list.map(mapApiCampaignToCampaign);
 }
 
