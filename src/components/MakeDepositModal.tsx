@@ -62,6 +62,8 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
   const pollingStartRef = useRef<number>(0);
   const pendingTxnRef = useRef<string | null>(null);
   const pendingAmountRef = useRef<number>(0);
+  /** Montant à créditer pour l'écriture de la transaction : baseAmount si frais cochés, sinon totalAmount - 2,5 % */
+  const pendingCreditAmountRef = useRef<number>(0);
   const accessTokenRef = useRef<string | null>(null);
   
   const userPhoneNumber = user?.phoneNumber || '+225 01 23 45 67 89';
@@ -103,6 +105,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
       setWaitingForPayment(false);
       setPendingTransactionNumber(null);
       setPendingAmount(0);
+      pendingCreditAmountRef.current = 0;
       setWavePaymentModalOpen(false);
       setWavePaymentUrl(null);
       if (pollingIntervalRef.current) {
@@ -136,7 +139,6 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
 
     const tick = async () => {
       const txn = pendingTxnRef.current;
-      const amt = pendingAmountRef.current;
       const token = accessTokenRef.current;
       if (!txn || !token) return;
       if (Date.now() - pollingStartRef.current >= POLL_TIMEOUT_MS) {
@@ -163,7 +165,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
           }
           setWavePaymentModalOpen(false);
           setWavePaymentUrl(null);
-          await confirmTopUp({ transactionNumber: txn, amount: amt }, token);
+          await confirmTopUp({ transactionNumber: txn, amount: pendingCreditAmountRef.current }, token);
           await refreshUser();
           setWaitingForPayment(false);
           setPendingTransactionNumber(null);
@@ -244,6 +246,8 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
       }
       const phoneNumber = depositNumber.trim().startsWith('0') ? depositNumber.trim() : `0${depositNumber.trim()}`;
       const amountNum = totalAmount;
+      /** Montant à créditer : base si frais cochés, sinon total - 2,5 % */
+      const creditAmount = payFees ? baseAmount : Math.round(amountNum * (1 - FEE_RATE));
       setPaymentLoading(true);
       try {
         const res = await initiatePayment(
@@ -261,6 +265,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
           setWavePaymentModalOpen(true);
           pendingTxnRef.current = res.data.transactionNumber;
           pendingAmountRef.current = amountNum;
+          pendingCreditAmountRef.current = creditAmount;
           setPendingTransactionNumber(res.data.transactionNumber);
           setPendingAmount(amountNum);
           setWaitingForPayment(true);
@@ -268,6 +273,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
         }
         pendingTxnRef.current = res.data.transactionNumber;
         pendingAmountRef.current = amountNum;
+        pendingCreditAmountRef.current = creditAmount;
         setPendingTransactionNumber(res.data.transactionNumber);
         setPendingAmount(amountNum);
         setWaitingForPayment(true);
@@ -304,6 +310,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
     setWaitingForPayment(false);
     setPendingTransactionNumber(null);
     setPendingAmount(0);
+    pendingCreditAmountRef.current = 0;
     setPaymentError('Paiement annulé');
   };
 

@@ -1006,7 +1006,7 @@ export default function CampagnesPage() {
                               <span className="truncate">
                                 {campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime())
                                   ? `Se termine le ${new Date(campaign.endDate).toLocaleDateString('fr-FR')}`
-                                  : 'En cours'}
+                                  : 'N/A'}
                               </span>
                             </div>
                           </div>

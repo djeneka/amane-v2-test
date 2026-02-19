@@ -22,6 +22,7 @@ export default function Footer() {
       { name: 'Support', href: '/contact' },
       { name: 'Confidentialité', href: '/confidentialite' },
       { name: 'Termes et conditions', href: '/termes-conditions' },
+      { name: 'Protection des enfants', href: '/protection-enfants' },
     ]
   };
 

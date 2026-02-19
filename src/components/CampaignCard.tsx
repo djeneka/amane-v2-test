@@ -105,7 +105,7 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
           </div>
           <div className="flex items-center space-x-1">
             <Calendar size={14} />
-            <span>Fin: {formatDate(campaign.endDate)}</span>
+            <span>Fin: {campaign.endDate ? formatDate(campaign.endDate) : 'N/A'}</span>
           </div>
         </div>
 

@@ -248,10 +248,10 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     className="h-full rounded-full bg-[#43b48f]"
                   />
                 </div>
-                {campaign.duration === 'PONCTUAL' && campaign.endDate && (
+                {campaign.duration === 'PONCTUAL' && (
                   <p className="text-sm text-white/70 mt-2 flex items-center gap-1.5">
                     <Calendar size={14} className="shrink-0 text-[#43b48f]" aria-hidden />
-                    Date de fin : <span className="font-semibold text-white/90">{formatDate(campaign.endDate)}</span>
+                    Date de fin : <span className="font-semibold text-white/90">{campaign.endDate ? formatDate(campaign.endDate) : 'N/A'}</span>
                   </p>
                 )}
               </div>
