@@ -103,7 +103,7 @@ function mapApiCampaignToCampaign(api: ApiCampaign): Campaign {
     type: api.type ?? 'SADAQAH',
     category,
     location: api.location ?? '',
-    endDate: api.endDate ?? new Date().toISOString(),
+    endDate: api.endDate ?? null,
     impact: api.goals ?? '',
     beneficiaries: Array.isArray(api.beneficiaries) ? api.beneficiaries.length : 0,
     beneficiariesList: Array.isArray(api.beneficiaries)

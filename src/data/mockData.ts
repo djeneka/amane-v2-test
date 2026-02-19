@@ -13,7 +13,7 @@ export interface Campaign {
   type?: string;
   category: 'urgence' | 'education' | 'sante' | 'developpement' | 'refugies' | 'special-ramadan' | 'special-tabaski' | 'autres';
   location: string;
-  endDate: string;
+  endDate: string | null;
   impact: string;
   beneficiaries: number;
   /** Liste des libellés bénéficiaires (API: beneficiaries array) */
