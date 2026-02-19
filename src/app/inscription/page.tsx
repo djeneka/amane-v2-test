@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { register as apiRegister, verifyAccount, resendOtp, type RegisterGender } from "@/services/auth";
 import AuthGuard from "@/components/AuthGuard";
+import { COUNTRY_DIAL_CODES, getFlagEmoji } from "@/data/countryDialCodes";
 
 export default function InscriptionPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function InscriptionPage() {
     phone: "",
     birthDate: "",
     gender: "" as RegisterGender | "",
+    isMuslim: true,
     interests: [] as string[],
     monthlyMinIncome: "",
     monthlyMaxIncome: "",
@@ -236,6 +238,7 @@ export default function InscriptionPage() {
         wallet: {
           code: formData.walletCode.replace(/\D/g, ""),
         },
+        isMuslim: formData.isMuslim,
       });
 
       // Stocker temporairement les données pour l'étape de vérification (et après succès)
@@ -510,7 +513,7 @@ export default function InscriptionPage() {
                         className="w-24 h-24 mx-auto mb-6 flex items-center justify-center bg-gray-100/10 rounded-2xl"
                       >
                         <img 
-                          src="/logo/AMANE%201.svg" 
+                          src="/amane-logo.png" 
                           alt="Amane+ Logo" 
                           className="w-full h-full object-contain shadow-2xl rounded-2xl"
                         />
@@ -636,26 +639,21 @@ export default function InscriptionPage() {
                       value={phoneCountryCode}
                       onChange={(e) => setPhoneCountryCode(e.target.value)}
                       aria-label="Indicatif pays"
-                      className="pl-3 pr-2 py-4 bg-white/50 text-gray-700 font-medium border-0 focus:ring-0 focus:outline-none cursor-pointer"
+                      className="pl-2 pr-1 py-4 bg-white/50 text-gray-700 font-medium border-0 focus:ring-0 focus:outline-none cursor-pointer w-[88px] flex-shrink-0 text-sm"
                     >
-                      <option value="+33">+33</option>
-                      <option value="+221">+221</option>
-                      <option value="+225">+225</option>
-                      <option value="+223">+223</option>
-                      <option value="+226">+226</option>
-                      <option value="+228">+228</option>
-                      <option value="+227">+227</option>
-                      <option value="+224">+224</option>
-                      <option value="+212">+212</option>
-                      <option value="+213">+213</option>
+                      {COUNTRY_DIAL_CODES.map((country) => (
+                        <option key={`${country.iso2}-${country.dialCode}-${country.name}`} value={country.dialCode} title={country.name}>
+                          {getFlagEmoji(country.iso2)} {country.dialCode}
+                        </option>
+                      ))}
                     </select>
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 min-w-0">
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                       <input
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => handleInputChange("phone", e.target.value.replace(/\D/g, ""))}
-                        className={`w-full pl-10 pr-4 py-4 bg-transparent border-0 focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-500 ${
+                        className={`w-full min-w-0 pl-10 pr-4 py-4 bg-transparent border-0 focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-500 ${
                           errors.phone ? "ring-2 ring-red-500 rounded-r-2xl" : ""
                         }`}
                         placeholder="6 12 34 56 78"
@@ -711,6 +709,23 @@ export default function InscriptionPage() {
                 {errors.gender && (
                   <p className="text-red-300 text-sm mt-1">{errors.gender}</p>
                 )}
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.73 }}
+                className="rounded-2xl border border-white/20 bg-white/5 backdrop-blur-sm overflow-hidden"
+              >
+                <label className="flex items-center gap-4 p-4 cursor-pointer hover:bg-white/5 transition-colors rounded-2xl">
+                  <input
+                    type="checkbox"
+                    checked={formData.isMuslim}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, isMuslim: e.target.checked }))}
+                    className="w-5 h-5 rounded border-2 border-white/40 text-[#5AB678] focus:ring-[#5AB678]/50 focus:ring-2 bg-white/10"
+                  />
+                  <span className="text-white font-medium">Êtes-vous musulman ?</span>
+                </label>
               </motion.div>
 
               <motion.div
@@ -1162,7 +1177,7 @@ export default function InscriptionPage() {
                       className="w-24 h-24 mx-auto mb-6 flex items-center justify-center bg-gray-100/10 rounded-2xl"
                     >
                       <img 
-                        src="/logo/AMANE%201.svg" 
+                        src="/amane-logo.png" 
                         alt="Amane+ Logo" 
                         className="w-full h-full object-contain shadow-2xl rounded-2xl"
                       />

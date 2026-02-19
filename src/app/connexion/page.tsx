@@ -7,26 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
-
-/** Codes pays pour le téléphone (concaténés avec le numéro envoyé à l'API) */
-const COUNTRY_CODES = [
-  { code: '+225', label: 'Côte d\'Ivoire', flag: '🇨🇮' },
-  { code: '+221', label: 'Sénégal', flag: '🇸🇳' },
-  { code: '+223', label: 'Mali', flag: '🇲🇱' },
-  { code: '+226', label: 'Burkina Faso', flag: '🇧🇫' },
-  { code: '+228', label: 'Togo', flag: '🇹🇬' },
-  { code: '+229', label: 'Bénin', flag: '🇧🇯' },
-  { code: '+33', label: 'France', flag: '🇫🇷' },
-  { code: '+32', label: 'Belgique', flag: '🇧🇪' },
-  { code: '+39', label: 'Italie', flag: '🇮🇹' },
-  { code: '+1', label: 'Canada', flag: '🇨🇦' },
-  { code: '+1', label: 'USA', flag: '🇺🇸' },
-  { code: '+212', label: 'Maroc', flag: '🇲🇦' },
-  { code: '+213', label: 'Algérie', flag: '🇩🇿' },
-  { code: '+216', label: 'Tunisie', flag: '🇹🇳' },
-  { code: '+237', label: 'Cameroun', flag: '🇨🇲' },
-  { code: '+234', label: 'Nigeria', flag: '🇳🇬' },
-];
+import { COUNTRY_DIAL_CODES, getFlagEmoji } from "@/data/countryDialCodes";
 
 function isEmail(value: string): boolean {
   return value.includes('@') && value.length > 3;
@@ -233,7 +214,7 @@ export default function ConnexionPage() {
                   className="w-24 h-24 mx-auto mb-6 flex items-center justify-center bg-gray-100/10 rounded-2xl"
                 >
                   <img 
-                    src="/logo/AMANE%201.svg" 
+                    src="/amane-logo.png" 
                     alt="Amane+ Logo" 
                     className="w-full h-full object-contain shadow-2xl rounded-2xl"
                   />
@@ -275,17 +256,17 @@ export default function ConnexionPage() {
                       <select
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
-                        className="pl-3 pr-8 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 appearance-none cursor-pointer min-w-[120px]"
+                        className="pl-2 pr-1 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 appearance-none cursor-pointer w-[88px] flex-shrink-0 text-sm"
                         aria-label="Code pays"
                       >
-                        {COUNTRY_CODES.map(({ code, label, flag }) => (
-                          <option key={`${code}-${flag}`} value={code}>
-                            {flag} {code}
+                        {COUNTRY_DIAL_CODES.map((country) => (
+                          <option key={`${country.iso2}-${country.dialCode}-${country.name}`} value={country.dialCode} title={country.name}>
+                            {getFlagEmoji(country.iso2)} {country.dialCode}
                           </option>
                         ))}
                       </select>
                     )}
-                    <div className="relative flex-1">
+                    <div className="relative flex-1 min-w-0">
                       {isEmailMode ? (
                         <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                       ) : (
@@ -297,7 +278,7 @@ export default function ConnexionPage() {
                         autoComplete="username"
                         value={loginValue}
                         onChange={(e) => setLoginValue(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500"
+                        className="w-full min-w-0 pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500"
                         placeholder={loginPlaceholder}
                         required
                       />
