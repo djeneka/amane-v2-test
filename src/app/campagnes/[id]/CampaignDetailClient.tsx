@@ -295,14 +295,24 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
             {/* Bloc principal des détails (catégorie, titre, barre et Donner sont en bas de l’image) */}
             <div className="bg-[#00644d]/10 backdrop-blur-sm rounded-3xl p-4 lg:p-8">
 
-              {/* Description */}
-              <p className="text-white/90 mb-6 leading-relaxed">
-                {campaign.description}
-              </p>
+              {/* Description : HTML uniquement si la chaîne contient des balises, sinon texte brut */}
+              {campaign.description?.includes('<') ? (
+                <div
+                  className="text-white/90 mb-6 leading-relaxed [&_div]:mt-2 [&_div:first-child]:mt-0 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-6"
+                  dangerouslySetInnerHTML={{ __html: campaign.description }}
+                />
+              ) : (
+                <p className="text-white/90 mb-6 leading-relaxed">{campaign.description ?? ''}</p>
+              )}
               <h3 className="text-white font-bold mb-4 text-xl">🎯 Notre objectif</h3>
-              <p className="text-white/90 mb-6 leading-relaxed">
-                {campaign.impact}
-              </p>
+              {campaign.impact?.includes('<') ? (
+                <div
+                  className="text-white/90 mb-6 leading-relaxed [&_div]:mt-2 [&_div:first-child]:mt-0 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-6"
+                  dangerouslySetInnerHTML={{ __html: campaign.impact }}
+                />
+              ) : (
+                <p className="text-white/90 mb-6 leading-relaxed">{campaign.impact ?? ''}</p>
+              )}
 
               {/* Liste déroulante  */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
