@@ -5,21 +5,7 @@ import { motion } from "framer-motion";
 import { Mail, ArrowLeft, Phone } from "lucide-react";
 import Link from "next/link";
 import { forgotPassword, resendOtp, type ForgotPasswordBody } from "@/services/auth";
-
-/** Codes pays pour le téléphone */
-const COUNTRY_CODES = [
-  { code: '+225', label: 'Côte d\'Ivoire', flag: '🇨🇮' },
-  { code: '+221', label: 'Sénégal', flag: '🇸🇳' },
-  { code: '+223', label: 'Mali', flag: '🇲🇱' },
-  { code: '+226', label: 'Burkina Faso', flag: '🇧🇫' },
-  { code: '+228', label: 'Togo', flag: '🇹🇬' },
-  { code: '+229', label: 'Bénin', flag: '🇧🇯' },
-  { code: '+33', label: 'France', flag: '🇫🇷' },
-  { code: '+32', label: 'Belgique', flag: '🇧🇪' },
-  { code: '+212', label: 'Maroc', flag: '🇲🇦' },
-  { code: '+237', label: 'Cameroun', flag: '🇨🇲' },
-  { code: '+234', label: 'Nigeria', flag: '🇳🇬' },
-];
+import { COUNTRY_DIAL_CODES, getFlagEmoji } from "@/data/countryDialCodes";
 
 function isEmail(value: string): boolean {
   return value.includes('@') && value.length > 3;
@@ -254,17 +240,17 @@ export default function MotDePasseOubliePage() {
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="pl-3 pr-8 py-3 bg-white/90 border border-white/30 rounded-xl focus:ring-2 focus:ring-[#00C48C] focus:border-transparent text-gray-900 appearance-none cursor-pointer min-w-[120px]"
+                      className="pl-2 pr-1 py-3 bg-white/90 border border-white/30 rounded-xl focus:ring-2 focus:ring-[#00C48C] focus:border-transparent text-gray-900 appearance-none cursor-pointer w-[88px] flex-shrink-0 text-sm"
                       aria-label="Code pays"
                     >
-                      {COUNTRY_CODES.map(({ code, label, flag }) => (
-                        <option key={code} value={code}>
-                          {flag} {code}
+                      {COUNTRY_DIAL_CODES.map((country) => (
+                        <option key={`${country.iso2}-${country.dialCode}-${country.name}`} value={country.dialCode} title={country.name}>
+                          {getFlagEmoji(country.iso2)} {country.dialCode}
                         </option>
                       ))}
                     </select>
                   )}
-                  <div className="relative flex-1">
+                  <div className="relative flex-1 min-w-0">
                     {isEmailMode ? (
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
                     ) : (
@@ -275,7 +261,7 @@ export default function MotDePasseOubliePage() {
                       inputMode={isEmailMode ? "email" : "numeric"}
                       value={loginValue}
                       onChange={(e) => setLoginValue(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#00C48C] focus:border-transparent transition-all duration-200 bg-white/90 text-gray-900 placeholder-gray-500 ${
+                      className={`w-full min-w-0 pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#00C48C] focus:border-transparent transition-all duration-200 bg-white/90 text-gray-900 placeholder-gray-500 ${
                         error ? "border-red-400" : "border-white/30"
                       }`}
                       placeholder={placeholder}

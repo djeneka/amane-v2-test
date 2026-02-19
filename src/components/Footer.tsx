@@ -44,15 +44,19 @@ export default function Footer() {
             viewport={{ once: true }}
             className="lg:col-span-2"
           >
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="w-16 h-16 rounded-lg flex items-center justify-center">
+            <div className="flex items-center mb-4">
                 <img 
-                  src="/logo/AMANE%201.svg" 
-                  alt="Amane+ Logo" 
-                  className="w-full h-full object-contain"
+                  src="/amane-logo.png" 
+                  alt="Amane+" 
+                  className="h-12 w-auto object-contain"
                 />
+              <div className="w-16 h-16 rounded-lg flex items-center justify-center">
+                  <img 
+                    src="/logo/AMANE%201.svg" 
+                    alt="Amane+ Logo" 
+                    className="w-full h-full object-contain"
+                  />
               </div>
-              <span className="text-2xl font-bold">Amane+</span>
             </div>
             <p className="text-gray-300 mb-6 leading-relaxed">
               Votre plateforme de confiance pour la finance islamique éthique. 

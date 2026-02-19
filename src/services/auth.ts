@@ -70,6 +70,8 @@ export interface RegisterBody {
   interests: string[];
   socialCategory: RegisterSocialCategory;
   wallet: RegisterWallet;
+  /** Utilisateur musulman (coché par défaut) */
+  isMuslim?: boolean;
 }
 
 /** Réponse POST /api/auth/register */
