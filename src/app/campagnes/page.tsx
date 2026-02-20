@@ -558,11 +558,18 @@ export default function CampagnesPage() {
                               <h3 className="text-xl font-bold text-white leading-tight">
                                 {campaign.title}
                               </h3>
-                              {campaign.description?.trim() && (
-                                <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
-                                  ({campaign.description})
-                                </p>
-                              )}
+                              {/* {campaign.description?.trim() && (
+                                campaign.description.includes('<') ? (
+                                  <div
+                                    className="text-base font-normal text-white/90 mt-1 line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
+                                    dangerouslySetInnerHTML={{ __html: campaign.description }}
+                                  />
+                                ) : (
+                                  <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
+                                    ({campaign.description})
+                                  </p>
+                                )
+                              )} */}
                             </div>
                           </div>
                         </div>
@@ -614,11 +621,18 @@ export default function CampagnesPage() {
                                     <h3 className="text-xl font-bold text-white leading-tight">
                                       {campaign.title}
                                     </h3>
-                                    {campaign.description?.trim() && (
-                                      <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
-                                        ({campaign.description})
-                                      </p>
-                                    )}
+                                    {/* {campaign.description?.trim() && (
+                                      campaign.description.includes('<') ? (
+                                        <div
+                                          className="text-base font-normal text-white/90 mt-1 line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
+                                          dangerouslySetInnerHTML={{ __html: campaign.description }}
+                                        />
+                                      ) : (
+                                        <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
+                                          ({campaign.description})
+                                        </p>
+                                      )
+                                    )} */}
                                   </div>
                                 </div>
                               </div>
@@ -717,11 +731,18 @@ export default function CampagnesPage() {
                               <h3 className="text-xl font-bold text-white leading-tight">
                                 {campaign.title}
                               </h3>
-                              {campaign.description?.trim() && (
-                                <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
-                                  ({campaign.description})
-                                </p>
-                              )}
+                              {/* {campaign.description?.trim() && (
+                                campaign.description.includes('<') ? (
+                                  <div
+                                    className="text-base font-normal text-white/90 mt-1 line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
+                                    dangerouslySetInnerHTML={{ __html: campaign.description }}
+                                  />
+                                ) : (
+                                  <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
+                                    ({campaign.description})
+                                  </p>
+                                )
+                              )} */}
                             </div>
                           </div>
                         </div>
@@ -773,11 +794,18 @@ export default function CampagnesPage() {
                                     <h3 className="text-xl font-bold text-white leading-tight">
                                       {campaign.title}
                                     </h3>
-                                    {campaign.description?.trim() && (
-                                      <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
-                                        ({campaign.description})
-                                      </p>
-                                    )}
+                                    {/* {campaign.description?.trim() && (
+                                      campaign.description.includes('<') ? (
+                                        <div
+                                          className="text-base font-normal text-white/90 mt-1 line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
+                                          dangerouslySetInnerHTML={{ __html: campaign.description }}
+                                        />
+                                      ) : (
+                                        <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
+                                          ({campaign.description})
+                                        </p>
+                                      )
+                                    )} */}
                                   </div>
                                 </div>
                               </div>
@@ -988,9 +1016,16 @@ export default function CampagnesPage() {
                           <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 group-hover:text-blue-600 transition-colors break-words">
                             {campaign.title}
                           </h3>
-                          <p className="text-white/70 mb-4 text-sm sm:text-base line-clamp-2">
-                            {campaign.description}
-                          </p>
+                          {campaign.description?.includes('<') ? (
+                            <div
+                              className="text-white/70 mb-4 text-sm sm:text-base line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
+                              dangerouslySetInnerHTML={{ __html: campaign.description ?? '' }}
+                            />
+                          ) : (
+                            <p className="text-white/70 mb-4 text-sm sm:text-base line-clamp-2">
+                              {campaign.description}
+                            </p>
+                          )}
 
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-xs sm:text-sm text-white/70 mb-4">
                             <div className="flex items-center space-x-1">
