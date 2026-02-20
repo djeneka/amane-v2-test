@@ -88,7 +88,7 @@ const STEP_INFO: Record<number, StepInfo> = {
     sections: [
       {
         subtitle: 'Agriculture',
-        text: "La Zakat est due sur toutes les productions agricoles (fruits, légumes, fleurs, céréales, etc.) produites dans un but commercial et ce au moment de la récolte. La durée de possession minimum d'un an ne s'applique pas aux productions agricoles et la Zakat doit être payée autant de fois qu'il n'y a de récolte. Le consensus adopte la formule suivante : 10 % pour les récoltes issues de champs non irrigués (eau de pluie uniquement) ; 5 % pour les champs irrigués ne bénéficiant pas de l'eau de pluie ; et 7,5 % pour les situations mixtes.",
+        text: "La Zakat est due sur toutes les productions agricoles (fruits, légumes, fleurs, céréales, etc.) produites dans un but commercial et ce au moment de la récolte d'une quantité totale d'au moins 653kg. La durée de possession minimum d'un an ne s'applique pas aux productions agricoles et la Zakat doit être payée autant de fois qu'il n'y a de récolte. Le consensus adopte la formule suivante : 10 % pour les récoltes issues de champs non irrigués (eau de pluie uniquement) ; 5 % pour les champs irrigués ne bénéficiant pas de l'eau de pluie ; et 7,5 % pour les situations mixtes.",
       },
       {
         subtitle: 'Bétail',
@@ -653,14 +653,18 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
             <h3 className="text-white font-bold text-base sm:text-lg">
               Liquidités & Valeurs (Le &quot;Cash&quot; et les Métaux)
             </h3>
-            <button
+            <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 1 ? null : 1))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
               aria-label="Afficher les informations"
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.95 }}
             >
               <Info size={18} />
-            </button>
+            </motion.button>
             <AnimatePresence>
               {infoPopoverStep === 1 && STEP_INFO[1] && (
                 <motion.div
@@ -989,14 +993,18 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
             <h3 className="text-white font-bold text-base sm:text-lg">
               Placements & Immobilier (Le Patrimoine)
             </h3>
-            <button
+            <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 2 ? null : 2))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
               aria-label="Afficher les informations"
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.95 }}
             >
               <Info size={18} />
-            </button>
+            </motion.button>
             <AnimatePresence>
               {infoPopoverStep === 2 && STEP_INFO[2] && (
                 <motion.div
@@ -1199,14 +1207,18 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
             <h3 className="text-white font-bold text-base sm:text-lg">
               Activités Rurales (Bétail & Agriculture)
             </h3>
-            <button
+            <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 3 ? null : 3))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
               aria-label="Afficher les informations"
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.95 }}
             >
               <Info size={18} />
-            </button>
+            </motion.button>
             <AnimatePresence>
               {infoPopoverStep === 3 && STEP_INFO[3] && (
                 <motion.div
@@ -1356,14 +1368,18 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
             <h3 className="text-white font-bold text-base sm:text-lg">
               Créances (Argent qu&apos;on vous doit)
             </h3>
-            <button
+            <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 4 ? null : 4))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
               aria-label="Afficher les informations"
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.95 }}
             >
               <Info size={18} />
-            </button>
+            </motion.button>
             <AnimatePresence>
               {infoPopoverStep === 4 && STEP_INFO[4] && (
                 <motion.div
@@ -1476,14 +1492,18 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
             <h3 className="text-white font-bold text-base sm:text-lg">
               Passif & Dettes (À déduire)
             </h3>
-            <button
+            <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 5 ? null : 5))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
               aria-label="Afficher les informations"
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.95 }}
             >
               <Info size={18} />
-            </button>
+            </motion.button>
             <AnimatePresence>
               {infoPopoverStep === 5 && STEP_INFO[5] && (
                 <motion.div
@@ -1673,14 +1693,18 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
                 <div className="flex items-center gap-2">
                   <span className="text-white font-medium text-sm sm:text-lg">Nissab</span>
-                <button
+                <motion.button
                   type="button"
                   onClick={() => setShowNissabInfo((prev) => !prev)}
                   className="text-[#43B48F] hover:opacity-80 shrink-0"
-                    aria-label="Information sur le Nissab"
-                  >
+                  aria-label="Information sur le Nissab"
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <Info size={18} />
-                </button>
+                </motion.button>
               </div>
               <div className="text-left sm:text-right">
                 {/* TODO: brancher le calcul du Nissab (seuil minimal d’assujettissement à la Zakat) */}

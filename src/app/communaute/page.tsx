@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { 
   ArrowRight, Heart, Users, MapPin, Calendar, ArrowLeft, ChevronDown,
-  Apple, Play, TrendingUp, Bookmark, Star
+  Apple, Play, TrendingUp, Bookmark, Star, Clock
 } from 'lucide-react';
 import Image from 'next/image';
 import { getTakafulPlans, type TakafulPlan } from '@/services/takaful-plans';
@@ -365,9 +365,16 @@ export default function CommunautePage() {
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
                             <h3 className="text-white text-2xl font-bold mb-2">{campaign.title}</h3>
+                            {campaign.description?.includes('<') ? (
+                            <div
+                              className="text-white/90 text-sm mb-4 line-clamp-3 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
+                              dangerouslySetInnerHTML={{ __html: campaign.description ?? '' }}
+                            />
+                            ) : (
                             <p className="text-white/90 text-sm mb-4 line-clamp-3">
-                            {campaign.description}
+                              {campaign.description}
                             </p>
+                            )}
                             <Link href={`/campagnes/${campaign.id}`}>
                             <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
                                 En savoir plus
@@ -461,6 +468,12 @@ export default function CommunautePage() {
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
+            )}
+            {!campaignsLoading && !campaignsError && popularCampaigns.length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-white/90">
+                <Clock size={48} className="mb-4 opacity-90" aria-hidden />
+                <p className="text-lg font-medium">Aucunes campagnes disponibles</p>
+              </div>
             )}
             {!campaignsLoading && !campaignsError && popularCampaigns.map((campaign, index) => {
               const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
