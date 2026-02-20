@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { 
   ArrowRight, Heart, Users, Star, MapPin, Calendar, Bookmark, Zap,
   Smartphone, Apple, Play, ChevronDown, ChevronLeft, ChevronRight,
-  Eye, Wallet as WalletIcon, HandCoins, TrendingUp, Circle, X, Share2
+  Eye, Wallet as WalletIcon, HandCoins, TrendingUp, Circle, X, Share2, Clock
 } from 'lucide-react';
 import CampaignCard from '@/components/CampaignCard';
 import Wallet from '@/components/Wallet';
@@ -712,6 +712,12 @@ export default function TransactionsPage() {
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
+            )}
+            {!campaignsLoading && !campaignsError && popularCampaigns.length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-white/90">
+                <Clock size={48} className="mb-4 opacity-90" aria-hidden />
+                <p className="text-lg font-medium">Aucunes campagnes disponibles</p>
+              </div>
             )}
             {!campaignsLoading && !campaignsError && popularCampaigns.map((campaign, index) => {
               const donorCount = donorCountByCampaignId[campaign.id] ?? 0;

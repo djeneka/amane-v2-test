@@ -74,15 +74,13 @@ export default function InscriptionPage() {
     { value: "CULTURE_ISLAMIQUE", label: "Culture islamique" },
   ] as const;
 
-  /** Étape 1 complète (infos personnelles + centres d'intérêt) — permet d'afficher "Suivant" */
+  /** Étape 1 complète (infos personnelles + centres d'intérêt) — permet d'afficher "Suivant". Email et date de naissance optionnels. */
   const isStep1Complete =
     !!formData.firstName.trim() &&
     !!formData.lastName.trim() &&
-    !!formData.email.trim() &&
-    /\S+@\S+\.\S+/.test(formData.email) &&
+    (formData.email.trim() === "" || /\S+@\S+\.\S+/.test(formData.email.trim())) &&
     !!formData.phone.trim() &&
     formData.phone.replace(/\D/g, "").length >= 8 &&
-    !!formData.birthDate &&
     (formData.gender === "MALE" || formData.gender === "FEMALE") &&
     (!hasInterests || formData.interests.length > 0);
 
@@ -151,9 +149,7 @@ export default function InscriptionPage() {
       newErrors.lastName = "Le nom est requis";
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = "L'email est requis";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email.trim())) {
       newErrors.email = "Format d'email invalide";
     }
 
@@ -162,10 +158,6 @@ export default function InscriptionPage() {
       newErrors.phone = "Le numéro de téléphone est requis";
     } else if (phoneDigits.length < 8) {
       newErrors.phone = "Le numéro doit contenir au moins 8 chiffres";
-    }
-
-    if (!formData.birthDate) {
-      newErrors.birthDate = "La date de naissance est requise";
     }
 
     if (formData.gender !== "MALE" && formData.gender !== "FEMALE") {
@@ -566,6 +558,7 @@ export default function InscriptionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                 >
+                  <label className="block text-xs font-medium text-white/90 mb-2">Prénom</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                     <input
@@ -588,6 +581,7 @@ export default function InscriptionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
+                  <label className="block text-xs font-medium text-white/90 mb-2">Nom</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                     <input
@@ -611,6 +605,7 @@ export default function InscriptionPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
+                <label className="block text-xs font-medium text-white/90 mb-2">Email (optionnel)</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                   <input
@@ -634,6 +629,8 @@ export default function InscriptionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
                 >
+                  <label className="block text-xs font-medium text-white/90 mb-2">Numéro de téléphone</label>
+
                   <div className="flex rounded-2xl overflow-hidden bg-white/80 backdrop-blur-sm border-0 focus-within:ring-2 focus-within:ring-white/50 focus-within:bg-white/90">
                     <select
                       value={phoneCountryCode}
@@ -656,7 +653,7 @@ export default function InscriptionPage() {
                         className={`w-full min-w-0 pl-10 pr-4 py-4 bg-transparent border-0 focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-500 ${
                           errors.phone ? "ring-2 ring-red-500 rounded-r-2xl" : ""
                         }`}
-                        placeholder="6 12 34 56 78"
+                        placeholder="0701020304"
                       />
                     </div>
                   </div>
@@ -670,13 +667,14 @@ export default function InscriptionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 }}
                 >
+                  <label className="block text-xs font-medium text-white/90 mb-2">Date de naissance (optionnel)</label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                     <input
                       type="date"
                       value={formData.birthDate}
                       onChange={(e) => handleInputChange("birthDate", e.target.value)}
-                      aria-label="Date de naissance"
+                      aria-label="Date de naissance (optionnel)"
                       className={`w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                         errors.birthDate ? "ring-2 ring-red-500" : ""
                       }`}
@@ -1200,7 +1198,7 @@ export default function InscriptionPage() {
                       transition={{ delay: 0.2 }}
                       className="text-white/90 mb-8"
                     >
-                      Veuillez entrer le code que nous venons de vous envoyer sur votre e-mail enregistré.
+                      Veuillez entrer le code que nous venons de vous envoyer sur votre numéro de telephone / e-mail enregistré.
                     </motion.p>
 
                     {/* Champs de code */}

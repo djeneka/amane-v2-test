@@ -10,7 +10,7 @@ import {
   Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin,
   Eye, EyeOff, Zap, Building, Leaf, Gift, Bookmark, ChevronDown, Globe, Calendar,
   Camera, Megaphone, ArrowDown, Award, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight as ArrowRightIcon,
-  Sparkles
+  Sparkles, Clock
 } from 'lucide-react';
 import Image from 'next/image';
 import CampaignCard from '@/components/CampaignCard';
@@ -772,7 +772,7 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
               { 
-                value: '15,247', 
+                value: '247', 
                 label: 'Donateurs actifs', 
                 icon: Users, 
                 iconBg: 'bg-[#5AB678]',
@@ -788,7 +788,7 @@ export default function Home() {
                 cardBg: 'bg-[#152A2A]'
               },
               { 
-                value: '50+', 
+                value: '18+', 
                 label: 'Campagnes actives', 
                 icon: Heart, 
                 iconBg: 'bg-pink-500',
@@ -796,7 +796,7 @@ export default function Home() {
                 cardBg: 'bg-[#152A2A]'
               },
               { 
-                value: '200+', 
+                value: '20+', 
                 label: 'Produits halal', 
                 icon: Bookmark, 
                 iconBg: 'bg-purple-500',
@@ -990,6 +990,12 @@ export default function Home() {
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
+            )}
+            {!campaignsLoading && !campaignsError && featuredCampaigns.length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-white/90">
+                <Clock size={48} className="mb-4 opacity-90" aria-hidden />
+                <p className="text-lg font-medium">Aucunes campagnes disponibles</p>
+              </div>
             )}
             {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
               const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
@@ -1598,6 +1604,12 @@ export default function Home() {
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
+            )}
+            {!campaignsLoading && !campaignsError && featuredCampaigns.length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-white/90">
+                <Clock size={48} className="mb-4 opacity-90" aria-hidden />
+                <p className="text-lg font-medium">Aucunes campagnes disponibles</p>
+              </div>
             )}
             {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
               const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
