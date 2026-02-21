@@ -882,7 +882,7 @@ export default function MakeDonationModal({
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ duration: 0.3 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#101919] rounded-none md:rounded-2xl w-full h-full max-w-4xl md:max-h-[90vh] overflow-hidden relative border-0 md:border border-white/10 flex flex-col"
+              className="bg-[#101919] rounded-none md:rounded-2xl w-full h-full max-h-[100dvh] max-w-4xl md:max-h-[90vh] overflow-hidden relative border-0 md:border border-white/10 flex flex-col"
             >
               {/* Close Button */}
               <button
@@ -1027,18 +1027,21 @@ export default function MakeDonationModal({
                   </div>
                 </div>
 
-                {/* Content - Right Side */}
+                {/* Content - Right Side - scrollable on mobile when keyboard is open */}
                 <div className="flex-1 flex flex-col min-h-0 p-4 md:p-8 overflow-hidden">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentStep}
-                      className="flex-1 flex flex-col min-h-0"
+                      className="flex-1 flex flex-col min-h-0 min-w-0"
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <div className="flex-1 min-h-0 flex flex-col">
+                      <div
+                        className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden pb-8"
+                        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+                      >
                         {renderStepContent()}
                       </div>
                     </motion.div>
