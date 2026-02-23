@@ -11,6 +11,8 @@ import { getMyDonations, type Donation } from '@/services/donations';
 import { getMyTransactions, type Transaction } from '@/services/transactions';
 import { getRankForScore, getNextRank } from '@/lib/rankRules';
 import { mySadaqahHistory, getMyRank, type SadaqahHistoryEntry, type RankingEntry } from '@/services/statistics';
+import { useTranslations } from 'next-intl';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface DonationHistoryItem {
   id: string;
@@ -20,29 +22,32 @@ interface DonationHistoryItem {
   gain: number;
 }
 
-function formatHistoryDate(iso: string): string {
+function formatHistoryDate(iso: string, locale: string): string {
   try {
     const d = new Date(iso);
-    const datePart = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-    const timePart = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return `${datePart}, à ${timePart}`;
+    const localeTag = locale === 'en' ? 'en-GB' : 'fr-FR';
+    const datePart = d.toLocaleDateString(localeTag, { day: 'numeric', month: 'short', year: 'numeric' });
+    const timePart = d.toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' });
+    return locale === 'en' ? `${datePart}, ${timePart}` : `${datePart}, à ${timePart}`;
   } catch {
     return iso;
   }
 }
 
-function sadaqahEntryToHistoryItem(entry: SadaqahHistoryEntry): DonationHistoryItem {
-  const type = entry.description.includes('Don général') ? 'Don général' : 'Don';
+function sadaqahEntryToHistoryItem(entry: SadaqahHistoryEntry, locale: string, generalDonLabel: string): DonationHistoryItem {
+  const type = entry.description.includes(generalDonLabel) ? generalDonLabel : 'Don';
   return {
     id: entry.id,
     type,
     description: entry.description,
-    date: formatHistoryDate(entry.createdAt),
+    date: formatHistoryDate(entry.createdAt, locale),
     gain: entry.score,
   };
 }
 
 export default function ScoresPage() {
+  const t = useTranslations('profil');
+  const { locale } = useLocale();
   const { isAuthenticated, accessToken, user } = useAuth();
   const [myDonations, setMyDonations] = useState<Donation[]>([]);
   const [myTransactions, setMyTransactions] = useState<Transaction[]>([]);
@@ -111,7 +116,7 @@ export default function ScoresPage() {
         if (!cancelled) setSadaqahHistory(list);
       })
       .catch((err) => {
-        if (!cancelled) setSadaqahHistoryError(err?.message ?? 'Erreur lors du chargement');
+        if (!cancelled) setSadaqahHistoryError(err?.message ?? t('loadError'));
       })
       .finally(() => {
         if (!cancelled) setSadaqahHistoryLoading(false);
@@ -135,7 +140,7 @@ export default function ScoresPage() {
         if (!cancelled) setRanking(list);
       })
       .catch((err) => {
-        if (!cancelled) setRankingError(err?.message ?? 'Erreur lors du chargement du classement');
+        if (!cancelled) setRankingError(err?.message ?? t('loadError'));
       })
       .finally(() => {
         if (!cancelled) setRankingLoading(false);
@@ -156,7 +161,8 @@ export default function ScoresPage() {
   const campaignsCount = new Set(myDonations.map((d) => d.campaignId).filter(Boolean)).size;
 
   // Données pour l'historique des dons (depuis mySadaqahHistory)
-  const donationHistoryData: DonationHistoryItem[] = sadaqahHistory.map(sadaqahEntryToHistoryItem);
+  const generalDonLabel = t('scoresGeneralDon');
+  const donationHistoryData: DonationHistoryItem[] = sadaqahHistory.map((e) => sadaqahEntryToHistoryItem(e, locale, generalDonLabel));
 
   // Calcul de la pagination
   const totalPages = Math.ceil(donationHistoryData.length / itemsPerPage);
@@ -181,9 +187,9 @@ export default function ScoresPage() {
   };
   // Données pour Impact de vos dons (données réelles comme sur la home)
   const impactData = [
-    { icon: Heart, label: 'Dons', value: donationsCount, color: '#00D9A5' },
-    { icon: Wallet, label: 'Dépensé (F CFA)', value: spentAmount, color: '#00D9A5' },
-    { icon: Megaphone, label: 'Campagnes', value: campaignsCount, color: '#00D9A5' },
+    { icon: Heart, labelKey: 'scoresDonations', value: donationsCount, color: '#00D9A5', formatNumber: false },
+    { icon: Wallet, labelKey: 'scoresSpent', value: spentAmount, color: '#00D9A5', formatNumber: true },
+    { icon: Megaphone, labelKey: 'scoresCampaigns', value: campaignsCount, color: '#00D9A5', formatNumber: false },
   ];
 
   // Statistiques sadaka score depuis mySadaqahHistory
@@ -204,16 +210,16 @@ export default function ScoresPage() {
     : 0;
 
   const statsData = [
-    { label: 'Ce mois', value: scoreThisMonth, color: '#00D9A5' },
-    { label: 'Cette année', value: scoreThisYear, color: '#00D9A5' },
-    { label: 'Record', value: scoreRecord, color: '#00D9A5' },
+    { labelKey: 'scoresThisMonth', value: scoreThisMonth, color: '#00D9A5' },
+    { labelKey: 'scoresThisYear', value: scoreThisYear, color: '#00D9A5' },
+    { labelKey: 'scoresRecord', value: scoreRecord, color: '#00D9A5' },
   ];
 
   // Données pour Comment gagner des points
   const earningPointsData = [
-    { icon: UserPlus, label: 'Parraine un ami', color: '#00D9A5' },
-    { icon: Gift, label: 'Participe à une campagne', color: '#00D9A5' },
-    { icon: User, label: 'Complète ton profil', color: '#00D9A5' },
+    { icon: UserPlus, labelKey: 'scoresInviteFriend', color: '#00D9A5' },
+    { icon: Gift, labelKey: 'scoresJoinCampaign', color: '#00D9A5' },
+    { icon: User, labelKey: 'scoresCompleteProfile', color: '#00D9A5' },
   ];
 
   // Badges débloqués : Solidaire (≥1 don), Donateur régulier (≥1 don dans chacun des 3 derniers mois), Parrain commenté
@@ -229,14 +235,12 @@ export default function ScoresPage() {
     });
   const hasDonateurRegulier = last3Months.every(({ year, month }) => hasDonInMonth(year, month));
 
-  const badgesData: { icon: typeof Package; label: string; description: string }[] = [];
+  const badgesData: { icon: typeof Package; labelKey: string; descKey: string }[] = [];
   if (hasAtLeastOneDon) {
-    badgesData.push({ icon: Package, label: 'Solidaire', description: 'A fait un don' });
+    badgesData.push({ icon: Package, labelKey: 'scoresBadgeSolidaire', descKey: 'scoresBadgeSolidaireDesc' });
   }
-  // Badge Parrain (désactivé / non affiché)
-  // badgesData.push({ icon: UserPlus, label: 'Parrain', description: 'A parrainé un ami' });
   if (hasDonateurRegulier) {
-    badgesData.push({ icon: Calendar, label: 'Donateur régulier', description: 'A donné 3 mois de suite' });
+    badgesData.push({ icon: Calendar, labelKey: 'scoresBadgeDonateurRegulier', descKey: 'scoresBadgeDonateurRegulierDesc' });
   }
 
   return (
@@ -264,13 +268,13 @@ export default function ScoresPage() {
               <Trophy size={24} className="text-[#00D9A5]" />
               <div>
                 {rankingLoading ? (
-                  <p className="text-white/70 font-medium text-sm">Chargement du classement...</p>
+                  <p className="text-white/70 font-medium text-sm">{t('scoresRankingLoading')}</p>
                 ) : rankingError ? (
                   <p className="text-red-400/90 font-medium text-sm">{rankingError}</p>
                 ) : myRankPosition != null && totalInRanking > 0 ? (
-                  <p className="text-white font-medium text-sm">Tu es {myRankPosition}e sur {totalInRanking}</p>
+                  <p className="text-white font-medium text-sm">{t('scoresYouAre', { rank: myRankPosition, total: totalInRanking })}</p>
                 ) : (
-                  <p className="text-white font-medium text-sm">Tu n&apos;es pas encore classé</p>
+                  <p className="text-white font-medium text-sm">{t('scoresNotRanked')}</p>
                 )}
               </div>
             </div>
@@ -280,8 +284,8 @@ export default function ScoresPage() {
                 whileTap={{ scale: 0.98 }}
                 className="bg-[#43b48f] text-white px-4 py-2 rounded-xl font-medium text-sm flex items-center space-x-2"
               >
-                <Image src="/icons/ranking.png" alt="Voir le classement" width={16} height={16} />
-                <span className="font-bold">Voir le classement</span>
+                <Image src="/icons/ranking.png" alt={t('scoresViewRanking')} width={16} height={16} />
+                <span className="font-bold">{t('scoresViewRanking')}</span>
               </motion.button>
             </Link>
           </div>
@@ -289,10 +293,10 @@ export default function ScoresPage() {
 
         {/* Section Badges débloqués */}
         <div className="space-y-4">
-          <h2 className="text-white text-xl font-semibold">Badges débloqués</h2>
+          <h2 className="text-white text-xl font-semibold">{t('scoresBadgesUnlocked')}</h2>
           <div className="space-y-3">
             {badgesData.length === 0 ? (
-              <p className="text-white/60 text-sm">Aucun badge débloqué pour le moment.</p>
+              <p className="text-white/60 text-sm">{t('scoresNoBadge')}</p>
             ) : badgesData.map((badge, index) => {
               const Icon = badge.icon;
               return (
@@ -307,8 +311,8 @@ export default function ScoresPage() {
                     <Icon size={24} className="text-[#00D9A5]" />
                   </div>
                   <div className='flex items-start justify-start space-x-3'>
-                    <p className="text-white font-semibold text-sm">{badge.label}</p>
-                    <p className="text-white/70 text-sm">{badge.description}</p>
+                    <p className="text-white font-semibold text-sm">{t(badge.labelKey)}</p>
+                    <p className="text-white/70 text-sm">{t(badge.descKey)}</p>
                   </div>
                 </motion.div>
               );
@@ -321,7 +325,7 @@ export default function ScoresPage() {
       <div className="space-y-8">
         {/* Section 1: Impact de vos dons */}
         <div>
-          <h2 className="text-white text-xl font-semibold mb-4">Impact de vos dons</h2>
+          <h2 className="text-white text-xl font-semibold mb-4">{t('scoresImpactTitle')}</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {impactData.map((item, index) => {
               const Icon = item.icon;
@@ -335,11 +339,11 @@ export default function ScoresPage() {
                 >
                   <Icon size={32} className={item.color} style={{ color: item.color }} />
                   <p className="text-white text-3xl font-bold">
-                    {item.label === 'Dépensé (F CFA)' 
-                      ? item.value.toLocaleString('fr-FR')
+                    {item.formatNumber
+                      ? item.value.toLocaleString(locale === 'en' ? 'en-GB' : 'fr-FR')
                       : item.value}
                   </p>
-                  <p className="text-white text-sm">{item.label}</p>
+                  <p className="text-white text-sm">{t(item.labelKey)}</p>
                 </motion.div>
               );
             })}
@@ -348,7 +352,7 @@ export default function ScoresPage() {
 
         {/* Section 2: Statistiques sadaka score */}
         <div className="space-y-4">
-          <h2 className="text-white text-xl font-semibold">Statistiques sadaka score</h2>
+          <h2 className="text-white text-xl font-semibold">{t('scoresStatsTitle')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {statsData.map((item, index) => (
               <motion.div
@@ -360,7 +364,7 @@ export default function ScoresPage() {
               >
                 <div className="flex flex-col items-center text-center space-y-3">
                   <p className="text-[#00D9A5] text-3xl font-bold">{item.value}</p>
-                  <p className="text-white text-sm">{item.label}</p>
+                  <p className="text-white text-sm">{t(item.labelKey)}</p>
                 </div>
               </motion.div>
             ))}
@@ -369,7 +373,7 @@ export default function ScoresPage() {
 
         {/* Section 3: Comment gagner des points ? */}
         <div className="space-y-4">
-          <h2 className="text-white text-xl font-semibold">Comment gagner des points ?</h2>
+          <h2 className="text-white text-xl font-semibold">{t('scoresHowToEarnTitle')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {earningPointsData.map((item, index) => {
               const Icon = item.icon;
@@ -383,7 +387,7 @@ export default function ScoresPage() {
                 >
                   <div className="flex flex-col items-center text-center space-y-3">
                     <Icon size={32} className={item.color} style={{ color: item.color }} />
-                    <p className="text-white text-sm leading-relaxed">{item.label}</p>
+                    <p className="text-white text-sm leading-relaxed">{t(item.labelKey)}</p>
                   </div>
                 </motion.div>
               );
@@ -395,24 +399,24 @@ export default function ScoresPage() {
 
       {/* Section Historique des dons */}
       <div className="space-y-4">
-        <h2 className="text-white text-xl font-semibold">Historique des dons</h2>
+        <h2 className="text-white text-xl font-semibold">{t('scoresHistoryTitle')}</h2>
         <div className="bg-[#101919]/50 rounded-2xl border border-white/10 overflow-hidden">
           {/* Table Header */}
           <div className="grid grid-cols-4 gap-4 p-4 border-b border-white/10 bg-white/10">
-            <div className="text-white font-semibold text-sm">Type</div>
-            <div className="text-white font-semibold text-sm">Description</div>
-            <div className="text-white font-semibold text-sm">Date</div>
-            <div className="text-white font-semibold text-sm text-right">Gain</div>
+            <div className="text-white font-semibold text-sm">{t('scoresHistoryType')}</div>
+            <div className="text-white font-semibold text-sm">{t('scoresHistoryDescription')}</div>
+            <div className="text-white font-semibold text-sm">{t('scoresHistoryDate')}</div>
+            <div className="text-white font-semibold text-sm text-right">{t('scoresHistoryGain')}</div>
           </div>
 
           {/* Table Body */}
           <div className="divide-y divide-white/10">
             {sadaqahHistoryLoading ? (
-              <div className="p-8 text-center text-white/70 text-sm">Chargement de l&apos;historique...</div>
+              <div className="p-8 text-center text-white/70 text-sm">{t('scoresHistoryLoading')}</div>
             ) : sadaqahHistoryError ? (
               <div className="p-8 text-center text-red-400 text-sm">{sadaqahHistoryError}</div>
             ) : currentData.length === 0 ? (
-              <div className="p-8 text-center text-white/70 text-sm">Aucun don dans l&apos;historique.</div>
+              <div className="p-8 text-center text-white/70 text-sm">{t('scoresHistoryEmpty')}</div>
             ) : (
               currentData.map((item) => (
                 <motion.div
@@ -438,13 +442,13 @@ export default function ScoresPage() {
           {donationHistoryData.length > 0 && (
           <div className="flex items-center justify-between p-4 border-t border-white/10">
             <div className="text-white/70 text-sm">
-              Affichage {startIndex + 1} à {Math.min(endIndex, donationHistoryData.length)} sur {donationHistoryData.length}
+              {t('scoresDisplaying', { start: startIndex + 1, end: Math.min(endIndex, donationHistoryData.length), total: donationHistoryData.length })}
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={handlePreviousPage}
                 disabled={currentPage === 1}
-                aria-label="Page précédente"
+                aria-label={t('prevPageAria')}
                 className={`p-2 rounded-lg transition-colors ${
                   currentPage === 1
                     ? 'bg-[#101919] text-white/30 cursor-not-allowed'
@@ -473,8 +477,8 @@ export default function ScoresPage() {
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                aria-label="Page suivante"
-                title="Page suivante"
+                aria-label={t('nextPageAria')}
+                title={t('nextPageAria')}
                 className={`p-2 rounded-lg transition-colors ${
                   currentPage === totalPages
                     ? 'bg-[#101919] text-white/30 cursor-not-allowed'

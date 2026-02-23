@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { 
+import {
   ArrowRight, Heart, Users, MapPin, Calendar, ArrowLeft, ChevronDown,
   Apple, Play, TrendingUp, Bookmark, Star, Clock
 } from 'lucide-react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { getTakafulPlans, type TakafulPlan } from '@/services/takaful-plans';
 import { takafulProducts, type Campaign, type TakafulProduct } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,6 +51,7 @@ function mockTakafulProductToPlan(p: TakafulProduct): TakafulPlan {
 
 export default function CommunautePage() {
   const { isAuthenticated } = useAuth();
+  const t = useTranslations('communaute');
   const [currentTakafulSlide, setCurrentTakafulSlide] = useState(0);
   const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
@@ -212,7 +214,7 @@ export default function CommunautePage() {
                   </AnimatePresence>
                 )}
                 {!activitiesLoading && !activitiesError && activities.length === 0 && (
-                  <p className="text-white/80">Aucune activité pour le moment.</p>
+                  <p className="text-white/80">{t('noActivity')}</p>
                 )}
               </motion.div>
             </div>
@@ -331,12 +333,11 @@ export default function CommunautePage() {
                 className="text-center lg:text-start max-w-2xl lg:ml-16"
             >
                 <h2 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-                Dernières <br />
-                 <span className="text-[#226c3a]">Cagnottes / Dons</span> Créés
+                {t('latestTitle')} <br />
+                 <span className="text-[#226c3a]">{t('latestCagnottes')}</span>
                 </h2>
                 <p className="text-lg text-white/90 leading-relaxed mb-8">
-                    Rejoignez la dynamique collective 
-                    Le <span className="text-[#20B6B3] font-semibold">d’Amane+.</span> Contribuez aux projets en cours et aidez à transformer de belles intentions en actions concrètes.
+                    {t('latestDesc')}
                 </p>
             </motion.div>
 
@@ -377,7 +378,7 @@ export default function CommunautePage() {
                             )}
                             <Link href={`/campagnes/${campaign.id}`}>
                             <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
-                                En savoir plus
+                                {t('learnMore')}
                             </button>
                             </Link>
                         </div>
@@ -393,7 +394,7 @@ export default function CommunautePage() {
                 <button
                 onClick={() => setCurrentCagnotteSlide((prev) => Math.max(0, prev - 1))}
                 disabled={currentCagnotteSlide === 0}
-                aria-label="Carte précédente"
+                aria-label={t('prevCard')}
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#00644D] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
                 >
                 <ArrowLeft size={28} className="text-white" />
@@ -401,7 +402,7 @@ export default function CommunautePage() {
                 <button
                 onClick={() => setCurrentCagnotteSlide((prev) => Math.min(latestCampaigns.length - 1, prev + 1))}
                 disabled={currentCagnotteSlide === latestCampaigns.length - 1}
-                aria-label="Carte suivante"
+                aria-label={t('nextCard')}
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
                 >
                 <ArrowRight size={28} className="text-white" />
@@ -436,7 +437,7 @@ export default function CommunautePage() {
                 whileTap={{ scale: 0.95 }}
                 className="border-1 border-white text-white px-6 py-3 rounded-3xl font-semibold flex items-center gap-2 w-fit mx-auto hover:bg-white/10 transition-colors"
                 >
-                Voir toutes les campagnes
+                {t('viewAllCampaigns')}
                 <ArrowRight size={20} />
                 </motion.button>
             </Link>
@@ -455,16 +456,16 @@ export default function CommunautePage() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-              Campagnes populaires
+              {t('campaignsTitle')}
             </h2>
             <p className="text-lg text-white max-w-3xl mx-auto">
-              Découvrez nos campagnes les plus populaires et soutenez des causes importantes
+              {t('campaignsSubtitle')}
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             {campaignsLoading && (
-              <div className="col-span-full text-center text-white/80 py-8">Chargement des campagnes...</div>
+              <div className="col-span-full text-center text-white/80 py-8">{t('campaignsLoading')}</div>
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
@@ -472,7 +473,7 @@ export default function CommunautePage() {
             {!campaignsLoading && !campaignsError && popularCampaigns.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-white/90">
                 <Clock size={48} className="mb-4 opacity-90" aria-hidden />
-                <p className="text-lg font-medium">Aucunes campagnes disponibles</p>
+                <p className="text-lg font-medium">{t('noCampaigns')}</p>
               </div>
             )}
             {!campaignsLoading && !campaignsError && popularCampaigns.map((campaign, index) => {
@@ -519,7 +520,7 @@ export default function CommunautePage() {
                         </div>
                         <div className="flex-1 min-h-[2rem]" />
                         <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
-                          {donorCount.toLocaleString('fr-FR')} donateurs
+                          {donorCount.toLocaleString('fr-FR')} {t('donors')}
                         </p>
                         <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
                           {campaign.title}
@@ -527,10 +528,10 @@ export default function CommunautePage() {
                         <div className="space-y-2">
                           <div className="flex justify-between items-center gap-2 text-sm">
                             <span className="text-[#5AB678] font-semibold">
-                              {formatAmount(amountSpent)} déboursés
+                              {formatAmount(amountSpent)} {t('spent')}
                             </span>
                             <span className="text-white font-medium">
-                              {formatAmount(currentAmount)} collectés
+                              {formatAmount(currentAmount)} {t('collected')}
                             </span>
                           </div>
                           <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
@@ -551,7 +552,7 @@ export default function CommunautePage() {
                           style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                         >
                           <Heart size={18} className="fill-white" />
-                          <span>Soutenir cette campagne</span>
+                          <span>{t('supportCampaign')}</span>
                           <ArrowRight size={18} />
                         </motion.div>
                       </div>
@@ -570,7 +571,7 @@ export default function CommunautePage() {
                 className=" text-white px-8 py-4 rounded-4xl font-semibold hover:bg-green-500 transition-all duration-200 shadow-lg"
                 style={{ background: 'linear-gradient(to bottom, #00644D, #101919)' }}
               >
-                Voir plus
+                {t('viewMore')}
               </motion.button>
             </Link>
           </div>
@@ -587,13 +588,13 @@ export default function CommunautePage() {
                 viewport={{ once: true }}
             >
                 <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-[#5AB678]">
-                Actualités
+                {t('newsTitle')}
                 </h2>
                 <p className="text-lg text-white/80 mb-4 leading-relaxed">
-                Découvrez les dernières initiatives, événements et moments forts d'<span className="text-[#5AB678]">Amane+</span>.
+                {t('newsSubtitle1')}
                 </p>
                 <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                Plongez au cœur de nos actions et suivez l'impact de notre communauté en images.
+                {t('newsSubtitle2')}
                 </p>
                 <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -651,7 +652,7 @@ export default function CommunautePage() {
                     className="text-white px-8 py-4 rounded-4xl font-semibold transition-all duration-200 shadow-lg"
                     style={{ background: 'linear-gradient(to right, #8FC99E, #20B6B3)' }}
                     >
-                    En savoir plus
+                    {t('learnMore')}
                     </motion.button>
                 </Link>
                 </motion.div>
@@ -687,13 +688,11 @@ export default function CommunautePage() {
                 className="text-center lg:text-start max-w-2xl lg:ml-16"
             >
                 <h2 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-                Découvrez nos <br />
-                Produits <span className="text-[#20B6B3]">Takaful</span>
+                {t('takafulTitle')} <br />
+                Produits <span className="text-[#20B6B3]">{t('takafulTitleHighlight')}</span>
                 </h2>
                 <p className="text-lg text-white/90 leading-relaxed mb-8">
-                Protégez-vous et vos proches grâce à des solutions d'assurance conformes aux principes islamiques. 
-                Le <span className="text-[#20B6B3] font-semibold">Takaful d'Amane+</span> repose sur la solidarité et le partage, 
-                pour un avenir plus sûr et équitable.
+                {t('takafulDesc')}
                 </p>
             </motion.div>
 
@@ -707,12 +706,12 @@ export default function CommunautePage() {
             >
                 {takafulLoading && (
                 <div className="text-white/80 py-12 text-center min-h-[200px] flex items-center justify-center">
-                    Chargement des produits Takaful...
+                    {t('takafulLoading')}
                 </div>
                 )}
                 {!takafulLoading && takafulPlans.length === 0 && (
                 <div className="text-white/90 py-12 text-center min-h-[200px] flex items-center justify-center rounded-2xl bg-white/5">
-                    Aucun produit disponible pour le moment.
+                    {t('takafulEmpty')}
                 </div>
                 )}
                 {!takafulLoading && takafulPlans.length > 0 && (
@@ -739,7 +738,7 @@ export default function CommunautePage() {
                             </p>
                             <Link href={takafulDisplayPromote ? '/takaful' : `/takaful/${plan.id}`}>
                             <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
-                                En savoir plus
+                                {t('learnMore')}
                             </button>
                             </Link>
                         </div>
@@ -796,7 +795,7 @@ export default function CommunautePage() {
                 whileTap={{ scale: 0.95 }}
                 className="border-1 border-white text-white px-6 py-3 rounded-3xl font-semibold flex items-center gap-2 w-fit mx-auto hover:bg-white/10 transition-colors"
                 >
-                Voir tous les produits
+                {t('viewAllProducts')}
                 <ArrowRight size={20} />
                 </motion.button>
             </Link>
@@ -816,12 +815,12 @@ export default function CommunautePage() {
             className="text-center mb-16"
             >
             <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-                <span className="text-white">L'impact d'</span>
+                <span className="text-white">{t('impactTitle')}</span>
                 <span className="text-[#5AB678]">Amane+</span>
-                <span className="text-white"> en chiffres</span>
+                <span className="text-white"> {t('impactTitleSuffix')}</span>
             </h2>
             <p className="text-lg text-white/90 max-w-3xl mx-auto mt-4">
-                Découvrez comment la foi, la solidarité et la transparence se traduisent en actions réelles.
+                {t('impactSubtitle')}
             </p>
             </motion.div>
 
@@ -829,7 +828,7 @@ export default function CommunautePage() {
             {[
                 { 
                 value: '15,247', 
-                label: 'Donateurs actifs', 
+                label: t('activeDonors'), 
                 icon: Users, 
                 iconBg: 'bg-[#5AB678]',
                 iconColor: 'text-[#5AB678]',
@@ -837,7 +836,7 @@ export default function CommunautePage() {
                 },
                 { 
                 value: '8.5%', 
-                label: 'Rendement moyen', 
+                label: t('avgReturn'), 
                 icon: TrendingUp, 
                 iconBg: 'bg-[#5AB678]',
                 iconColor: 'text-[#5AB678]',
@@ -845,7 +844,7 @@ export default function CommunautePage() {
                 },
                 { 
                 value: '50+', 
-                label: 'Campagnes actives', 
+                label: t('activeCampaigns'), 
                 icon: Heart, 
                 iconBg: 'bg-pink-500',
                 iconColor: 'text-pink-500',
@@ -853,7 +852,7 @@ export default function CommunautePage() {
                 },
                 { 
                 value: '200+', 
-                label: 'Produits halal', 
+                label: t('halalProducts'), 
                 icon: Bookmark, 
                 iconBg: 'bg-purple-500',
                 iconColor: 'text-purple-500',
@@ -900,10 +899,10 @@ export default function CommunautePage() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-6xl font-extrabold mb-6 text-[#00644d]">
-                  Emportez Amane+ partout avec vous
+                  {t('takeWithYouTitle')}
                 </h2>
                 <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                Retrouvez toutes les fonctionnalités d’Amane+ dans une seule application. Faites vos dons, suivez vos rendements, automatisez votre Zakat et participez à des actions solidaires, où que vous soyez.
+                {t('takeWithYouDesc')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <motion.button
@@ -912,7 +911,7 @@ export default function CommunautePage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Apple size={24} />
-                    <span>Disponible sur l'App Store</span>
+                    <span>{t('appStore')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -920,7 +919,7 @@ export default function CommunautePage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Play size={24} />
-                    <span>Télécharger sur Google Play</span>
+                    <span>{t('googlePlay')}</span>
                   </motion.button>
                 </div>
               </motion.div>
@@ -940,7 +939,7 @@ export default function CommunautePage() {
             className="text-center"
           >
             <h2 className="text-3xl lg:text-4xl font-bold mb-12">
-              Ils nous font confiance
+              {t('trustTitle')}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center justify-items-center">
               {[

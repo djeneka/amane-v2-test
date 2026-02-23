@@ -4,32 +4,13 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, HelpCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+
+const FAQ_KEYS = [0, 1, 2, 3, 4] as const;
 
 export default function FAQPage() {
+  const t = useTranslations('home.faq');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  const faqs = [
-    {
-      question: 'Comment effectuer un don ?',
-      answer: 'Pour faire un don, accédez à la section "Dons" ou "Campagnes" dans le menu principal, choisissez votre projet ou cause, puis suivez les instructions pour compléter votre don. Vous pouvez payer par carte bancaire, mobile money ou portefeuille Amane+.',
-    },
-    {
-      question: 'Comment calculer ma Zakat ?',
-      answer: 'Notre calculateur de Zakat vous guide étape par étape. Accédez à la section "Zakat", entrez vos informations financières (épargnes, or, argent, etc.), et notre système calculera automatiquement le montant de votre Zakat (généralement 2,5 % de vos avoirs éligibles).',
-    },
-    {
-      question: 'Qu\'est-ce que le Takaful ?',
-      answer: 'Le Takaful est une assurance solidaire conforme aux principes de la finance islamique. Les participants mutualisent leurs contributions pour se protéger mutuellement, sans intérêt (riba) et avec une gestion transparente des fonds.',
-    },
-    {
-      question: 'Comment investir avec Amane+ ?',
-      answer: 'Rendez-vous dans la section "Investir" pour découvrir les projets d\'investissement halal disponibles. Après création de votre compte et vérification, vous pouvez choisir un projet et participer selon les modalités indiquées.',
-    },
-    {
-      question: 'Comment contacter le service client ?',
-      answer: 'Vous pouvez nous contacter par email à contact@amane-plus.com, par téléphone au +225 27 22 49 89 00, ou via le formulaire sur notre page Contact. Notre équipe est disponible pour vous aider.',
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-[#0B302F]">
@@ -47,16 +28,16 @@ export default function FAQPage() {
           >
             <Link href="/" className="inline-flex items-center text-white/80 hover:text-white mb-6 transition-colors">
               <ArrowLeft size={20} className="mr-2" />
-              Retour à l&apos;accueil
+              {t('backHome')}
             </Link>
             <div className="flex justify-center mb-4">
               <HelpCircle size={48} className="text-white/90" />
             </div>
             <h1 className="text-4xl lg:text-5xl font-bold mb-4">
-              Questions fréquentes
+              {t('title')}
             </h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              Des réponses simples aux questions les plus courantes sur Amane+
+              {t('subtitle')}
             </p>
           </motion.div>
         </div>
@@ -65,7 +46,7 @@ export default function FAQPage() {
       <section className="py-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-3">
-            {faqs.map((faq, index) => (
+            {FAQ_KEYS.map((index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 10 }}
@@ -77,7 +58,7 @@ export default function FAQPage() {
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
                   className="w-full p-5 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
                 >
-                  <span className="text-white font-medium pr-4">{faq.question}</span>
+                  <span className="text-white font-medium pr-4">{t(`item${index}Question`)}</span>
                   {openFaq === index ? (
                     <ChevronUp size={20} className="text-[#5AB678] flex-shrink-0" />
                   ) : (
@@ -94,7 +75,7 @@ export default function FAQPage() {
                       className="overflow-hidden"
                     >
                       <div className="px-5 pb-5 text-white/70 leading-relaxed border-t border-white/10 pt-3">
-                        {faq.answer}
+                        {t(`item${index}Answer`)}
                       </div>
                     </motion.div>
                   )}
@@ -109,12 +90,12 @@ export default function FAQPage() {
             transition={{ delay: 0.3 }}
             className="mt-12 text-center"
           >
-            <p className="text-white/70 mb-4">Vous n&apos;avez pas trouvé votre réponse ?</p>
+            <p className="text-white/70 mb-4">{t('notFound')}</p>
             <Link
               href="/contact"
               className="inline-flex items-center gap-2 text-[#5AB678] hover:underline font-medium"
             >
-              Contactez notre support
+              {t('contactSupport')}
             </Link>
           </motion.div>
         </div>

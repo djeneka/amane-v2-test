@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight, CheckCircle, User, Building, Hash, Infinity, Heart, ChevronDown, FileText, Upload, Paperclip, Handshake, Pen, Clock, Home, MapPin, Users, Briefcase, Banknote, GraduationCap, Building2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 import { getActiveCampaignsRaw, type ApiCampaign } from '@/services/campaigns';
 import { createAidRequest } from '@/services/help-requests';
@@ -31,11 +32,18 @@ const SECTION_LABELS: Record<CampaignCategory, string> = {
   HABITATION: 'Réhabilitation / Infrastructures',
 };
 
-/** Options type de besoin (Éducation) — design Figma */
+const SECTION_LABEL_KEYS: Record<CampaignCategory, 'sectionHealth' | 'sectionEducation' | 'sectionWidow' | 'sectionHabitation'> = {
+  HEALTH: 'sectionHealth',
+  EDUCATION: 'sectionEducation',
+  WIDOW_SUPPORT: 'sectionWidow',
+  HABITATION: 'sectionHabitation',
+};
+
+/** Options type de besoin (Éducation) — value envoyé à l'API inchangé */
 const EDUCATION_TYPE_NEED_OPTIONS = [
-  { value: "Arriérés d'écolage", label: "Arriérés d'écolage" },
-  { value: 'Fournitures/Kits', label: 'Fournitures/Kits' },
-  { value: 'Transport', label: 'Transport' },
+  { value: "Arriérés d'écolage", labelKey: 'educationTypeArrieres' },
+  { value: 'Fournitures/Kits', labelKey: 'educationTypeFournitures' },
+  { value: 'Transport', labelKey: 'educationTypeTransport' },
 ] as const;
 
 /** Options habitation (Veuves) — design Figma */
@@ -63,13 +71,13 @@ const HABITATION_KIND_OPTIONS = [
 ] as const;
 
 const SITUATION_MATRIMONIALE_OPTIONS = [
-  { value: '', label: 'Sélectionner...' },
-  { value: 'Célibataire', label: 'Célibataire' },
-  { value: 'Marié(e)', label: 'Marié(e)' },
-  { value: 'Veuf(ve)', label: 'Veuf(ve)' },
-  { value: 'Divorcé(e)', label: 'Divorcé(e)' },
-  { value: 'Concubinage', label: 'Concubinage' },
-  { value: 'Autre', label: 'Autre' },
+  { value: '', labelKey: 'maritalSelect' },
+  { value: 'Célibataire', labelKey: 'maritalCelibataire' },
+  { value: 'Marié(e)', labelKey: 'maritalMarie' },
+  { value: 'Veuf(ve)', labelKey: 'maritalVeuf' },
+  { value: 'Divorcé(e)', labelKey: 'maritalDivorce' },
+  { value: 'Concubinage', labelKey: 'maritalConcubinage' },
+  { value: 'Autre', labelKey: 'maritalAutre' },
 ];
 
 interface AskForHelpFormModalProps {
@@ -78,11 +86,11 @@ interface AskForHelpFormModalProps {
 }
 
 const STEPS = [
-  { id: 1, label: 'Informations sur l\'émetteur' },
-  { id: 2, label: 'Identification du bénéficiaire' },
-  { id: 3, label: 'Documents à fournir' },
-  { id: 4, label: 'Engagement' },
-  { id: 5, label: 'Signature' },
+  { id: 1, labelKey: 'step1' },
+  { id: 2, labelKey: 'step2' },
+  { id: 3, labelKey: 'step3' },
+  { id: 4, labelKey: 'step4' },
+  { id: 5, labelKey: 'step5' },
 ];
 
 type EmitterType = 'myself' | 'third-party' | 'partner' | 'volunteer' | null;
@@ -99,19 +107,19 @@ const TRANSMITTER_API: Record<NonNullable<EmitterType>, string> = {
 /** Valeurs API (typo backend : AL_GHARIMOIN) */
 export type ShariahEligibilityValue = 'AL_FOUQARA' | 'AL_MASAKIN' | 'AL_GHARIMOIN';
 
-const SHARIAH_ELIGIBILITY_OPTIONS: { value: ShariahEligibilityValue; label: string }[] = [
-  { value: 'AL_FOUQARA', label: 'Al fouqara (pauvre : aucun revenu)' },
-  { value: 'AL_MASAKIN', label: 'Al Masakin (Nécessiteux : revenu insuffisant pour les besoins de base)' },
-  { value: 'AL_GHARIMOIN', label: 'Al Gharimin (Endetté : dettes de santé ou de survie uniquement)' },
+const SHARIAH_ELIGIBILITY_OPTIONS: { value: ShariahEligibilityValue; labelKey: string }[] = [
+  { value: 'AL_FOUQARA', labelKey: 'shariahFouqara' },
+  { value: 'AL_MASAKIN', labelKey: 'shariahMasakin' },
+  { value: 'AL_GHARIMOIN', labelKey: 'shariahGharimin' },
 ];
 
 /** Urgence — valeurs API */
 export type UrgencyLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
-const URGENCY_OPTIONS: { value: UrgencyLevel; label: string }[] = [
-  { value: 'LOW', label: 'Faible' },
-  { value: 'MEDIUM', label: 'Moyenne' },
-  { value: 'HIGH', label: 'Haute' },
+const URGENCY_OPTIONS: { value: UrgencyLevel; labelKey: string }[] = [
+  { value: 'LOW', labelKey: 'urgencyLow' },
+  { value: 'MEDIUM', labelKey: 'urgencyMedium' },
+  { value: 'HIGH', labelKey: 'urgencyHigh' },
 ];
 
 /** Types d'attachment acceptés par l'API (valeurs exactes) */
@@ -195,6 +203,7 @@ function nameToFirstLast(name: string): { firstName: string; lastName: string } 
 
 export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormModalProps) {
   const { user: currentUser, accessToken } = useAuth();
+  const t = useTranslations('helpRequest');
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedEmitter, setSelectedEmitter] = useState<EmitterType>(null);
 
@@ -530,7 +539,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
   // Payload aligné sur l'API (clés et types exacts, dont typos côté API)
   const submitAidRequest = async () => {
     if (!accessToken) {
-      throw new Error('Veuillez vous reconnecter pour envoyer une demande d\'aide.');
+      throw new Error(t('form.errorReconnect'));
     }
 
     // Documents requis pour la campagne sélectionnée uniquement
@@ -714,7 +723,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
   /** Récupère la position actuelle et remplit le lieu d'habitation (géolocalisation + géocodage inverse). */
   const handleGetCurrentPosition = () => {
     if (typeof window === 'undefined' || !navigator.geolocation) {
-      setLocationError('La géolocalisation n\'est pas disponible sur ce navigateur.');
+      setLocationError(t('form.locationErrorGeo'));
       return;
     }
     setLocationError(null);
@@ -744,10 +753,10 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
       },
       (err) => {
         setIsGettingLocation(false);
-        if (err.code === 1) setLocationError('Autorisation refusée. Activez la localisation dans les paramètres.');
-        else if (err.code === 2) setLocationError('Position indisponible.');
-        else if (err.code === 3) setLocationError('Délai dépassé. Réessayez.');
-        else setLocationError('Impossible de récupérer la position.');
+        if (err.code === 1) setLocationError(t('form.locationErrorDenied'));
+        else if (err.code === 2) setLocationError(t('form.locationErrorUnavailable'));
+        else if (err.code === 3) setLocationError(t('form.locationErrorTimeout'));
+        else setLocationError(t('form.locationErrorGeneric'));
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
@@ -784,7 +793,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
   // Fonction pour gérer le clic sur "Terminer" (étape 5)
   const handleFinish = () => {
     if (!isSignatureApplied) {
-      console.warn('⚠️ Veuillez d\'abord appliquer la signature');
+      console.warn('⚠️', t('form.applySignatureFirst'));
       return;
     }
     setIsSubmitting(true);
@@ -794,7 +803,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
       })
       .catch((error) => {
         console.error('Erreur lors de l\'envoi de la demande d\'aide:', error);
-        setErrorToast(error instanceof Error ? error.message : 'Impossible d\'envoyer la demande. Réessayez plus tard.');
+        setErrorToast(error instanceof Error ? error.message : t('form.errorSend'));
       })
       .finally(() => {
         setIsSubmitting(false);
@@ -814,18 +823,18 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-white mb-2">
-              Informations sur l'émetteur
+              {t('form.step1')}
             </h3>
             <p className="text-[#A0AEC0] mb-6">
-              Veuillez choisir une option
+              {t('form.emitter')}
             </p>
             
             <div className="space-y-3">
               {[
-                { value: 'myself', label: 'Moi-même' },
-                { value: 'third-party', label: 'Tierce personne (Proche, voisin...)' },
-                { value: 'partner', label: 'Partenaire (ONG, Mosquée, Hôpital)' },
-                { value: 'volunteer', label: 'Bénévole AMANE+ (Terrain Saisie)' },
+                { value: 'myself', labelKey: 'emitterMyself' },
+                { value: 'third-party', labelKey: 'emitterThirdParty' },
+                { value: 'partner', labelKey: 'emitterPartner' },
+                { value: 'volunteer', labelKey: 'emitterVolunteer' },
               ].map((option) => (
                 <motion.button
                   key={option.value}
@@ -849,7 +858,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     {selectedEmitter === option.value && (
                       <div className="w-2 h-2 bg-[#2F855A] rounded-full"></div>
                     )}
-                    <span className="font-medium">{option.label}</span>
+                    <span className="font-medium">{t(`form.${option.labelKey}`)}</span>
                   </div>
                 </motion.button>
               ))}
@@ -865,7 +874,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={transmitterCompanyName}
                     onChange={(e) => setTransmitterCompanyName(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                    placeholder="Nom de l'organisation"
+                    placeholder={t('form.organisationName')}
                   />
                 </div>
               </div>
@@ -880,7 +889,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={transmitterCodeId}
                     onChange={(e) => setTransmitterCodeId(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                    placeholder="ID Code bénévole"
+                    placeholder={t('form.volunteerCodeId')}
                   />
                 </div>
               </div>
@@ -888,7 +897,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
 
             {(selectedEmitter === 'myself' || selectedEmitter === 'third-party') && (
               <div className="mt-6 space-y-4 bg-[#00644d]/10 rounded-3xl p-4">
-                <h4 className="text-lg font-semibold text-white">Identité de l'émetteur</h4>
+                <h4 className="text-lg font-semibold text-white">{t('form.emitterIdentity')}</h4>
                 <div className="space-y-4">
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
@@ -897,7 +906,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       value={transmitterLastName}
                       onChange={(e) => setTransmitterLastName(e.target.value)}
                       className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-3xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                      placeholder="Nom"
+                      placeholder={t('form.lastName')}
                     />
                   </div>
                   <div className="relative">
@@ -907,7 +916,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       value={transmitterFirstName}
                       onChange={(e) => setTransmitterFirstName(e.target.value)}
                       className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-3xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 transition-all"
-                      placeholder="Prénom"
+                      placeholder={t('form.firstName')}
                     />
                   </div>
                 </div>
@@ -920,18 +929,17 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-white mb-2">
-              Identification du bénéficiaire
+              {t('form.beneficiaryTitle')}
             </h3>
             <p className="text-[#A0AEC0] mb-6">
-              Renseignez d'abord les informations du bénéficiaire, puis choisissez le type de campagne et les détails associés.
+              {t('form.beneficiaryDesc')}
             </p>
 
-            {/* ——— 1. Bénéficiaire — design mobile Figma (labels au-dessus, libellés exacts) ——— */}
             <div className="space-y-5 bg-[#00644d]/10 rounded-3xl p-4">
-              <h4 className="text-lg font-semibold text-white">Informations bénéficiaire</h4>
+              <h4 className="text-lg font-semibold text-white">{t('form.beneficiaryInfo')}</h4>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Nom</label>
+                <label className="text-sm font-medium text-white">{t('form.lastName')}</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
@@ -939,12 +947,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={beneficiaryLastName}
                     onChange={(e) => setBeneficiaryLastName(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Nom"
+                    placeholder={t('form.lastName')}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Prénoms</label>
+                <label className="text-sm font-medium text-white">{t('form.prenoms')}</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
@@ -952,12 +960,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={beneficiaryFirstName}
                     onChange={(e) => setBeneficiaryFirstName(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Prénoms"
+                    placeholder={t('form.prenoms')}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Genre</label>
+                <label className="text-sm font-medium text-white">{t('form.genre')}</label>
                 <div className="flex gap-4">
                   {(['male', 'female'] as const).map((g) => (
                     <label key={g} className="flex items-center gap-2 cursor-pointer">
@@ -965,13 +973,13 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                         {beneficiaryGender === g && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
                       </span>
                       <input type="radio" name="beneficiaryGender" className="sr-only" checked={beneficiaryGender === g} onChange={() => setBeneficiaryGender(g)} />
-                      <span className="text-white text-sm">{g === 'male' ? 'Homme' : 'Femme'}</span>
+                      <span className="text-white text-sm">{g === 'male' ? t('form.male') : t('form.female')}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Âge</label>
+                <label className="text-sm font-medium text-white">{t('form.age')}</label>
                 <div className="relative">
                   <Infinity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
@@ -983,13 +991,13 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     onChange={(e) => setBeneficiaryAge(e.target.value.replace(/\D/g, ''))}
                     className="w-full pl-12 pr-14 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
                     placeholder="0"
-                    aria-label="Âge du bénéficiaire en années"
+                    aria-label={`${t('form.age')} (${t('form.years')})`}
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0] text-sm">ans</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0] text-sm">{t('form.years')}</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Lieu d&apos;habitation</label>
+                <label className="text-sm font-medium text-white">{t('form.residence')}</label>
                 <div className="relative">
                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
@@ -997,7 +1005,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={beneficiaryLocation}
                     onChange={(e) => setBeneficiaryLocation(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Ville, commune, quartier"
+                    placeholder={t('form.cityPlaceholder')}
                   />
                 </div>
                 <button
@@ -1009,10 +1017,10 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   {isGettingLocation ? (
                     <>
                       <span className="inline-block w-4 h-4 border-2 border-[#48BB78] border-t-transparent rounded-full animate-spin" />
-                      Récupération en cours...
+                      {t('form.fetchingLocation')}
                     </>
                   ) : (
-                    'Choisir ma position actuelle'
+                    t('form.getLocation')
                   )}
                 </button>
                 {locationError && (
@@ -1022,17 +1030,17 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                 )}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Situation matrimoniale</label>
+                <label className="text-sm font-medium text-white">{t('form.maritalStatus')}</label>
                 <div className="relative">
                   <select
                     value={beneficiaryMaritalStatus}
                     onChange={(e) => setBeneficiaryMaritalStatus(e.target.value)}
-                    aria-label="Situation matrimoniale"
+                    aria-label={t('form.maritalStatus')}
                     className="w-full pl-4 pr-12 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50 appearance-none cursor-pointer"
                   >
                     {SITUATION_MATRIMONIALE_OPTIONS.map((opt) => (
                       <option key={opt.value || 'empty'} value={opt.value} className="bg-[#1E2726] text-white">
-                        {opt.label}
+                        {t(`form.${opt.labelKey}`)}
                       </option>
                     ))}
                   </select>
@@ -1040,20 +1048,20 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Musulman</label>
+                <label className="text-sm font-medium text-white">{t('form.muslim')}</label>
                 <div className="flex gap-4">
                   {([true, false] as const).map((v) => (
                     <motion.button key={String(v)} type="button" whileTap={{ scale: 0.98 }} onClick={() => setBeneficiaryIsMuslim(v)} className="flex items-center gap-2">
                       <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${beneficiaryIsMuslim === v ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
                         {beneficiaryIsMuslim === v && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
                       </span>
-                      <span className="text-white text-sm">{v ? 'Oui' : 'Non'}</span>
+                      <span className="text-white text-sm">{v ? t('form.yes') : t('form.no')}</span>
                     </motion.button>
                   ))}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Nombre de personnes à charge</label>
+                <label className="text-sm font-medium text-white">{t('form.numberOfDependants')}</label>
                 <div className="relative flex items-center">
                   <Users className="absolute left-4 text-[#48BB78] w-5 h-5 z-10" />
                   <input
@@ -1069,7 +1077,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Votre activité/fonction</label>
+                <label className="text-sm font-medium text-white">{t('form.activity')}</label>
                 <div className="relative">
                   <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
@@ -1077,12 +1085,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={beneficiaryActivity}
                     onChange={(e) => setBeneficiaryActivity(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Ex: Commerçant, Enseignant..."
+                    placeholder={t('form.activityPlaceholder')}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Revenu mensuel</label>
+                <label className="text-sm font-medium text-white">{t('form.monthlyIncome')}</label>
                 <div className="relative">
                   <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 text-[#48BB78] w-5 h-5 z-10" />
                   <input
@@ -1093,33 +1101,33 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     onChange={(e) => setMonthlyIncomeOfBeneficiary(e.target.value.replace(/\D/g, ''))}
                     className="w-full pl-12 pr-16 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
                     placeholder="0"
-                    aria-label="Revenu mensuel en XOF"
+                    aria-label={t('form.monthlyIncome')}
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0] text-sm">XOF</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Éligibilité Charia (Catégories Asnaf)</label>
+                <label className="text-sm font-medium text-white">{t('form.shariahEligibility')}</label>
                 <div className="flex flex-col gap-2">
                   {SHARIAH_ELIGIBILITY_OPTIONS.map((opt) => (
                     <motion.button key={opt.value} type="button" whileTap={{ scale: 0.98 }} onClick={() => setBeneficiaryShariahEligibility(opt.value)} className="flex items-center gap-3 text-left w-full">
                       <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${beneficiaryShariahEligibility === opt.value ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
                         {beneficiaryShariahEligibility === opt.value && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
                       </span>
-                      <span className="text-white text-sm">{opt.label}</span>
+                      <span className="text-white text-sm">{t(`form.${opt.labelKey}`)}</span>
                     </motion.button>
                   ))}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white">Pour la transparence le demandeur accepterait-il la prise de photo.</label>
+                <label className="text-sm font-medium text-white">{t('form.acceptPhoto')}</label>
                 <div className="flex gap-4">
                   {([true, false] as const).map((v) => (
                     <motion.button key={String(v)} type="button" whileTap={{ scale: 0.98 }} onClick={() => setBeneficiaryAcceptPicture(v)} className="flex items-center gap-2">
                       <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${beneficiaryAcceptPicture === v ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
                         {beneficiaryAcceptPicture === v && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
                       </span>
-                      <span className="text-white text-sm">{v ? 'Oui' : 'Non'}</span>
+                      <span className="text-white text-sm">{v ? t('form.yes') : t('form.no')}</span>
                     </motion.button>
                   ))}
                 </div>
@@ -1128,7 +1136,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
 
             {/* ——— 2. Sélection de la campagne (liste getActiveCampaigns) ——— */}
             <div className="space-y-4 mt-8">
-              <p className="text-[#A0AEC0] text-sm">Sélection de la campagne</p>
+              <p className="text-[#A0AEC0] text-sm">{t('form.campaignSelection')}</p>
               <div className="relative" ref={categoryDropdownRef}>
                 <motion.button
                   whileHover={{ scale: 1.01 }}
@@ -1144,8 +1152,8 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     {!campaignCategory && selectedCampaign && <Building className="w-5 h-5 text-[#48BB78]" />}
                     <span>
                       {selectedCampaign
-                        ? (campaignCategory ? SECTION_LABELS[campaignCategory] : selectedCampaign.title)
-                        : 'Choisir une campagne'}
+                        ? (campaignCategory ? t(`form.${SECTION_LABEL_KEYS[campaignCategory]}`) : selectedCampaign.title)
+                        : t('form.chooseCampaign')}
                     </span>
                   </div>
                   <motion.div animate={{ rotate: isCategoryDropdownOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -1161,7 +1169,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       className="absolute z-20 w-full mt-2 bg-[#1E2726] border border-[#101919] rounded-3xl overflow-hidden max-h-60 overflow-y-auto"
                     >
                       {activeCampaigns.length === 0 ? (
-                        <div className="px-4 py-3 text-[#A0AEC0] text-sm">Aucune campagne active</div>
+                        <div className="px-4 py-3 text-[#A0AEC0] text-sm">{t('form.noActiveCampaign')}</div>
                       ) : (
                         activeCampaigns.map((campaign) => {
                           const section = apiCategoryToSection(campaign.category);
@@ -1193,7 +1201,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
 
             {/* Urgence (API) */}
             <div className="space-y-4 mt-6">
-              <h4 className="text-lg font-semibold text-white">Urgence</h4>
+              <h4 className="text-lg font-semibold text-white">{t('form.urgency')}</h4>
               <div className="flex flex-wrap gap-3">
                 {URGENCY_OPTIONS.map((opt) => (
                   <motion.button
@@ -1205,7 +1213,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       urgency === opt.value ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'
                     }`}
                   >
-                    {opt.label}
+                    {t(`form.${opt.labelKey}`)}
                   </motion.button>
                 ))}
               </div>
@@ -1214,7 +1222,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
             {/* ——— Champs selon le type de campagne ——— */}
             {campaignCategory === 'HEALTH' && (
               <div className="space-y-6 mt-8 bg-[#00644d]/10 rounded-3xl p-4">
-                <h4 className="text-lg font-semibold text-white">Détails santé</h4>
+                <h4 className="text-lg font-semibold text-white">{t('form.healthDetails')}</h4>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <span className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${lifeThreateningEmergency ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
                     {lifeThreateningEmergency && <CheckCircle className="w-3.5 h-3.5 text-[#101919]" />}
@@ -1223,7 +1231,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   <span className="text-white text-sm">S&apos;agit-il d&apos;une urgence vitale (pronostic engagé sous 24h-48h) ?</span>
                 </label>
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">Patient a une carte CMU ? (patientHaveCmuCard)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.patientCmuCard')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1236,13 +1244,13 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       }}
                       className={`rounded-3xl px-4 py-2 ${patientHaveCmuCard === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
                 {patientHaveCmuCard === true && (
                   <div className="space-y-2">
-                    <label className="text-white text-sm font-medium block">Pourcentage couvert par la carte CMU</label>
+                    <label className="text-white text-sm font-medium block">{t('form.cmuPercentage')}</label>
                     <div className="relative">
                       <input
                         type="text"
@@ -1251,15 +1259,15 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                         value={percentageOfCmuCard}
                         onChange={(e) => setPercentageOfCmuCard(e.target.value.replace(/\D/g, '').slice(0, 3))}
                         className="w-full pl-4 pr-10 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                        placeholder="0-100"
-                        aria-label="Pourcentage couvert par la carte CMU"
+                        placeholder={t('form.cmuPercentagePlaceholder')}
+                        aria-label={t('form.cmuPercentage')}
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A0AEC0]">%</span>
                     </div>
                   </div>
                 )}
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">Devis d’un établissement agréé ? (quoteIsFromApprovedEstablishment)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.quoteFromEstablishment')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1272,7 +1280,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       }}
                       className={`rounded-3xl px-4 py-2 ${quoteIsFromApprovedEstablishment === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
@@ -1283,15 +1291,15 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       value={establishmentName}
                       onChange={(e) => setEstablishmentName(e.target.value)}
                       className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                      placeholder="Nom de l'établissement"
-                      aria-label="Nom de l'établissement"
+                      placeholder={t('form.establishmentName')}
+                      aria-label={t('form.establishmentName')}
                     />
                   </div>
                 ) : quoteIsFromApprovedEstablishment === false ? (
-                  <p className="text-[#A0AEC0] text-sm">Nom de l&apos;établissement : N/A</p>
+                  <p className="text-[#A0AEC0] text-sm">{t('form.establishmentNa')}</p>
                 ) : null}
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">Patient totalement dans l’incapacité de payer ? (patientTotalityUnableToPay)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.patientUnableToPay')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1300,7 +1308,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       onClick={() => setPatientTotalityUnableToPay(v)}
                       className={`rounded-3xl px-4 py-2 ${patientTotalityUnableToPay === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
@@ -1325,7 +1333,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={totalQuote}
                     onChange={(e) => setTotalQuote(e.target.value)}
                     className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Montant (XOF)"
+                    placeholder={t('form.totalQuote')}
                   />
                 </div>
               </div>
@@ -1333,22 +1341,22 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
 
             {campaignCategory === 'EDUCATION' && (
               <div className="space-y-6 mt-8 bg-[#00644d]/10 rounded-3xl p-4">
-                <h4 className="text-lg font-semibold text-white">Éducation / Scolarisation</h4>
+                <h4 className="text-lg font-semibold text-white">{t('form.educationDetails')}</h4>
                 <div className="space-y-2">
-                  <label className="text-white text-sm font-medium block">Type de besoin</label>
+                  <label className="text-white text-sm font-medium block">{t('form.typeOfNeed')}</label>
                   <div className="flex flex-col gap-2">
                     {EDUCATION_TYPE_NEED_OPTIONS.map((opt) => (
                       <motion.button key={opt.value} type="button" whileTap={{ scale: 0.98 }} onClick={() => setTypeOfNeed(opt.value)} className="flex items-center gap-2 text-left">
                         <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${typeOfNeed === opt.value ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
                           {typeOfNeed === opt.value && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
                         </span>
-                        <span className="text-white text-sm">{opt.label}</span>
+                        <span className="text-white text-sm">{t(`form.${opt.labelKey}`)}</span>
                       </motion.button>
                     ))}
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-white text-sm font-medium block">L&apos;élève/étudiant est-il déjà inscrit dans un établissement ?</label>
+                  <label className="text-white text-sm font-medium block">{t('form.studentRegistered')}</label>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1357,12 +1365,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       onClick={() => setIsStudentRegistered(v)}
                       className={`rounded-3xl px-4 py-2 ${isStudentRegistered === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-white text-sm font-medium block">S&apos;agit-il d&apos;un risque d&apos;exclusion pour les impayés ?</label>
+                  <label className="text-white text-sm font-medium block">{t('form.riskOfExclusion')}</label>
                   <div className="flex gap-4">
                     {([true, false] as const).map((v) => (
                       <motion.button key={String(v)} type="button" whileTap={{ scale: 0.98 }} onClick={() => {
@@ -1372,21 +1380,21 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                         <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${riskOfExclusion === v ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
                           {riskOfExclusion === v && <span className="w-2 h-2 rounded-full bg-[#101919]" />}
                         </span>
-                        <span className="text-white text-sm">{v ? 'Oui' : 'Non'}</span>
+                        <span className="text-white text-sm">{v ? t('form.yes') : t('form.no')}</span>
                       </motion.button>
                     ))}
                   </div>
                 </div>
                 {riskOfExclusion === true && (
                   <div className="space-y-2">
-                    <label className="text-white text-sm font-medium block">À combien s&apos;élève les impayés ?</label>
+                    <label className="text-white text-sm font-medium block">{t('form.outstandingAmount')}</label>
                     <input
                       type="text"
                       inputMode="numeric"
                       value={outstandingAmount}
                       onChange={(e) => setOutstandingAmount(e.target.value)}
                       className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                      placeholder="Montant (XOF)"
+                      placeholder={t('form.totalQuote')}
                     />
                   </div>
                 )}
@@ -1395,9 +1403,9 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
 
             {campaignCategory === 'WIDOW_SUPPORT' && (
               <div className="space-y-6 mt-8 bg-[#00644d]/10 rounded-3xl p-4">
-                <h4 className="text-lg font-semibold text-white">Accompagnement des Veuves</h4>
+                <h4 className="text-lg font-semibold text-white">{t('form.widowDetails')}</h4>
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">A des enfants mineurs ? (haveMinorChildren)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.haveMinorChildren')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1406,7 +1414,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       onClick={() => setHaveMinorChildren(v)}
                       className={`rounded-3xl px-4 py-2 ${haveMinorChildren === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
@@ -1418,12 +1426,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       value={numberOfMinorChildren}
                       onChange={(e) => setNumberOfMinorChildren(e.target.value)}
                       className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                      placeholder="Nombre d’enfants mineurs (numberOfMinorChildren)"
+                      placeholder={t('form.numberOfMinorChildren')}
                     />
                   </div>
                 )}
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">Hébergement stable ? (stableAccomodation)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.stableAccommodation')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1432,7 +1440,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       onClick={() => setStableAccomodation(v)}
                       className={`rounded-3xl px-4 py-2 ${stableAccomodation === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
@@ -1442,7 +1450,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={whereSheLives}
                     onChange={(e) => setWhereSheLives(e.target.value)}
                     className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Où vit-elle (whereSheLives)"
+                    placeholder={t('form.whereSheLives')}
                   />
                 </div>
                 <div className="relative">
@@ -1451,11 +1459,11 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={kindOfSupport}
                     onChange={(e) => setKindOfSupport(e.target.value)}
                     className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Type de soutien (kindOfSupport)"
+                    placeholder={t('form.kindOfSupport')}
                   />
                 </div>
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">Désert inclus ? (isDessertIncluded)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.dessertIncluded')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1464,7 +1472,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       onClick={() => setIsDessertIncluded(v)}
                       className={`rounded-3xl px-4 py-2 ${isDessertIncluded === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
@@ -1484,7 +1492,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   />
                 </div>
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">Infrastructure communautaire ? (isCommunityInfrastructure)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.communityInfrastructure')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1493,12 +1501,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       onClick={() => setIsCommunityInfrastructure(v)}
                       className={`rounded-3xl px-4 py-2 ${isCommunityInfrastructure === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">Terrain avec titre de propriété ou autorisation ? (landHaveTitleDeedOrAuthorisation)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.landTitle')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1507,12 +1515,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       onClick={() => setLandHaveTitleDeedOrAuthorisation(v)}
                       className={`rounded-3xl px-4 py-2 ${landHaveTitleDeedOrAuthorisation === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">Comité de gestion pour maintenance future ? (isThereManagementCommitteeForFutureMaintenance)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.managementCommittee')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1521,12 +1529,12 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       onClick={() => setIsThereManagementCommitteeForFutureMaintenance(v)}
                       className={`rounded-3xl px-4 py-2 ${isThereManagementCommitteeForFutureMaintenance === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
                 <div className="flex gap-3 flex-wrap">
-                  <span className="text-white text-sm font-medium w-full">Au moins 2 devis de prestataires ? (areThereAtLeastTwoConflictingQuotesFromServiceProviders)</span>
+                  <span className="text-white text-sm font-medium w-full">{t('form.twoQuotes')}</span>
                   {([true, false] as const).map((v) => (
                     <motion.button
                       key={String(v)}
@@ -1535,7 +1543,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       onClick={() => setAreThereAtLeastTwoConflictingQuotesFromServiceProviders(v)}
                       className={`rounded-3xl px-4 py-2 ${areThereAtLeastTwoConflictingQuotesFromServiceProviders === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
                     >
-                      {v ? 'Oui' : 'Non'}
+                      {v ? t('form.yes') : t('form.no')}
                     </motion.button>
                   ))}
                 </div>
@@ -1546,7 +1554,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     value={whatIsTheQuote}
                     onChange={(e) => setWhatIsTheQuote(e.target.value)}
                     className="w-full pl-4 py-4 bg-[#1E2726] border border-[#48BB78] rounded-2xl text-white placeholder-[#A0AEC0] focus:outline-none focus:ring-2 focus:ring-[#48BB78]/50"
-                    placeholder="Montant du devis (whatIsTheQuote)"
+                    placeholder={t('form.quoteAmount')}
                   />
                 </div>
               </div>
@@ -1565,10 +1573,10 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-white mb-2">
-              Documents à fournir
+              {t('form.documentsTitle')}
             </h3>
             <p className="text-[#A0AEC0] mb-6">
-              Téléchargez au moins 2 documents parmi les suivants (selon le type de campagne).
+              {t('form.documentsDesc')}
             </p>
             
             <div className="space-y-3">
@@ -1585,7 +1593,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   {/* Nom du document */}
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm leading-relaxed">
-                      {docType.label}
+                      {t(`docLabels.${apiCategory.toLowerCase()}.${docType.key}`)}
                     </p>
                     {documents[docType.key] && (
                       <p className="text-[#48BB78] text-xs mt-1 truncate">
@@ -1610,7 +1618,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                           }
                         }}
                         className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                        aria-label="Supprimer le fichier"
+                        aria-label={t('form.removeFile')}
                       >
                         <X className="w-4 h-4 text-white" />
                       </motion.button>
@@ -1628,8 +1636,8 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                             handleFileSelect(docType.key, file);
                           }}
                           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                          aria-label={`Importer ${docType.label}`}
-                          title={`Importer ${docType.label}`}
+                          aria-label={`${t('form.importBtn')} ${t(`docLabels.${apiCategory.toLowerCase()}.${docType.key}`)}`}
+                          title={`${t('form.importBtn')} ${t(`docLabels.${apiCategory.toLowerCase()}.${docType.key}`)}`}
                         />
                         <motion.button
                           whileHover={{ scale: 1.02 }}
@@ -1642,7 +1650,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                           }}
                           className="px-4 py-2 rounded-2xl flex items-center gap-2 transition-all bg-[#5AB678]/10 text-white"
                         >
-                          <span className="text-sm font-medium">Importer</span>
+                          <span className="text-sm font-medium">{t('form.importBtn')}</span>
                           <Paperclip className="w-4 h-4" />
                         </motion.button>
                       </>
@@ -1659,35 +1667,29 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-white mb-2">
-              Engagement du demandeur
+              {t('form.commitmentTitle')}
             </h3>
             <p className="text-[#A0AEC0] mb-6">
-              Enagez-vous de l'exactitude des informations fournies.
+              {t('form.commitmentDesc')}
             </p>
             
-            {/* Section Engagement du demandeur */}
             <div className="bg-[#00644d]/10 rounded-3xl p-6 space-y-6">
-              {/* En-tête avec icône */}
               <div className="flex items-start gap-4">
-                {/* Icône de poignée de main avec document */}
                 <div className="relative flex-shrink-0 bg-[#48BB78] rounded-4xl p-2 w-16 h-16">
                   <div className="relative">
                     <Image src="/images/accord-2 1.png" alt="Engagement" width={100} height={100} />
                   </div>
                 </div>
                 
-                {/* Titre */}
                 <h4 className="text-2xl font-bold text-white flex-1 pt-2">
-                  Engagement du demandeur
+                  {t('form.commitmentTitle')}
                 </h4>
               </div>
               
-              {/* Texte de certification */}
               <p className="text-white text-base leading-relaxed">
-                Je certifie sur l'honneur l'exactitude des informations fournies. Je comprends que toute fausse déclaration entraîne le rejet immédiat de la demande.
+                {t('form.certifyText')}
               </p>
               
-              {/* Bouton de certification */}
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -1698,7 +1700,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                     : 'bg-gradient-to-r from-[#48BB78]/50 to-[#38B2AC]/50 text-white/70'
                 }`}
               >
-                <span className="text-lg font-bold">Je certifie</span>
+                <span className="text-lg font-bold">{t('form.certifyBtn')}</span>
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
                   isCertified
                     ? 'bg-white border-white'
@@ -1718,18 +1720,16 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
           <div className="space-y-6">
             {/* En-tête avec icône */}
             <div className="flex items-start gap-4">
-              {/* Icône */}
               <div className="relative flex-shrink-0 bg-[#48BB78] rounded-4xl p-2 w-16 h-16 flex items-center justify-center">
                 <Image src="/images/accord-2 1.png" alt="Signature" width={48} height={48} className="object-contain" />
               </div>
               
-              {/* Titre et texte */}
               <div className="flex-1">
                 <h3 className="text-2xl font-bold text-white mb-2">
-                  Signature
+                  {t('form.signatureTitle')}
                 </h3>
                 <p className="text-[#A0AEC0] text-base leading-relaxed">
-                  Veuillez signer avec le doigt dans la case ci-dessous pour confirmer votre engagement.
+                  {t('form.signatureDesc')}
                 </p>
               </div>
             </div>
@@ -1772,7 +1772,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                       <Pen className="w-5 h-5" />
                     </div>
                     <p className="text-[#A0AEC0] text-sm italic">
-                      Veuillez dessiner votre signature ici
+                      {t('form.drawHere')}
                     </p>
                   </div>
                 )}
@@ -1784,14 +1784,14 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   onClick={clearSignature}
                   className="mt-3 text-[#48BB78] text-sm hover:text-[#38A169] transition-colors"
                 >
-                  Effacer
+                  {t('form.clearSignature')}
                 </button>
               )}
               
               {/* Message de confirmation après application */}
               {isSignatureApplied && (
                 <p className="mt-3 text-[#48BB78] text-sm font-medium">
-                  ✓ Signature appliquée et téléchargée
+                  ✓ {t('form.signatureApplied')}
                 </p>
               )}
             </div>
@@ -1806,7 +1806,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   disabled={!signature}
                   className="w-fit py-4 px-6 bg-gradient-to-r from-[#48BB78] to-[#38B2AC] text-white font-bold rounded-3xl flex items-center justify-center gap-2 hover:from-[#38A169] hover:to-[#319795] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span className="text-lg">Appliquer</span>
+                  <span className="text-lg">{t('form.applyBtn')}</span>
                   <CheckCircle className="w-5 h-5" />
                 </motion.button>
               </div>
@@ -1846,7 +1846,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
               {/* Bouton de fermeture */}
               <button
                 onClick={onClose}
-                aria-label="Fermer la modale"
+                aria-label={t('form.closeAria')}
                 className="absolute top-4 right-4 w-10 h-10 bg-[#2F855A] rounded-full flex items-center justify-center hover:bg-[#276749] transition-colors z-10"
               >
                 <X className="w-5 h-5 text-white" />
@@ -1917,7 +1917,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                                   : 'text-white/60'
                               }`}
                             >
-                              {step.label}
+                              {t(`form.${step.labelKey}`)}
                             </span>
                           </div>
                         </div>
@@ -1930,7 +1930,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                 <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
                   <div className="p-8 flex-1">
                     <h2 className="text-2xl font-bold text-white mb-2">
-                      Demande d'aide
+                      {t('form.title')}
                     </h2>
                     
                     <div className="mt-6">
@@ -1947,7 +1947,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                         onClick={handleQuit}
                         className="px-6 py-3 bg-[#1E2726] text-white font-medium rounded-3xl hover:bg-[#2A3534] transition-colors"
                       >
-                        Quitter
+                        <span>{t('form.quit')}</span>
                       </motion.button>
                       {currentStep > 1 && (
                         <motion.button
@@ -1956,7 +1956,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                           onClick={handleBack}
                           className="px-6 py-3 bg-[#1E2726] text-white font-medium rounded-3xl hover:bg-[#2A3534] transition-colors"
                         >
-                          Précédent
+                          {t('form.previous')}
                         </motion.button>
                       )}
                     </div>
@@ -1969,7 +1969,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                         disabled={isNextDisabled}
                         className="px-6 py-3 bg-gradient-to-r from-[#48BB78] to-[#38B2AC] text-white font-bold rounded-3xl flex items-center gap-2 hover:from-[#38A169] hover:to-[#319795] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <span>Suivant</span>
+                        <span>{t('form.next')}</span>
                         <ArrowRight className="w-5 h-5" />
                       </motion.button>
                     )}
@@ -1986,11 +1986,11 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                         {isSubmitting ? (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
-                            <span>Envoi en cours...</span>
+                            <span>{t('form.sending')}</span>
                           </>
                         ) : (
                           <>
-                            <span>Terminer</span>
+                            <span>{t('form.finish')}</span>
                             <CheckCircle className="w-5 h-5" />
                           </>
                         )}
@@ -2031,7 +2031,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
               {/* Bouton de fermeture */}
               <button
                 onClick={() => setShowSuccessModal(false)}
-                aria-label="Fermer la modale"
+                aria-label={t('form.closeAria')}
                 className="absolute top-4 right-4 w-10 h-10 bg-[#48BB78] rounded-full flex items-center justify-center hover:bg-[#38A169] transition-colors z-10"
               >
                 <X className="w-5 h-5 text-white" />
@@ -2052,23 +2052,23 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
 
                 {/* Titre */}
                 <h2 className="text-2xl font-bold text-white">
-                  ❤ Votre demande a bien été envoyée !
+                  ❤ {t('form.successTitle')}
                 </h2>
 
                 {/* Texte descriptif */}
                 <div className="space-y-2 text-[#A0AEC0]">
                   <p>
-                    Merci de nous avoir fait confiance.
+                    {t('form.successThankYou')}
                   </p>
                   <p>
-                    Notre équipe va étudier votre situation avec attention et vous recontactera dans les plus brefs délais.
+                    {t('form.successTeamReview')}
                   </p>
                 </div>
 
                 {/* Délai estimé */}
                 <div className="flex items-center gap-2 text-[#48BB78] font-medium">
                   <Clock className="w-5 h-5" />
-                  <span>Délai estimé : 48 à 72 heures</span>
+                  <span>{t('form.estimatedDelay')}</span>
                 </div>
 
                 {/* Bouton Aller à l'accueil */}
@@ -2079,7 +2079,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                   className="w-full py-4 px-6 bg-gradient-to-r from-[#48BB78] to-[#38B2AC] text-white font-bold rounded-3xl flex items-center justify-center gap-2 hover:from-[#38A169] hover:to-[#319795] transition-all"
                 >
                   <Home className="w-5 h-5" />
-                  <span>Aller à l'accueil</span>
+                  <span>{t('form.goToHome')}</span>
                 </motion.button>
               </div>
             </motion.div>

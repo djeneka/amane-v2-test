@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { 
   ArrowRight, Heart, Users, Star, MapPin, Calendar, Bookmark, Zap,
   Smartphone, Apple, Play, ChevronDown, ChevronLeft, ChevronRight,
@@ -36,6 +37,7 @@ interface FormattedTransaction {
 
 export default function TransactionsPage() {
   const { isAuthenticated, accessToken, authReady, user } = useAuth();
+  const t = useTranslations('transactions');
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState('tout');
   const [selectedStatus, setSelectedStatus] = useState('tout');
@@ -112,7 +114,7 @@ export default function TransactionsPage() {
     setTransactionsError(null);
     getMyTransactions(accessToken)
       .then((list) => { if (!cancelled) setApiTransactions(list); })
-      .catch(() => { if (!cancelled) setTransactionsError('impossible de recuperer vos transaction actuellement'); })
+      .catch(() => { if (!cancelled) setTransactionsError(t('errorLoad')); })
       .finally(() => { if (!cancelled) setTransactionsLoading(false); });
     return () => { cancelled = true; };
   }, [isAuthenticated, accessToken]);
@@ -132,21 +134,21 @@ export default function TransactionsPage() {
   // Transformer une transaction API en format d'affichage (purpose = type métier)
   const formatTransaction = (transaction: ApiTransaction): FormattedTransaction => {
     const typeMap: Record<ApiTransaction['purpose'], string> = {
-      DONATION: 'Don',
-      DEPOSIT: 'Dépôt',
-      TAKAFUL: 'Takaful',
-      ZAKAT: 'Zakat',
-      INVESTMENT: 'Investissement'
+      DONATION: t('typeDonation'),
+      DEPOSIT: t('typeDeposit'),
+      TAKAFUL: t('typeTakaful'),
+      ZAKAT: t('typeZakat'),
+      INVESTMENT: t('typeInvestment')
     };
     const statusMap: Record<string, { label: string; color: string }> = {
-      completed: { label: 'Effectué', color: '#1fcb4f' },
-      COMPLETED: { label: 'Effectué', color: '#1fcb4f' },
-      pending: { label: 'En attente', color: '#ffbd2e' },
-      PENDING: { label: 'En attente', color: '#ffbd2e' },
-      failed: { label: 'Annulé', color: '#e14640' },
-      FAILED: { label: 'Annulé', color: '#e14640' },
-      in_progress: { label: 'En cours', color: '#ffbd2e' },
-      IN_PROGRESS: { label: 'En cours', color: '#ffbd2e' }
+      completed: { label: t('statusCompleted'), color: '#1fcb4f' },
+      COMPLETED: { label: t('statusCompleted'), color: '#1fcb4f' },
+      pending: { label: t('statusPending'), color: '#ffbd2e' },
+      PENDING: { label: t('statusPending'), color: '#ffbd2e' },
+      failed: { label: t('statusCancelled'), color: '#e14640' },
+      FAILED: { label: t('statusCancelled'), color: '#e14640' },
+      in_progress: { label: t('statusInProgress'), color: '#ffbd2e' },
+      IN_PROGRESS: { label: t('statusInProgress'), color: '#ffbd2e' }
     };
     const dateObj = new Date(transaction.createdAt);
     const day = dateObj.getDate();
@@ -250,12 +252,12 @@ export default function TransactionsPage() {
   }
 
   const filters = [
-    { id: 'tout', label: 'Tout', icon: Circle },
-    { id: 'depots', label: 'Dépôts', icon: WalletIcon },
-    { id: 'dons', label: 'Dons', icon: HandCoins },
-    { id: 'zakats', label: 'Zakats', icon: WalletIcon },
-    { id: 'investissements', label: 'Investissements', icon: TrendingUp },
-    { id: 'takaful', label: 'Takaful', icon: Heart }
+    { id: 'tout', label: t('filterAll'), icon: Circle },
+    { id: 'depots', label: t('filterDeposits'), icon: WalletIcon },
+    { id: 'dons', label: t('filterDonations'), icon: HandCoins },
+    { id: 'zakats', label: t('filterZakats'), icon: WalletIcon },
+    { id: 'investissements', label: t('filterInvestments'), icon: TrendingUp },
+    { id: 'takaful', label: t('filterTakaful'), icon: Heart }
   ];
 
   const testimonials = [
@@ -319,12 +321,12 @@ export default function TransactionsPage() {
               {/* Header */}
               <div className="flex items-center justify-between mb-[42px]">
                 <h3 className="text-[20px] font-medium text-white">
-                  Détails de la transaction
+                  {t('modalTitle')}
                 </h3>
                 <button
                   onClick={() => setSelectedTransaction(null)}
                   className="bg-[#5AB678] rounded-full w-8 h-8 flex items-center justify-center hover:bg-[#5AB678]/80 transition-colors"
-                  aria-label="Fermer"
+                  aria-label={t('close')}
                 >
                   <X size={16} className="text-[#1C1D22]" />
                 </button>
@@ -334,12 +336,12 @@ export default function TransactionsPage() {
               <div className="flex items-start justify-between mb-[42px]">
                 {/* Colonne gauche - Labels */}
                 <div className="flex flex-col gap-2 text-base font-normal text-white">
-                  <p>Référence</p>
-                  <p>Date et heure</p>
-                  <p>Type</p>
-                  <p>Montant</p>
-                  <p>Montant total</p>
-                  <p>Statut</p>
+                  <p>{t('reference')}</p>
+                  <p>{t('dateTime')}</p>
+                  <p>{t('type')}</p>
+                  <p>{t('amount')}</p>
+                  <p>{t('totalAmount')}</p>
+                  <p>{t('status')}</p>
                 </div>
 
                 {/* Colonne droite - Valeurs */}
@@ -377,7 +379,7 @@ export default function TransactionsPage() {
                   className="bg-[#5AB678] h-12 px-[38px] rounded-full flex items-center justify-center gap-2.5 hover:bg-[#5AB678]/80 transition-colors"
                 >
                   <Share2 size={22} className="text-white" />
-                  <span className="text-sm font-semibold text-white">Partager</span>
+                  <span className="text-sm font-semibold text-white">{t('share')}</span>
                 </motion.button>
               </div>
             </motion.div>
@@ -410,7 +412,7 @@ export default function TransactionsPage() {
             <div className="flex flex-col gap-6 min-w-0 overflow-hidden">
               {/* Titre */}
               <h2 className="text-[28px] font-semibold text-white leading-[1.36]">
-                Historique des transactions
+                {t('historyTitle')}
               </h2>
 
               {/* Sélecteur de date (intervalle 1ère → dernière transaction) */}
@@ -455,12 +457,12 @@ export default function TransactionsPage() {
                       className="bg-white/10 flex gap-2 h-10 items-center justify-center px-3 py-2 rounded-2xl text-base font-medium text-white hover:bg-white/20 transition-all"
                     >
                       <span>
-                        Statuts : {
-                          selectedStatus === 'tout' ? 'Tout' :
-                          selectedStatus === 'effectue' ? 'Effectué' :
-                          selectedStatus === 'en_attente' ? 'En attente' :
-                          selectedStatus === 'en_cours' ? 'En cours' :
-                          selectedStatus === 'annule' ? 'Annulé' : 'Tout'
+                        {t('statusLabel')} : {
+                          selectedStatus === 'tout' ? t('statusAll') :
+                          selectedStatus === 'effectue' ? t('statusCompleted') :
+                          selectedStatus === 'en_attente' ? t('statusPending') :
+                          selectedStatus === 'en_cours' ? t('statusInProgress') :
+                          selectedStatus === 'annule' ? t('statusCancelled') : t('statusAll')
                         }
                       </span>
                       <ChevronDown size={16} className="text-[#5AB678]" />
@@ -474,12 +476,12 @@ export default function TransactionsPage() {
                 <div className="overflow-x-auto">
                   {/* En-tête du tableau */}
                   <div className="bg-[#fafafa]/10 grid grid-cols-[180px_220px_140px_160px_140px_80px] gap-x-8 gap-y-6 items-center justify-items-center px-6 py-6 rounded-t-[32px] min-w-[1000px]">
-                    <p className="text-base font-medium text-white text-center w-full">Référence</p>
-                    <p className="text-base font-medium text-white text-center w-full whitespace-nowrap">Date de transaction</p>
-                    <p className="text-base font-medium text-white text-center w-full">Type</p>
-                    <p className="text-base font-medium text-white text-center w-full">Montant (F CFA)</p>
-                    <p className="text-base font-medium text-white text-center w-full">Statut</p>
-                    <p className="text-base font-medium text-white text-center w-full">Actions</p>
+                    <p className="text-base font-medium text-white text-center w-full">{t('reference')}</p>
+                    <p className="text-base font-medium text-white text-center w-full whitespace-nowrap">{t('tableDate')}</p>
+                    <p className="text-base font-medium text-white text-center w-full">{t('type')}</p>
+                    <p className="text-base font-medium text-white text-center w-full">{t('amount')} (F CFA)</p>
+                    <p className="text-base font-medium text-white text-center w-full">{t('status')}</p>
+                    <p className="text-base font-medium text-white text-center w-full">{t('actions')}</p>
                   </div>
 
                 {/* Corps du tableau */}
@@ -489,11 +491,11 @@ export default function TransactionsPage() {
                   </div>
                 ) : transactionsLoading ? (
                   <div className="min-w-[1000px] px-6 py-12 text-center">
-                    <p className="text-white/70 text-base">Chargement des transactions...</p>
+                    <p className="text-white/70 text-base">{t('loading')}</p>
                   </div>
                 ) : filteredTransactions.length === 0 ? (
                   <div className="min-w-[1000px] px-6 py-12 text-center">
-                    <p className="text-white/70 text-base">Aucune transaction trouvée avec les filtres sélectionnés</p>
+                    <p className="text-white/70 text-base">{t('empty')}</p>
                   </div>
                 ) : (
                 <div className="relative min-w-[1000px]">
@@ -581,8 +583,8 @@ export default function TransactionsPage() {
                           <button
                             onClick={() => setSelectedTransaction(transaction)}
                             className="w-8 h-8 flex items-center justify-center rounded hover:opacity-70 transition-opacity"
-                            aria-label={`Voir les détails de la transaction ${transaction.reference}`}
-                            title={`Voir les détails de la transaction ${transaction.reference}`}
+                            aria-label={t('seeDetailsAria')}
+                            title={t('seeDetailsAria')}
                           >
                             <Eye size={24} className="text-white" />
                           </button>
@@ -598,14 +600,14 @@ export default function TransactionsPage() {
               {/* Pagination */}
               {totalPages > 0 && (
               <div className="flex items-center justify-end gap-3">
-                <p className="text-base font-medium text-white">Page</p>
+                <p className="text-base font-medium text-white">{t('page')}</p>
                 <div className="flex gap-3 items-center">
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                     className="bg-[rgba(0,100,77,0.3)] flex items-center justify-center p-2.5 rounded-[18px] w-9 h-9 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[rgba(0,100,77,0.5)] transition-colors"
-                    aria-label="Page précédente"
-                    title="Page précédente"
+                    aria-label={t('prevPage')}
+                    title={t('prevPage')}
                   >
                     <ChevronLeft size={15} className="text-white" />
                   </button>
@@ -674,8 +676,8 @@ export default function TransactionsPage() {
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                     className="bg-[rgba(0,100,77,0.3)] border border-[#00644d] flex items-center justify-center p-2.5 rounded-[198px] w-9 h-9 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[rgba(0,100,77,0.5)] transition-colors"
-                    aria-label="Page suivante"
-                    title="Page suivante"
+                    aria-label={t('nextPage')}
+                    title={t('nextPage')}
                   >
                     <ChevronRight size={15} className="text-white" />
                   </button>
@@ -699,16 +701,16 @@ export default function TransactionsPage() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-              Campagnes populaires
+              {t('campaignsTitle')}
             </h2>
             <p className="text-lg text-white max-w-3xl mx-auto">
-              Découvrez nos campagnes les plus populaires et soutenez des causes importantes
+              {t('campaignsSubtitle')}
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 mb-12">
             {campaignsLoading && (
-              <div className="col-span-full text-center text-white/80 py-8">Chargement des campagnes...</div>
+              <div className="col-span-full text-center text-white/80 py-8">{t('campaignsLoading')}</div>
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
@@ -716,7 +718,7 @@ export default function TransactionsPage() {
             {!campaignsLoading && !campaignsError && popularCampaigns.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-white/90">
                 <Clock size={48} className="mb-4 opacity-90" aria-hidden />
-                <p className="text-lg font-medium">Aucunes campagnes disponibles</p>
+                <p className="text-lg font-medium">{t('noCampaigns')}</p>
               </div>
             )}
             {!campaignsLoading && !campaignsError && popularCampaigns.map((campaign, index) => {
@@ -763,7 +765,7 @@ export default function TransactionsPage() {
                         </div>
                         <div className="flex-1 min-h-[2rem]" />
                         <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
-                          {donorCount.toLocaleString('fr-FR')} donateurs
+                          {donorCount.toLocaleString('fr-FR')} {t('donors')}
                         </p>
                         <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
                           {campaign.title}
@@ -771,10 +773,10 @@ export default function TransactionsPage() {
                         <div className="space-y-2">
                           <div className="flex justify-between items-center gap-2 text-sm">
                             <span className="text-[#5AB678] font-semibold">
-                              {formatCampaignAmount(amountSpent)} déboursés
+                              {formatCampaignAmount(amountSpent)} {t('spent')}
                             </span>
                             <span className="text-white font-medium">
-                              {formatCampaignAmount(currentAmount)} collectés
+                              {formatCampaignAmount(currentAmount)} {t('collected')}
                             </span>
                           </div>
                           <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
@@ -795,7 +797,7 @@ export default function TransactionsPage() {
                           style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                         >
                           <Heart size={18} className="fill-white" />
-                          <span>Soutenir cette campagne</span>
+                          <span>{t('supportCampaign')}</span>
                           <ArrowRight size={18} />
                         </motion.div>
                       </div>
@@ -814,7 +816,7 @@ export default function TransactionsPage() {
                 className=" text-white px-8 py-4 rounded-4xl font-semibold hover:bg-green-500 transition-all duration-200 shadow-lg"
                 style={{ background: 'linear-gradient(to bottom, #00644D, #101919)' }}
               >
-                Voir toutes les campagnes
+                {t('viewAllCampaigns')}
               </motion.button>
             </Link>
           </div>
@@ -840,10 +842,10 @@ export default function TransactionsPage() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-6xl font-extrabold mb-6 text-[#00644d]">
-                  Emportez Amane+ partout avec vous
+                  {t('takeWithYouTitle')}
                 </h2>
                 <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                Retrouvez toutes les fonctionnalités d'Amane+ dans une seule application. Faites vos dons, suivez vos rendements, automatisez votre Zakat et participez à des actions solidaires, où que vous soyez.
+                {t('takeWithYouDesc')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <motion.button
@@ -852,7 +854,7 @@ export default function TransactionsPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Apple size={24} />
-                    <span>Disponible sur l'App Store</span>
+                    <span>{t('appStore')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -860,7 +862,7 @@ export default function TransactionsPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Play size={24} />
-                    <span>Télécharger sur Google Play</span>
+                    <span>{t('googlePlay')}</span>
                   </motion.button>
                 </div>
               </motion.div>
@@ -880,7 +882,7 @@ export default function TransactionsPage() {
             className="text-center"
           >
             <h2 className="text-3xl lg:text-4xl font-bold mb-12">
-              Ils nous font confiance
+              {t('trustTitle')}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center justify-items-center">
               {[

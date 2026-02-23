@@ -11,7 +11,12 @@ import {
   FileText, BarChart3
 } from 'lucide-react';
 import MakeDonationModal from '@/components/MakeDonationModal';
+import type { PendingDonationState } from '@/components/MakeDonationModal';
+import MakeDepositModal from '@/components/MakeDepositModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslations } from 'next-intl';
+import { useTranslatedCampaign } from '@/contexts/CampaignTranslationsContext';
+import { isHtmlContent, getHtmlForRender } from '@/lib/campaign-html';
 import type { Campaign, CampaignActivity } from '@/data/mockData';
 
 const TOAST_DURATION_MS = 4000;
@@ -23,10 +28,14 @@ interface CampaignDetailClientProps {
 }
 
 export default function CampaignDetailClient({ campaign, donorCount = 0 }: CampaignDetailClientProps) {
+  const t = useTranslations('campagnes');
+  const tc = useTranslatedCampaign(campaign);
   const { user, accessToken, isAuthenticated } = useAuth();
   const [selectedImage, setSelectedImage] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [pendingDonationState, setPendingDonationState] = useState<PendingDonationState | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [openAccordionId, setOpenAccordionId] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<CampaignActivity | null>(null);
@@ -71,7 +80,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
 
   const handleDonateClick = () => {
     if (!isAuthenticated || !user) {
-      setToastMessage('Veuillez vous connecter pour faire un don.');
+      setToastMessage(t('loginToDonate'));
       setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
       return;
     }
@@ -79,15 +88,15 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   };
 
   const categoryLabels: Record<string, string> = {
-    'urgence': 'Urgence',
-    'education': 'Éducation',
-    'sante': 'Santé',
-    'developpement': 'Développement',
-    'refugies': 'Réfugiés',
-    'nourriture': 'Nourriture',
-    'special-ramadan': 'Spécial Ramadan',
-    'special-tabaski': 'Spécial Tabaski',
-    'autres': 'Autre',
+    'urgence': t('categoryUrgence'),
+    'education': t('categoryEducation'),
+    'sante': t('categorySante'),
+    'developpement': t('categoryDeveloppement'),
+    'refugies': t('categoryRefugies'),
+    'nourriture': t('categoryOther'),
+    'special-ramadan': t('categorySpecialRamadan'),
+    'special-tabaski': t('categorySpecialTabaski'),
+    'autres': t('categoryOther'),
   };
 
   const getCategoryLabel = (category: string) => {
@@ -95,15 +104,13 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   };
 
   const typeLabels: Record<string, string> = {
-    ZAKAT: 'Zakat',
-    SADAQAH: 'Sadaqah',
+    ZAKAT: t('typeZakat'),
+    SADAQAH: t('typeSadaqah'),
   };
-  const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
+  const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? t('typeSadaqah');
 
   const impactStats = [
-    { icon: Users, value: donorCount.toLocaleString('fr-FR'), label: 'Donateurs' },
-    // { icon: UtensilsCrossed, value: '+12 000', label: 'Repas' },
-    // { icon: Droplets, value: '+15', label: 'Puits' },
+    { icon: Users, value: donorCount.toLocaleString('fr-FR'), labelKey: 'donors' },
   ];
 
 
@@ -139,17 +146,17 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
           transition={{ duration: 0.6 }}
           className="mb-8"
         >
-          <h1 className="text-4xl lg:text-5xl font-bold text-white mb-2">Dons</h1>
+          <h1 className="text-4xl lg:text-5xl font-bold text-white mb-2">{t('breadcrumbDonations')}</h1>
           <nav className="text-sm">
             <Link href="/">
-              <span className="text-gray-300 hover:text-white transition-colors">Accueil</span>
+              <span className="text-gray-300 hover:text-white transition-colors">{t('breadcrumbHome')}</span>
             </Link>
             <span className="text-gray-300 mx-2">/</span>
             <Link href="/campagnes">
-              <span className="text-gray-300 hover:text-white transition-colors">Dons</span>
+              <span className="text-gray-300 hover:text-white transition-colors">{t('breadcrumbDonations')}</span>
             </Link>
             <span className="text-gray-300 mx-2">/</span>
-            <span className="text-green-400">Détails</span>
+            <span className="text-green-400">{t('breadcrumbDetails')}</span>
           </nav>
         </motion.div>
 
@@ -177,7 +184,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                   <div className="absolute inset-0">
                     <img
                       src={campaign.images?.[selectedImage] || campaign.image || '/images/no-picture.png'}
-                      alt={campaign.title}
+                      alt={tc.title}
                       className="w-full h-full object-cover scale-105"
                     />
                   </div>
@@ -227,17 +234,17 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-300 mb-1">
-                  Catégorie : <span className="text-green-400 font-semibold">{getCategoryLabel(campaign.category)}</span>
+                  {t('categoryLabel')} : <span className="text-green-400 font-semibold">{getCategoryLabel(campaign.category)}</span>
                 </p>
                 <h2 className="text-xl lg:text-2xl font-bold text-white uppercase leading-tight mb-3">
-                  {campaign.title}
+                  {tc.title}
                 </h2>
                 <div className="flex justify-between items-center mb-2">
                   <p className="text-sm text-[#43b48f] font-bold">
-                    {formatAmount(campaign.amountSpent ?? 0)} déboursés
+                    {formatAmount(campaign.amountSpent ?? 0)} {t('disbursed')}
                   </p>
                   <p className="text-sm text-gray-300 font-bold">
-                    {formatAmount(campaign.currentAmount)} collectés
+                    {formatAmount(campaign.currentAmount)} {t('collected')}
                   </p>
                 </div>
                 <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
@@ -251,7 +258,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 {campaign.duration === 'PONCTUAL' && (
                   <p className="text-sm text-white/70 mt-2 flex items-center gap-1.5">
                     <Calendar size={14} className="shrink-0 text-[#43b48f]" aria-hidden />
-                    Date de fin : <span className="font-semibold text-white/90">{campaign.endDate ? formatDate(campaign.endDate) : 'N/A'}</span>
+                    {t('endDateLabel')} : <span className="font-semibold text-white/90">{campaign.endDate ? formatDate(campaign.endDate) : t('na')}</span>
                   </p>
                 )}
               </div>
@@ -264,7 +271,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                   className="w-full px-8 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-3 transition-all duration-200"
                   style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
                 >
-                  <span>Donner</span>
+                  <span>{t('donate')}</span>
                   <Image
                     src="/icons/hand-coin(2).png"
                     alt=""
@@ -278,7 +285,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                       <Image src="/icons/shield-tick.png" alt="Target" width={20} height={20} className="object-contain" />
                   </div>
                   <p className="text-white text-sm">
-                    Vos dons sont 100% traçables et utilisés pour les bénéficiaires.
+                    {t('donationsTraceable')}
                   </p>
                 </div>
               </div>
@@ -295,23 +302,23 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
             {/* Bloc principal des détails (catégorie, titre, barre et Donner sont en bas de l’image) */}
             <div className="bg-[#00644d]/10 backdrop-blur-sm rounded-3xl p-4 lg:p-8">
 
-              {/* Description : HTML uniquement si la chaîne contient des balises, sinon texte brut */}
-              {campaign.description?.includes('<') ? (
+              {/* Description : HTML si balises ou entités, sinon texte brut */}
+              {isHtmlContent(tc.description) ? (
                 <div
                   className="text-white/90 mb-6 leading-relaxed [&_div]:mt-2 [&_div:first-child]:mt-0 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-6"
-                  dangerouslySetInnerHTML={{ __html: campaign.description }}
+                  dangerouslySetInnerHTML={{ __html: getHtmlForRender(tc.description) }}
                 />
               ) : (
-                <p className="text-white/90 mb-6 leading-relaxed">{campaign.description ?? ''}</p>
+                <p className="text-white/90 mb-6 leading-relaxed">{tc.description ?? ''}</p>
               )}
-              <h3 className="text-white font-bold mb-4 text-xl">🎯 Notre objectif</h3>
-              {campaign.impact?.includes('<') ? (
+              <h3 className="text-white font-bold mb-4 text-xl">{t('ourObjective')}</h3>
+              {isHtmlContent(tc.impact) ? (
                 <div
                   className="text-white/90 mb-6 leading-relaxed [&_div]:mt-2 [&_div:first-child]:mt-0 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-6"
-                  dangerouslySetInnerHTML={{ __html: campaign.impact }}
+                  dangerouslySetInnerHTML={{ __html: getHtmlForRender(tc.impact) }}
                 />
               ) : (
-                <p className="text-white/90 mb-6 leading-relaxed">{campaign.impact ?? ''}</p>
+                <p className="text-white/90 mb-6 leading-relaxed">{tc.impact ?? ''}</p>
               )}
 
               {/* Liste déroulante  */}
@@ -320,20 +327,20 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                   {
                     id: 'beneficiaires',
                     icon: Users,
-                    title: 'Quels sont les bénéficiaires de votre bonne foi ?',
+                    titleKey: 'beneficiariesTitle',
                   },
                   {
                     id: 'contribution',
                     icon: CircleHelp,
-                    title: 'Où va votre contribution ?',
+                    titleKey: 'contributionTitle',
                   },
                   {
                     id: 'decaissement',
                     iconImage: '/icons/CashOut.png',
-                    title: 'Processus de décaissement',
+                    titleKey: 'disbursementTitle',
                   },
                 ].map((item) => {
-                  const { id, title } = item;
+                  const { id, titleKey } = item;
                   const isOpen = openAccordionId === id;
                   const IconComponent = 'icon' in item ? item.icon : null;
                   return (
@@ -358,7 +365,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                           />
                         ) : null}
                         <span className="flex-1 text-white font-medium text-sm leading-tight">
-                          {title}
+                          {t(titleKey)}
                         </span>
                         <ChevronDown
                           size={20}
@@ -377,7 +384,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                             <div className="px-4 pb-4 pt-0 text-white/80 text-sm border-t border-white/10">
                               {id === 'beneficiaires' ? (
                                 (() => {
-                                  const list = campaign.beneficiariesList ?? [];
+                                  const list = tc.beneficiariesList;
                                   return list.length > 0 ? (
                                     <ul className="space-y-2 mt-3">
                                       {list.map((label, index) => (
@@ -389,13 +396,13 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                                       ))}
                                     </ul>
                                   ) : (
-                                    <p className="text-white/70 mt-3">Aucun bénéficiaire renseigné.</p>
+                                    <p className="text-white/70 mt-3">{t('noBeneficiaries')}</p>
                                   );
                                 })()
                               ) : id === 'contribution' ? (
                                 <div className="mt-3 space-y-4">
                                   <p className="text-white/80 text-sm leading-relaxed">
-                                    Consultez le budget prévisionnel et le bilan financier de cette campagne pour comprendre comment les fonds sont collectés et utilisés en toute transparence.
+                                    {t('contributionText')}
                                   </p>
                                   <div className="flex flex-col gap-3">
                                     {campaign.provisionalBudget ? (
@@ -406,13 +413,13 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                                         className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-[#43b48f] bg-[#43b48f]/5 px-4 py-3 text-[#43b48f] font-medium text-sm hover:bg-[#43b48f]/10 transition-colors"
                                       >
                                         <FileText size={22} className="shrink-0" />
-                                        <span>Budget prévisionnel</span>
+                                        <span>{t('provisionalBudget')}</span>
                                       </a>
                                     ) : (
                                       <div className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-white/20 bg-white/5 px-4 py-3 text-white/50 text-sm">
                                         <FileText size={22} className="shrink-0" />
-                                        <span>Budget prévisionnel</span>
-                                        <span className="text-xs">(non disponible)</span>
+                                        <span>{t('provisionalBudget')}</span>
+                                        <span className="text-xs">{t('notAvailable')}</span>
                                       </div>
                                     )}
                                     {campaign.financialStatement ? (
@@ -423,28 +430,28 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                                         className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-[#43b48f] bg-[#43b48f]/5 px-4 py-3 text-[#43b48f] font-medium text-sm hover:bg-[#43b48f]/10 transition-colors"
                                       >
                                         <BarChart3 size={22} className="shrink-0" />
-                                        <span>Bilan financier</span>
+                                        <span>{t('financialStatement')}</span>
                                       </a>
                                     ) : (
                                       <div className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-white/20 bg-white/5 px-4 py-3 text-white/50 text-sm">
                                         <BarChart3 size={22} className="shrink-0" />
-                                        <span>Bilan financier</span>
-                                        <span className="text-xs">(non disponible)</span>
+                                        <span>{t('financialStatement')}</span>
+                                        <span className="text-xs">{t('notAvailable')}</span>
                                       </div>
                                     )}
                                   </div>
                                 </div>
                               ) : id === 'decaissement' ? (
-                                campaign.process?.trim() ? (
+                                tc.process?.trim() ? (
                                   <div
                                     className="mt-3 text-white/90 text-sm leading-relaxed [&_b]:font-semibold [&_div]:mt-2"
-                                    dangerouslySetInnerHTML={{ __html: campaign.process }}
+                                    dangerouslySetInnerHTML={{ __html: getHtmlForRender(tc.process) }}
                                   />
                                 ) : (
-                                  <p className="text-white/70 mt-3">Aucun processus renseigné.</p>
+                                  <p className="text-white/70 mt-3">{t('noProcess')}</p>
                                 )
                               ) : (
-                                <p className="text-white/70">Contenu à venir.</p>
+                                <p className="text-white/70">{t('contentComing')}</p>
                               )}
                             </div>
                           </motion.div>
@@ -472,7 +479,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
           >
             <Leaf className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 text-[#4DE676]" aria-hidden />
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white text-center">
-              L&apos;impact de votre générosité en temps réel <span className="text-red-500">❤️</span>
+              {t('impactTitle')} <span className="text-red-500">❤️</span>
             </h2>
           </motion.div>
 
@@ -492,29 +499,30 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 >
                   <Target className="w-14 h-14 text-white/40 mb-4" aria-hidden />
                   <p className="text-white/70 text-center text-lg font-medium">
-                    Pas encore d&apos;impact disponible.
+                    {t('noImpactYet')}
                   </p>
                   <p className="text-white/50 text-center text-sm mt-1">
-                    Les réalisations de cette campagne seront affichées ici.
+                    {t('impactWillAppear')}
                   </p>
                 </motion.div>
               );
             }
 
             const renderActivityCard = (activity: CampaignActivity, i: number) => {
+              const ta = tc.activities[i];
               const lines: (string | React.ReactNode)[] = [];
-              if (activity.description?.trim()) lines.push(activity.description.trim());
+              if (ta?.description?.trim()) lines.push(ta.description.trim());
               if (typeof activity.amountSpent === 'number' && activity.amountSpent > 0) {
-                lines.push(formatAmount(activity.amountSpent) + ' déboursés');
+                lines.push(formatAmount(activity.amountSpent) + ' ' + t('disbursed'));
               }
-              if (activity.result?.trim()) lines.push(activity.result.trim());
+              if (ta?.result?.trim()) lines.push(ta.result.trim());
               const mediaUrl =
                 activity.videos?.length && activity.videos[0]
                   ? activity.videos[0]
                   : activity.images?.length && activity.images[0]
                     ? activity.images[0]
                     : campaign.images?.[i] ?? campaign.image;
-              const title = activity.title?.trim() || campaign.title;
+              const title = ta?.title?.trim() || tc.title;
               return (
                 <motion.div
                   key={activity.id ?? i}
@@ -534,8 +542,10 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                       <ul className="space-y-1 text-sm text-white/90">
                         {lines.map((line, j) => (
                           <li key={j}>
-                            {typeof line === 'string' && line.includes('déboursés') ? (
+                            {typeof line === 'string' && line.includes(t('disbursed')) ? (
                               <span className="text-[#4DE676]">{line}</span>
+                            ) : typeof line === 'string' && isHtmlContent(line) ? (
+                              <span dangerouslySetInnerHTML={{ __html: getHtmlForRender(line) }} />
                             ) : (
                               line
                             )}
@@ -543,7 +553,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-white/70 text-sm">Aucun détail renseigné.</p>
+                      <p className="text-white/70 text-sm">{t('noDetails')}</p>
                     )}
                   </div>
                   <div className="h-32 sm:h-36 relative bg-[#2a2a2a]">
@@ -567,7 +577,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                       )
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-white/40 text-sm">
-                        Pas de média
+                        {t('noMedia')}
                       </div>
                     )}
                   </div>
@@ -598,7 +608,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     type="button"
                     onClick={() => setImpactCardsSlideIndex((i) => (i <= 0 ? activities.length - 1 : i - 1))}
                     className="w-10 h-10 rounded-full bg-[#1A1A1A] border border-white/20 text-white flex items-center justify-center hover:bg-white/10 transition-colors shrink-0"
-                    aria-label="Activité précédente"
+                    aria-label={t('activityPrevAria')}
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
@@ -609,7 +619,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     type="button"
                     onClick={() => setImpactCardsSlideIndex((i) => (i >= activities.length - 1 ? 0 : i + 1))}
                     className="w-10 h-10 rounded-full bg-[#1A1A1A] border border-white/20 text-white flex items-center justify-center hover:bg-white/10 transition-colors shrink-0"
-                    aria-label="Activité suivante"
+                    aria-label={t('activityNextAria')}
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>
@@ -639,20 +649,20 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
             {[
               {
                 icon: 'eye',
-                title: 'Transparence totale',
-                text: 'Chaque don est tracé, documenté et affecté à des bénéficiaires clairement identifiés.',
+                titleKey: 'transparencyTitle',
+                textKey: 'transparencyText',
                 bgIcon: '#4DC6E6',
               },
               {
                 icon: 'moon',
-                title: 'Conformité religieuse',
-                text: 'La redistribution se fait exclusivement selon un processus validé par le Comité Shariah.',
+                titleKey: 'complianceTitle',
+                textKey: 'complianceText',
                 bgIcon: '#4DE676',
               },
               {
                 icon: 'shield',
-                title: 'Sécurité et confidentialité',
-                text: 'Vos dons sont 100% traçables et utilisés pour les bénéficiaires.',
+                titleKey: 'securityTitle',
+                textKey: 'securityText',
                 bgIcon: '#4DE676',
               },
             ].map((item, i) => (
@@ -678,8 +688,8 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-white font-bold text-lg mb-2">{item.title}</h3>
-                    <p className="text-white/90 text-sm leading-relaxed">{item.text}</p>
+                    <h3 className="text-white font-bold text-lg mb-2">{t(item.titleKey)}</h3>
+                    <p className="text-white/90 text-sm leading-relaxed">{t(item.textKey)}</p>
                   </div>
                 </div>
               </motion.div>
@@ -694,9 +704,9 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
             className="text-center max-w-2xl mx-auto mb-10"
           >
             <p className="text-white/95 text-lg sm:text-xl">
-              <span className="text-[#5AB678] not-italic">Le Prophète ﷺ a dit :</span>{' '}
-              <span className="italic text-[#5AB678]">« La charité n&apos;a jamais diminué une richesse. »</span>{' '}
-              <span className="text-[#5AB678] not-italic">(Mouslim)</span>
+              <span className="text-[#5AB678] not-italic">{t('hadithIntro')}</span>{' '}
+              <span className="italic text-[#5AB678]">{t('hadithQuote')}</span>{' '}
+              <span className="text-[#5AB678] not-italic">{t('hadithSource')}</span>
             </p>
           </motion.blockquote>
 
@@ -710,7 +720,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
               className="w-1/3 px-8 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-3 transition-all duration-200"
               style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
             >
-              <span>Donner</span>
+              <span>{t('donate')}</span>
               <Image
                 src="/icons/hand-coin(2).png"
                 alt=""
@@ -743,10 +753,10 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 className="flex flex-col items-center"
               >
                 <h2 className="text-3xl lg:text-6xl font-extrabold mb-6 text-[#ffffff]">
-                  Emportez Amane+ partout avec vous
+                  {t('takeAmaneEverywhere')}
                 </h2>
                 <p className="text-lg text-white/80 mb-8 leading-relaxed max-w-xl">
-                Retrouvez toutes les fonctionnalités d’Amane+ dans une seule application. Faites vos dons, suivez vos rendements, automatisez votre Zakat et participez à des actions solidaires, où que vous soyez.
+                {t('takeAmaneDescription')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <motion.button
@@ -755,7 +765,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Apple size={24} />
-                    <span>Disponible sur l'App Store</span>
+                    <span>{t('appStore')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -763,7 +773,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Play size={24} />
-                    <span>Télécharger sur Google Play</span>
+                    <span>{t('googlePlay')}</span>
                   </motion.button>
                 </div>
               </motion.div>
@@ -790,15 +800,21 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
               className="bg-[#1A1A1A] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
+              {(() => {
+                const selectedIndex = campaign.activities?.findIndex((a) => a === selectedActivity) ?? -1;
+                const selectedTa = selectedIndex >= 0 ? tc.activities[selectedIndex] : null;
+                const modalTitle = selectedTa?.title?.trim() || selectedActivity.title?.trim() || tc.title;
+                return (
+                  <>
               <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <h3 className="text-xl font-bold text-white">
-                  {selectedActivity.title?.trim() || campaign.title}
+                  {modalTitle}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setSelectedActivity(null)}
                   className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-                  aria-label="Fermer"
+                  aria-label={t('closeAria')}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -850,7 +866,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                               setActivitySlideIndex((i) => (i <= 0 ? mediaItems.length - 1 : i - 1));
                             }}
                             className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center z-10 transition-colors"
-                            aria-label="Précédent"
+                            aria-label={t('previousAria')}
                           >
                             <ChevronLeft className="w-5 h-5" />
                           </button>
@@ -861,7 +877,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                               setActivitySlideIndex((i) => (i >= mediaItems.length - 1 ? 0 : i + 1));
                             }}
                             className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center z-10 transition-colors"
-                            aria-label="Suivant"
+                            aria-label={t('nextAria')}
                           >
                             <ChevronRight className="w-5 h-5" />
                           </button>
@@ -891,19 +907,36 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                   );
                 })()}
                 <div className="p-6 space-y-4">
-                  {selectedActivity.description?.trim() && (
-                    <p className="text-white/90 leading-relaxed">{selectedActivity.description.trim()}</p>
+                  {selectedTa?.description?.trim() && (
+                    isHtmlContent(selectedTa.description) ? (
+                      <div
+                        className="text-white/90 leading-relaxed [&_div]:mt-1 [&_div]:first-child:mt-0"
+                        dangerouslySetInnerHTML={{ __html: getHtmlForRender(selectedTa.description.trim()) }}
+                      />
+                    ) : (
+                      <p className="text-white/90 leading-relaxed">{selectedTa.description.trim()}</p>
+                    )
                   )}
                   {typeof selectedActivity.amountSpent === 'number' && selectedActivity.amountSpent > 0 && (
                     <p className="text-[#4DE676] font-semibold">
-                      {formatAmount(selectedActivity.amountSpent)} déboursés
+                      {formatAmount(selectedActivity.amountSpent)} {t('disbursed')}
                     </p>
                   )}
-                  {selectedActivity.result?.trim() && (
-                    <p className="text-white/80 leading-relaxed">{selectedActivity.result.trim()}</p>
+                  {selectedTa?.result?.trim() && (
+                    isHtmlContent(selectedTa.result) ? (
+                      <div
+                        className="text-white/80 leading-relaxed [&_div]:mt-1 [&_div]:first-child:mt-0"
+                        dangerouslySetInnerHTML={{ __html: getHtmlForRender(selectedTa.result.trim()) }}
+                      />
+                    ) : (
+                      <p className="text-white/80 leading-relaxed">{selectedTa.result.trim()}</p>
+                    )
                   )}
                 </div>
               </div>
+                  </>
+                );
+              })()}
             </motion.div>
           </motion.div>
         )}
@@ -927,11 +960,28 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
       {/* Modal de don */}
       <MakeDonationModal
         isOpen={showDonationModal}
-        onClose={() => setShowDonationModal(false)}
+        onClose={() => {
+          setShowDonationModal(false);
+          setPendingDonationState(null);
+        }}
         balance={walletBalance}
         campaignId={campaign.id}
         accessToken={accessToken ?? undefined}
         donorName={user?.name ?? null}
+        onRequestRecharge={(state) => {
+          setPendingDonationState(state);
+          setShowDonationModal(false);
+          setShowDepositModal(true);
+        }}
+        initialDonationState={pendingDonationState}
+      />
+      <MakeDepositModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
+        onSuccess={() => {
+          setShowDepositModal(false);
+          setShowDonationModal(true);
+        }}
       />
     </div>
   );

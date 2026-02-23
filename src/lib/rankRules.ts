@@ -11,11 +11,11 @@ export interface RankRule {
  * Fer 0–4, Bronze 5–19, Argent 20–49, Or 50–99, Platine 100+
  */
 export const RANK_RULES: RankRule[] = [
-  { id: 'fer', label: 'Fer', minPoints: 0, badge: '/badges/fer.png' },
-  { id: 'bronze', label: 'Bronze', minPoints: 5, badge: '/badges/bronze.png' },
+  { id: 'fer', label: 'Fer', minPoints: 0, badge: '/badges/Fer.png' },
+  { id: 'bronze', label: 'Bronze', minPoints: 5, badge: '/badges/Bronze.png' },
   { id: 'argent', label: 'Argent', minPoints: 20, badge: '/badges/argent.png' },
-  { id: 'gold', label: 'Or', minPoints: 50, badge: '/badges/or.png' },
-  { id: 'platine', label: 'Platine', minPoints: 100, badge: '/badges/platinum.png' },
+  { id: 'gold', label: 'Or', minPoints: 50, badge: '/badges/Or.png' },
+  { id: 'platine', label: 'Platine', minPoints: 100, badge: '/badges/Platinum.png' },
 ];
 
 /**

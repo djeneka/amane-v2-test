@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Heart, Users, MapPin, Calendar, ArrowRight, Play } from 'lucide-react';
 import { Campaign } from '@/data/mockData';
+import { useTranslatedCampaign } from '@/contexts/CampaignTranslationsContext';
 
 interface CampaignCardProps {
   campaign: Campaign;
@@ -13,6 +14,7 @@ interface CampaignCardProps {
 }
 
 export default function CampaignCard({ campaign, showVideo = false, donorCount }: CampaignCardProps) {
+  const tc = useTranslatedCampaign(campaign);
   const progress = (campaign.currentAmount / campaign.targetAmount) * 100;
   
   const categoryColors = {
@@ -64,7 +66,7 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
           <div className="relative w-full h-full">
             <img
               src={campaign.image || '/images/no-picture.png'}
-              alt={campaign.title}
+              alt={tc.title}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-black/20" />
@@ -90,10 +92,10 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
       <div className="p-6">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-            {campaign.title}
+            {tc.title}
           </h3>
           <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
-            {campaign.description}
+            {tc.description}
           </p>
         </div>
 
@@ -101,7 +103,7 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
           <div className="flex items-center space-x-1">
             <MapPin size={14} />
-            <span>{campaign.location}</span>
+            <span>{tc.location}</span>
           </div>
           <div className="flex items-center space-x-1">
             <Calendar size={14} />
@@ -140,7 +142,7 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
             </span>
           </div>
           <div className="text-sm text-gray-600">
-            <span className="font-medium">{campaign.impact}</span>
+            <span className="font-medium">{tc.impact}</span>
           </div>
         </div>
 

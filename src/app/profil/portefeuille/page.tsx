@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Wallet, Key, RefreshCw, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { changeWalletCode, requestResetWalletCode, resetWalletCode } from '@/services/wallet';
+import { useTranslations } from 'next-intl';
 
 type Screen = 'menu' | 'change-code' | 'request-reset' | 'reset-code';
 
@@ -19,6 +20,7 @@ function getApiErrorMessage(err: unknown): string {
 }
 
 export default function PortefeuillePage() {
+  const t = useTranslations('profil');
   const { user, accessToken, refreshUser } = useAuth();
   const [walletLoading, setWalletLoading] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
@@ -65,18 +67,18 @@ export default function PortefeuillePage() {
     e.preventDefault();
     if (!accessToken) return;
     if (newCode !== confirmCode) {
-      showToast('error', 'Les deux codes ne correspondent pas.');
+      showToast('error', t('portefeuilleCodesMismatch'));
       return;
     }
     if (newCode.length !== 4) {
-      showToast('error', 'Le code doit contenir exactement 4 chiffres.');
+      showToast('error', t('portefeuilleCodeLength'));
       return;
     }
     setChangeLoading(true);
     try {
       await changeWalletCode(accessToken, { oldCode: currentCode, newCode, confirmNewCode: confirmCode });
       await refreshUser();
-      showToast('success', 'Code wallet modifié avec succès.');
+      showToast('success', t('portefeuilleCodeSuccess'));
       setCurrentCode('');
       setNewCode('');
       setConfirmCode('');
@@ -93,7 +95,7 @@ export default function PortefeuillePage() {
     setRequestResetLoading(true);
     try {
       await requestResetWalletCode(accessToken);
-      showToast('success', 'Un lien ou code de réinitialisation vous a été envoyé.');
+      showToast('success', t('portefeuilleResetLinkSent'));
       setCurrentScreen('menu');
     } catch (err) {
       showToast('error', getApiErrorMessage(err));
@@ -106,18 +108,18 @@ export default function PortefeuillePage() {
     e.preventDefault();
     if (!accessToken) return;
     if (resetNewCode !== resetConfirmCode) {
-      showToast('error', 'Les deux codes ne correspondent pas.');
+      showToast('error', t('portefeuilleCodesMismatch'));
       return;
     }
     if (resetNewCode.length !== 4) {
-      showToast('error', 'Le code doit contenir exactement 4 chiffres.');
+      showToast('error', t('portefeuilleCodeLength'));
       return;
     }
     setResetLoading(true);
     try {
       await resetWalletCode(accessToken, { otp: tokenOrOtp, newCode: resetNewCode, confirmNewCode: resetConfirmCode });
       await refreshUser();
-      showToast('success', 'Code wallet réinitialisé avec succès.');
+      showToast('success', t('portefeuilleResetSuccess'));
       setTokenOrOtp('');
       setResetNewCode('');
       setResetConfirmCode('');
@@ -137,14 +139,14 @@ export default function PortefeuillePage() {
           <Wallet size={24} className="text-[#00D9A5]" />
         </div>
         <div>
-          <h1 className="text-white text-xl font-semibold">Portefeuille</h1>
-          <p className="text-white/70 text-sm">Gérer le code de votre portefeuille</p>
+          <h1 className="text-white text-xl font-semibold">{t('portefeuilleTitle')}</h1>
+          <p className="text-white/70 text-sm">{t('portefeuilleSubtitle')}</p>
         </div>
       </div>
 
       {/* Carte solde wallet (données du service / contexte) */}
       <div className="bg-[#101919] rounded-2xl border border-white/10 p-4 sm:p-5">
-        <p className="text-white/60 text-sm mb-1">Solde actuel</p>
+        <p className="text-white/60 text-sm mb-1">{t('portefeuilleCurrentBalance')}</p>
         {walletLoading ? (
           <div className="h-8 w-24 bg-white/10 rounded animate-pulse" />
         ) : (
@@ -187,8 +189,8 @@ export default function PortefeuillePage() {
                   <Key size={20} className="text-[#00D9A5]" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">Changer le code wallet</p>
-                  <p className="text-white/60 text-sm">Modifier votre code de sécurité actuel</p>
+                  <p className="text-white font-medium">{t('portefeuilleChangeCode')}</p>
+                  <p className="text-white/60 text-sm">{t('portefeuilleChangeCodeDesc')}</p>
                 </div>
               </div>
               <span className="text-white/50">→</span>
@@ -204,8 +206,8 @@ export default function PortefeuillePage() {
                   <RefreshCw size={20} className="text-[#00D9A5]" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">Demander la réinitialisation du code</p>
-                  <p className="text-white/60 text-sm">Recevoir le code par email / SMS</p>
+                  <p className="text-white font-medium">{t('portefeuilleRequestReset')}</p>
+                  <p className="text-white/60 text-sm">{t('portefeuilleRequestResetDesc')}</p>
                 </div>
               </div>
               <span className="text-white/50">→</span>
@@ -221,8 +223,8 @@ export default function PortefeuillePage() {
                   <Key size={20} className="text-[#00D9A5]" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">Réinitialiser le code wallet</p>
-                  <p className="text-white/60 text-sm">Avec le code reçu par email</p>
+                  <p className="text-white font-medium">{t('portefeuilleResetCode')}</p>
+                  <p className="text-white/60 text-sm">{t('portefeuilleResetCodeDesc')}</p>
                 </div>
               </div>
               <span className="text-white/50">→</span>
@@ -243,12 +245,12 @@ export default function PortefeuillePage() {
             onClick={() => setCurrentScreen('menu')}
             className="text-white/70 hover:text-white text-sm font-medium mb-6 flex items-center gap-1"
           >
-            ← Retour
+            ← {t('portefeuilleBack')}
           </button>
-          <h2 className="text-white font-semibold text-lg mb-4">Changer le code wallet</h2>
+          <h2 className="text-white font-semibold text-lg mb-4">{t('portefeuilleChangeCode')}</h2>
           <form onSubmit={handleChangeCode} className="space-y-4">
             <div>
-              <label className="block text-white/80 text-sm mb-2">Code actuel</label>
+              <label className="block text-white/80 text-sm mb-2">{t('portefeuilleCurrentCode')}</label>
               <div className="relative">
                 <input
                   type={showCurrentCode ? 'text' : 'password'}
@@ -270,7 +272,7 @@ export default function PortefeuillePage() {
               </div>
             </div>
             <div>
-              <label className="block text-white/80 text-sm mb-2">Nouveau code</label>
+              <label className="block text-white/80 text-sm mb-2">{t('portefeuilleNewCode')}</label>
               <div className="relative">
                 <input
                   type={showNewCode ? 'text' : 'password'}
@@ -292,7 +294,7 @@ export default function PortefeuillePage() {
               </div>
             </div>
             <div>
-              <label className="block text-white/80 text-sm mb-2">Confirmer le nouveau code</label>
+              <label className="block text-white/80 text-sm mb-2">{t('portefeuilleConfirmNewCode')}</label>
               <div className="relative">
                 <input
                   type={showConfirmCode ? 'text' : 'password'}
@@ -318,7 +320,7 @@ export default function PortefeuillePage() {
               disabled={changeLoading}
               className="w-full py-3 rounded-xl font-semibold bg-[#00D9A5] text-[#101919] hover:bg-[#00D9A5]/90 disabled:opacity-50"
             >
-              {changeLoading ? 'En cours...' : 'Enregistrer le nouveau code'}
+              {changeLoading ? t('portefeuilleInProgress') : t('portefeuilleSaveNewCode')}
             </button>
           </form>
         </motion.div>
@@ -336,11 +338,11 @@ export default function PortefeuillePage() {
             onClick={() => setCurrentScreen('menu')}
             className="text-white/70 hover:text-white text-sm font-medium mb-6 flex items-center gap-1"
           >
-            ← Retour
+            ← {t('portefeuilleBack')}
           </button>
-          <h2 className="text-white font-semibold text-lg mb-2">Demander la réinitialisation du code</h2>
+          <h2 className="text-white font-semibold text-lg mb-2">{t('portefeuilleRequestResetTitle')}</h2>
           <p className="text-white/70 text-sm mb-6">
-            Un code de réinitialisation vous sera envoyé par email / SMS. Utilisez-le dans l’écran « Réinitialiser le code wallet ».
+            {t('portefeuilleRequestResetHint')}
           </p>
           <button
             type="button"
@@ -349,7 +351,7 @@ export default function PortefeuillePage() {
             className="w-full py-3 rounded-xl font-semibold bg-[#00D9A5] text-[#101919] hover:bg-[#00D9A5]/90 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <RefreshCw size={20} />
-            {requestResetLoading ? 'Envoi en cours...' : 'Envoyer la demande'}
+            {requestResetLoading ? t('portefeuilleSending') : t('portefeuilleSendRequest')}
           </button>
         </motion.div>
       )}
@@ -366,20 +368,20 @@ export default function PortefeuillePage() {
             onClick={() => setCurrentScreen('menu')}
             className="text-white/70 hover:text-white text-sm font-medium mb-6 flex items-center gap-1"
           >
-            ← Retour
+            ← {t('portefeuilleBack')}
           </button>
-          <h2 className="text-white font-semibold text-lg mb-2">Réinitialiser le code wallet</h2>
+          <h2 className="text-white font-semibold text-lg mb-2">{t('portefeuilleResetCodeTitle')}</h2>
           <p className="text-white/70 text-sm mb-6">
-            Saisissez le code reçu par email / SMS puis choisissez votre nouveau code.
+            {t('portefeuilleResetCodeHint')}
           </p>
           <form onSubmit={handleResetCode} className="space-y-4">
             <div>
-              <label className="block text-white/80 text-sm mb-2">Code reçu par email / SMS</label>
+              <label className="block text-white/80 text-sm mb-2">{t('portefeuilleCodeReceived')}</label>
               <input
                 type="text"
                 value={tokenOrOtp}
                 onChange={(e) => setTokenOrOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="Code à 4 chiffres"
+                placeholder={t('portefeuilleCodePlaceholder')}
                 maxLength={4}
                 inputMode="numeric"
                 className="w-full bg-[#0A1515] border border-white/10 rounded-xl py-3 px-4 text-white placeholder-white/30"
@@ -387,7 +389,7 @@ export default function PortefeuillePage() {
               />
             </div>
             <div>
-              <label className="block text-white/80 text-sm mb-2">Nouveau code</label>
+              <label className="block text-white/80 text-sm mb-2">{t('portefeuilleNewCode')}</label>
               <div className="relative">
                 <input
                   type={showResetNewCode ? 'text' : 'password'}
@@ -409,7 +411,7 @@ export default function PortefeuillePage() {
               </div>
             </div>
             <div>
-              <label className="block text-white/80 text-sm mb-2">Confirmer le nouveau code</label>
+              <label className="block text-white/80 text-sm mb-2">{t('portefeuilleConfirmNewCode')}</label>
               <div className="relative">
                 <input
                   type={showResetConfirmCode ? 'text' : 'password'}
@@ -435,7 +437,7 @@ export default function PortefeuillePage() {
               disabled={resetLoading}
               className="w-full py-3 rounded-xl font-semibold bg-[#00D9A5] text-[#101919] hover:bg-[#00D9A5]/90 disabled:opacity-50"
             >
-              {resetLoading ? 'En cours...' : 'Réinitialiser le code'}
+              {resetLoading ? t('portefeuilleInProgress') : t('portefeuilleResetButton')}
             </button>
           </form>
         </motion.div>

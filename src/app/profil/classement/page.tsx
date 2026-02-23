@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Trophy, Medal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getMyRank, passToAnonymous, type RankingEntry } from '@/services/statistics';
+import { useTranslations } from 'next-intl';
 
 function getInitials(name: string): string {
   return name
@@ -27,8 +28,8 @@ function getAnonymousSuffix(userId: string): string {
   return `${digit}${letter}`;
 }
 
-function getDisplayName(entry: RankingEntry): string {
-  return entry.anonymous ? `Anonyme-${getAnonymousSuffix(entry.userId)}` : entry.name;
+function getDisplayName(entry: RankingEntry, anonymousLabel: string): string {
+  return entry.anonymous ? `${anonymousLabel}-${getAnonymousSuffix(entry.userId)}` : entry.name;
 }
 
 function getDisplayInitials(entry: RankingEntry): string {
@@ -36,6 +37,7 @@ function getDisplayInitials(entry: RankingEntry): string {
 }
 
 export default function ClassementPage() {
+  const t = useTranslations('profil');
   const { isAuthenticated, accessToken, user } = useAuth();
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ export default function ClassementPage() {
         if (!cancelled) setRanking(list);
       })
       .catch((err) => {
-        if (!cancelled) setError(err?.message ?? 'Erreur lors du chargement du classement');
+        if (!cancelled) setError(err?.message ?? t('loadError'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -79,7 +81,7 @@ export default function ClassementPage() {
       const list = await getMyRank({ token: accessToken });
       setRanking(list);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du changement');
+      setError(err instanceof Error ? err.message : t('loadError'));
     } finally {
       setAnonymizeLoading(false);
     }
@@ -92,20 +94,20 @@ export default function ClassementPage() {
           <Trophy size={24} className="text-[#00D9A5]" />
         </div>
         <div>
-          <h1 className="text-white text-xl font-semibold">Classement</h1>
+          <h1 className="text-white text-xl font-semibold">{t('classementTitle')}</h1>
           <p className="text-white/70 text-sm">
             {myEntry
-              ? `Tu es ${myEntry.rank}e sur ${ranking.length}`
+              ? t('classementSubtitleYou', { rank: myEntry.rank, total: ranking.length })
               : ranking.length > 0
-                ? 'Consulte le classement des contributeurs'
-                : 'Aucun classement pour le moment'}
+                ? t('classementSubtitleBrowse')
+                : t('classementEmpty')}
           </p>
         </div>
       </div>
 
       {loading ? (
         <div className="bg-[#101919]/50 rounded-2xl border border-white/10 p-8 text-center text-white/70">
-          Chargement du classement...
+          {t('classementLoading')}
         </div>
       ) : error ? (
         <div className="bg-[#101919]/50 rounded-2xl border border-white/10 p-8 text-center text-red-400">
@@ -113,7 +115,7 @@ export default function ClassementPage() {
         </div>
       ) : ranking.length === 0 ? (
         <div className="bg-[#101919]/50 rounded-2xl border border-white/10 p-8 text-center text-white/70">
-          Aucun participant au classement pour le moment.
+          {t('classementNoParticipants')}
         </div>
       ) : (
         <div className="bg-[#101919]/50 rounded-2xl border border-white/10 overflow-hidden">
@@ -150,7 +152,7 @@ export default function ClassementPage() {
                     {!entry.anonymous && entry.profilePicture ? (
                       <Image
                         src={entry.profilePicture}
-                        alt={getDisplayName(entry)}
+                        alt={getDisplayName(entry, t('classementAnonymous'))}
                         width={44}
                         height={44}
                         className="rounded-full object-cover"
@@ -163,21 +165,21 @@ export default function ClassementPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`font-medium truncate ${isMe ? 'text-[#00D9A5]' : 'text-white'}`}>
-                      {getDisplayName(entry)}
+                      {getDisplayName(entry, t('classementAnonymous'))}
                       {isMe && (
-                        <span className="ml-2 text-xs text-white/70 font-normal">(ma position)</span>
+                        <span className="ml-2 text-xs text-white/70 font-normal">{t('classementMyPosition')}</span>
                       )}
                     </p>
                     <p className="text-white/60 text-sm">{entry.score.toLocaleString('fr-FR')} points</p>
                   </div>
                   {isMe && (
                     <div className="flex-shrink-0 flex items-center gap-2">
-                      <span className="text-white/60 text-xs whitespace-nowrap">Anonyme</span>
+                      <span className="text-white/60 text-xs whitespace-nowrap">{t('classementAnonymous')}</span>
                       <button
                         type="button"
                         role="switch"
-                        aria-checked={myEntry?.anonymous ? 'true' : 'false'}
-                        aria-label={myEntry?.anonymous ? 'Afficher mon nom' : 'Passer en anonyme'}
+                        aria-checked={myEntry?.anonymous === true}
+                        aria-label={myEntry?.anonymous ? t('classementShowName') : t('classementGoAnonymous')}
                         onClick={handleToggleAnonymous}
                         disabled={anonymizeLoading}
                         className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#00D9A5] focus:ring-offset-2 focus:ring-offset-[#101919] disabled:opacity-50 ${

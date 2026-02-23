@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { login as apiLogin, type AuthUser, type LoginCredentials } from '@/services/auth';
 import { getCurrentUser } from '@/services/user';
 import { AUTH_UNAUTHORIZED_EVENT } from '@/lib/api';
+import { LOCALE_STORAGE_KEY } from '@/i18n/config';
 
 const STORAGE_USER = 'amane-user';
 const STORAGE_ACCESS_TOKEN = 'amane-access-token';
@@ -138,6 +139,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_USER);
     localStorage.removeItem(STORAGE_ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_REFRESH_TOKEN);
+    localStorage.removeItem(LOCALE_STORAGE_KEY);
+    if (typeof window !== 'undefined') {
+      sessionStorage.clear();
+    }
   }, []);
 
   // Déconnexion automatique quand une requête API retourne 401 (storage déjà nettoyé par api.ts)

@@ -2,15 +2,20 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Languages, ChevronRight, Palette, Sun, Moon, Settings, ChevronDown, Check } from 'lucide-react';
+import { Bell, Languages, Palette, Sun, Moon, Settings, ChevronDown, Check } from 'lucide-react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import { useLocale } from '@/components/LocaleProvider';
+import type { Locale } from '@/i18n/config';
 
 export default function ParametresPage() {
+  const t = useTranslations('parametres');
+  const tCommon = useTranslations('common');
+  const { locale, setLocale } = useLocale();
   const [notifications, setNotifications] = useState(false);
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'system'>('dark');
-  const [selectedLanguage, setSelectedLanguage] = useState<'fr' | 'en'>('fr');
   const themeDropdownRef = useRef<HTMLDivElement>(null);
   const languageDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -35,47 +40,27 @@ export default function ParametresPage() {
   }, [isThemeDropdownOpen, isLanguageDropdownOpen]);
 
   const themeOptions = [
-    {
-      id: 'light' as const,
-      label: 'Mode Clair',
-      icon: Sun,
-    },
-    {
-      id: 'dark' as const,
-      label: 'Mode Sombre',
-      icon: Moon,
-    },
-    {
-      id: 'system' as const,
-      label: 'Suivre le système',
-      icon: Settings,
-    },
+    { id: 'light' as const, labelKey: 'lightMode' as const, icon: Sun },
+    { id: 'dark' as const, labelKey: 'darkMode' as const, icon: Moon },
+    { id: 'system' as const, labelKey: 'followSystem' as const, icon: Settings },
   ];
 
-  const languageOptions = [
-    {
-      id: 'fr' as const,
-      label: 'Français',
-      flag: '🇫🇷',
-    },
-    {
-      id: 'en' as const,
-      label: 'Anglais',
-      flag: '🇬🇧',
-    },
+  const languageOptions: { id: Locale; labelKey: 'french' | 'english'; flag: string }[] = [
+    { id: 'fr', labelKey: 'french', flag: '🇫🇷' },
+    { id: 'en', labelKey: 'english', flag: '🇬🇧' },
   ];
 
   const settings = [
     {
       id: 'theme',
-      label: 'Thème',
+      label: t('theme'),
       icon: Palette,
       type: 'dropdown' as const,
       onClick: () => setIsThemeDropdownOpen(!isThemeDropdownOpen),
     },
     {
       id: 'notifications',
-      label: 'Notifications',
+      label: t('notifications'),
       icon: Bell,
       type: 'toggle' as const,
       value: notifications,
@@ -83,7 +68,7 @@ export default function ParametresPage() {
     },
     {
       id: 'language',
-      label: 'Langue de l\'application',
+      label: t('appLanguage'),
       icon: Languages,
       type: 'dropdown' as const,
       onClick: () => setIsLanguageDropdownOpen(!isLanguageDropdownOpen),
@@ -106,8 +91,8 @@ export default function ParametresPage() {
               <button
                 onClick={setting.onClick}
                 className="w-full flex items-center justify-between p-4 sm:p-6 hover:bg-white/5 transition-colors text-left"
-                aria-label={`Ouvrir ${setting.label}`}
-                title={`Ouvrir ${setting.label}`}
+                aria-label={`${tCommon('open')} ${setting.label}`}
+                title={`${tCommon('open')} ${setting.label}`}
               >
                 <div className="flex items-center space-x-2 flex-1">
                   <setting.icon size={24} className="text-[#00D9A5] flex-shrink-0" />
@@ -134,8 +119,8 @@ export default function ParametresPage() {
                 {setting.type === 'toggle' && (
                   <button
                     onClick={setting.onChange}
-                    aria-label={`${setting.value ? 'Désactiver' : 'Activer'} ${setting.label}`}
-                    title={`${setting.value ? 'Désactiver' : 'Activer'} ${setting.label}`}
+                    aria-label={`${setting.value ? tCommon('disable') : tCommon('enable')} ${setting.label}`}
+                    title={`${setting.value ? tCommon('disable') : tCommon('enable')} ${setting.label}`}
                     className={`relative w-14 h-8 rounded-full transition-colors flex-shrink-0 ${
                       setting.value ? 'bg-[#00D9A5]' : 'bg-white/20'
                     }`}
@@ -172,10 +157,10 @@ export default function ParametresPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-white mb-2">
-                    Définissez votre thème
+                    {t('setYourTheme')}
                   </h3>
                   <p className="text-white/70 text-sm">
-                    Adaptez l'apparence de l'application selon vos préférences.
+                    {t('themeDescription')}
                   </p>
                 </div>
               </div>
@@ -216,7 +201,7 @@ export default function ParametresPage() {
 
                   {/* Label and Icon */}
                   <div className="flex items-center space-x-2 flex-1">
-                    <span className="text-white font-medium">{option.label}</span>
+                    <span className="text-white font-medium">{t(option.labelKey)}</span>
                     <option.icon
                       size={20}
                       className={`flex-shrink-0 ${
@@ -254,10 +239,10 @@ export default function ParametresPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-white mb-2">
-                    Langue
+                    {t('language')}
                   </h3>
                   <p className="text-white/70 text-sm">
-                    Veuillez définir la langue que vous préférez
+                    {t('languageDescription')}
                   </p>
                 </div>
               </div>
@@ -272,23 +257,23 @@ export default function ParametresPage() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
                   onClick={() => {
-                    setSelectedLanguage(option.id);
+                    setLocale(option.id);
                     setIsLanguageDropdownOpen(false);
                   }}
                   className="w-full flex items-center space-x-3 p-4 rounded-lg hover:bg-white/5 transition-colors text-left"
                 >
                   {/* Checkmark */}
-                  {selectedLanguage === option.id && (
+                  {locale === option.id && (
                     <Check size={20} className="text-[#00D9A5] flex-shrink-0" />
                   )}
-                  {selectedLanguage !== option.id && (
+                  {locale !== option.id && (
                     <div className="w-5 flex-shrink-0" />
                   )}
 
                   {/* Flag and Label */}
                   <div className="flex items-center space-x-2 flex-1">
                     <span className="text-2xl">{option.flag}</span>
-                    <span className="text-white font-medium">{option.label}</span>
+                    <span className="text-white font-medium">{t(option.labelKey)}</span>
                   </div>
                 </motion.button>
               ))}
