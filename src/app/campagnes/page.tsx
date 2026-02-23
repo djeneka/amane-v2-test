@@ -19,6 +19,7 @@ import { getDonationsStatistics } from '@/services/statistics';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from 'next-intl';
 import { useCampaignTranslations } from '@/contexts/CampaignTranslationsContext';
+import { isHtmlContent, getHtmlForRender } from '@/lib/campaign-html';
 
 const COUNTRY_LABELS: Record<string, string> = {
   ci: "côte d'ivoire",
@@ -563,7 +564,7 @@ export default function CampagnesPage() {
                         <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
                           <img
                             src={campaign.image || '/images/no-picture.png'}
-                            alt={campaign.title}
+                            alt={tc.title}
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
@@ -582,7 +583,7 @@ export default function CampagnesPage() {
                             </div>
                             <div className="relative">
                               <h3 className="text-xl font-bold text-white leading-tight">
-                                {campaign.title}
+                                {tc.title}
                               </h3>
                               {/* {campaign.description?.trim() && (
                                 campaign.description.includes('<') ? (
@@ -1047,10 +1048,10 @@ export default function CampagnesPage() {
                           <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 group-hover:text-blue-600 transition-colors break-words">
                             {tc.title}
                           </h3>
-                          {tc.description?.includes('<') ? (
+                          {isHtmlContent(tc.description) ? (
                             <div
                               className="text-white/70 mb-4 text-sm sm:text-base line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
-                              dangerouslySetInnerHTML={{ __html: tc.description ?? '' }}
+                              dangerouslySetInnerHTML={{ __html: getHtmlForRender(tc.description ?? '') }}
                             />
                           ) : (
                             <p className="text-white/70 mb-4 text-sm sm:text-base line-clamp-2">

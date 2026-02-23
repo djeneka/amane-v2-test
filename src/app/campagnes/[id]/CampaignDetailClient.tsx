@@ -16,6 +16,7 @@ import MakeDepositModal from '@/components/MakeDepositModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from 'next-intl';
 import { useTranslatedCampaign } from '@/contexts/CampaignTranslationsContext';
+import { isHtmlContent, getHtmlForRender } from '@/lib/campaign-html';
 import type { Campaign, CampaignActivity } from '@/data/mockData';
 
 const TOAST_DURATION_MS = 4000;
@@ -301,20 +302,20 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
             {/* Bloc principal des détails (catégorie, titre, barre et Donner sont en bas de l’image) */}
             <div className="bg-[#00644d]/10 backdrop-blur-sm rounded-3xl p-4 lg:p-8">
 
-              {/* Description : HTML uniquement si la chaîne contient des balises, sinon texte brut */}
-              {tc.description?.includes('<') ? (
+              {/* Description : HTML si balises ou entités, sinon texte brut */}
+              {isHtmlContent(tc.description) ? (
                 <div
                   className="text-white/90 mb-6 leading-relaxed [&_div]:mt-2 [&_div:first-child]:mt-0 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-6"
-                  dangerouslySetInnerHTML={{ __html: tc.description }}
+                  dangerouslySetInnerHTML={{ __html: getHtmlForRender(tc.description) }}
                 />
               ) : (
                 <p className="text-white/90 mb-6 leading-relaxed">{tc.description ?? ''}</p>
               )}
               <h3 className="text-white font-bold mb-4 text-xl">{t('ourObjective')}</h3>
-              {tc.impact?.includes('<') ? (
+              {isHtmlContent(tc.impact) ? (
                 <div
                   className="text-white/90 mb-6 leading-relaxed [&_div]:mt-2 [&_div:first-child]:mt-0 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-6"
-                  dangerouslySetInnerHTML={{ __html: tc.impact }}
+                  dangerouslySetInnerHTML={{ __html: getHtmlForRender(tc.impact) }}
                 />
               ) : (
                 <p className="text-white/90 mb-6 leading-relaxed">{tc.impact ?? ''}</p>
@@ -444,7 +445,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                                 tc.process?.trim() ? (
                                   <div
                                     className="mt-3 text-white/90 text-sm leading-relaxed [&_b]:font-semibold [&_div]:mt-2"
-                                    dangerouslySetInnerHTML={{ __html: tc.process }}
+                                    dangerouslySetInnerHTML={{ __html: getHtmlForRender(tc.process) }}
                                   />
                                 ) : (
                                   <p className="text-white/70 mt-3">{t('noProcess')}</p>
@@ -543,6 +544,8 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                           <li key={j}>
                             {typeof line === 'string' && line.includes(t('disbursed')) ? (
                               <span className="text-[#4DE676]">{line}</span>
+                            ) : typeof line === 'string' && isHtmlContent(line) ? (
+                              <span dangerouslySetInnerHTML={{ __html: getHtmlForRender(line) }} />
                             ) : (
                               line
                             )}
@@ -905,7 +908,14 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 })()}
                 <div className="p-6 space-y-4">
                   {selectedTa?.description?.trim() && (
-                    <p className="text-white/90 leading-relaxed">{selectedTa.description.trim()}</p>
+                    isHtmlContent(selectedTa.description) ? (
+                      <div
+                        className="text-white/90 leading-relaxed [&_div]:mt-1 [&_div]:first-child:mt-0"
+                        dangerouslySetInnerHTML={{ __html: getHtmlForRender(selectedTa.description.trim()) }}
+                      />
+                    ) : (
+                      <p className="text-white/90 leading-relaxed">{selectedTa.description.trim()}</p>
+                    )
                   )}
                   {typeof selectedActivity.amountSpent === 'number' && selectedActivity.amountSpent > 0 && (
                     <p className="text-[#4DE676] font-semibold">
@@ -913,7 +923,14 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     </p>
                   )}
                   {selectedTa?.result?.trim() && (
-                    <p className="text-white/80 leading-relaxed">{selectedTa.result.trim()}</p>
+                    isHtmlContent(selectedTa.result) ? (
+                      <div
+                        className="text-white/80 leading-relaxed [&_div]:mt-1 [&_div]:first-child:mt-0"
+                        dangerouslySetInnerHTML={{ __html: getHtmlForRender(selectedTa.result.trim()) }}
+                      />
+                    ) : (
+                      <p className="text-white/80 leading-relaxed">{selectedTa.result.trim()}</p>
+                    )
                   )}
                 </div>
               </div>
