@@ -2,28 +2,15 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 
 export default function TermesPage() {
+  const t = useTranslations('profil');
   const sections = [
     {
       icon: '/icons/security-safe.png',
-      title: 'Conditions d\'utilisation',
-      content: `En utilisant la plateforme Amane+, vous acceptez de respecter les conditions d'utilisation suivantes :
-
-1. Utilisation de la plateforme
-   - Vous devez être âgé d'au moins 18 ans pour utiliser nos services
-   - Vous êtes responsable de maintenir la confidentialité de votre compte
-   - Vous acceptez de fournir des informations exactes et à jour
-
-2. Transactions
-   - Toutes les transactions sont finales et non remboursables, sauf cas exceptionnels
-   - Les frais de transaction peuvent s'appliquer selon le mode de paiement
-   - Nous nous réservons le droit de refuser toute transaction suspecte
-
-3. Comportement
-   - Vous vous engagez à utiliser la plateforme de manière légale et éthique
-   - Toute activité frauduleuse entraînera la suspension immédiate de votre compte
-   - Le respect de la communauté est essentiel`,
+      title: t('termesTitle'),
+      content: t('termesContent'),
     },
   ];
 

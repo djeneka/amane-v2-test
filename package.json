@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-campaigns": "node scripts/generate-campaigns-json.mjs",
+    "translate-campaigns-en": "node scripts/translate-campaigns-to-en.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.984.0",

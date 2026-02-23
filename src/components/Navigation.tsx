@@ -9,18 +9,20 @@ import {
   Menu, X, User, Heart, Calculator, Shield, TrendingUp, Home, Users, 
   Gift, Wallet, Settings, ChevronDown, LogOut, PiggyBank, LogIn, 
   Star, Coins, ChevronRight, Eye, EyeOff, ShoppingBag, Mail, 
-  ArrowRight, ArrowUpDown, Grid3x3
+  ArrowRight, ArrowUpDown, Grid3x3, Languages
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from '@/components/LocaleProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationPopup from '@/components/NotificationPopup';
 import { getUnreadNotificationsCount } from '@/services/notifications';
+import type { Locale } from '@/i18n/config';
 
 export default function Navigation() {
   const t = useTranslations('nav');
   const tCommon = useTranslations('common');
-  const { locale } = useLocale();
+  const tParametres = useTranslations('parametres');
+  const { locale, setLocale } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
@@ -31,6 +33,9 @@ export default function Navigation() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout, accessToken } = useAuth();
   const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
+  const languageDropdownRefMobile = useRef<HTMLDivElement>(null);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
 
   // Charger le nombre de notifications non lues (et rafraîchir à la fermeture du popup)
   useEffect(() => {
@@ -49,16 +54,21 @@ export default function Navigation() {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
         setIsProfileDropdownOpen(false);
       }
+      const outsideDesktop = !languageDropdownRef.current || !languageDropdownRef.current.contains(event.target as Node);
+      const outsideMobile = !languageDropdownRefMobile.current || !languageDropdownRefMobile.current.contains(event.target as Node);
+      if (outsideDesktop && outsideMobile) {
+        setIsLanguageDropdownOpen(false);
+      }
     }
 
-    if (isProfileDropdownOpen) {
+    if (isProfileDropdownOpen || isLanguageDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isProfileDropdownOpen]);
+  }, [isProfileDropdownOpen, isLanguageDropdownOpen]);
 
   // Mock data for wallet and sadaqah score
   const walletBalance = 125000; // 125,000 XOF
@@ -85,6 +95,11 @@ export default function Navigation() {
     { nameKey: 'helpSupport' as const, href: '/profil/aide-support', image: '/icons/message-question.png' },
     { nameKey: 'termsConditions' as const, href: '/profil/termes', image: '/icons/security-safe.png' },
     { nameKey: 'logout' as const, href: '/', icon: LogOut, isLogout: true },
+  ];
+
+  const languageOptions: { id: Locale; labelKey: 'french' | 'english'; flag: string }[] = [
+    { id: 'fr', labelKey: 'french', flag: '🇫🇷' },
+    { id: 'en', labelKey: 'english', flag: '🇬🇧' },
   ];
 
   const formatAmount = (amount: number) => {
@@ -530,6 +545,109 @@ export default function Navigation() {
                 </motion.div>
               </div>
             )}
+
+            {/* Sélecteur de langue (drapeau) */}
+            <div className="relative hidden md:block" ref={languageDropdownRef}>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+                className="flex items-center space-x-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white border border-white/20"
+                aria-label={tParametres('appLanguage')}
+                title={tParametres('appLanguage')}
+              >
+                <span className="text-xl" aria-hidden>
+                  {languageOptions.find((o) => o.id === locale)?.flag ?? '🌐'}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={`text-white/80 transition-transform duration-200 ${isLanguageDropdownOpen ? 'rotate-180' : ''}`}
+                />
+              </motion.button>
+              <AnimatePresence>
+                {isLanguageDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute right-0 mt-2 w-44 bg-[#1A1F1F] rounded-xl shadow-2xl border border-[#00644D]/30 overflow-hidden z-50"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="py-2">
+                      {languageOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => {
+                            setLocale(option.id);
+                            setIsLanguageDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center space-x-2 px-4 py-2.5 text-left transition-colors ${
+                            locale === option.id
+                              ? 'bg-[#00644D]/30 text-[#00D9A5]'
+                              : 'text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <span className="text-lg">{option.flag}</span>
+                          <span className="text-sm font-medium">{tParametres(option.labelKey)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Sélecteur de langue mobile (drapeaux) */}
+          <div className="relative md:hidden flex items-center" ref={languageDropdownRefMobile}>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+              className="flex items-center space-x-1 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white border border-white/20"
+              aria-label={tParametres('appLanguage')}
+              title={tParametres('appLanguage')}
+            >
+              <span className="text-xl" aria-hidden>
+                {languageOptions.find((o) => o.id === locale)?.flag ?? '🌐'}
+              </span>
+              <ChevronDown
+                size={14}
+                className={`text-white/80 transition-transform duration-200 ${isLanguageDropdownOpen ? 'rotate-180' : ''}`}
+              />
+            </motion.button>
+            <AnimatePresence>
+              {isLanguageDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 top-full mt-2 w-40 bg-[#1A1F1F] rounded-xl shadow-2xl border border-[#00644D]/30 overflow-hidden z-50"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="py-2">
+                    {languageOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setLocale(option.id);
+                          setIsLanguageDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center space-x-2 px-4 py-2.5 text-left transition-colors ${
+                          locale === option.id
+                            ? 'bg-[#00644D]/30 text-[#00D9A5]'
+                            : 'text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <span className="text-lg">{option.flag}</span>
+                        <span className="text-sm font-medium">{tParametres(option.labelKey)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Mobile menu button */}

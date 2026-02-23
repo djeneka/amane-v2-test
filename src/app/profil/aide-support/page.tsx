@@ -3,27 +3,17 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, Phone, MapPin, Map } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export default function AideSupportPage() {
+  const t = useTranslations('profil');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const faqs = [
-    {
-      question: 'Comment effectuer un don ?',
-      answer: 'Pour faire un don, accédez à la section "Dons" dans le menu principal, choisissez votre projet ou cause, puis suivez les instructions pour compléter votre don. Vous pouvez payer par carte bancaire, mobile money ou portefeuille Amane+.',
-    },
-    {
-      question: 'Comment calculer ma Zakat ?',
-      answer: 'Notre calculateur de Zakat vous guide étape par étape. Accédez à la section "Zakat", entrez vos informations financières (épargnes, or, argent, etc.), et notre système calculera automatiquement le montant de votre Zakat (généralement 2.5% de vos avoirs éligibles).',
-    },
-    {
-      question: 'Comment activer le mode sombre ?',
-      answer: 'Le mode sombre est activé par défaut sur Amane+. Si vous souhaitez le désactiver ou le modifier, allez dans les Paramètres de votre profil, puis dans la section Préférences. Vous pourrez y choisir entre le thème sombre et le thème clair.',
-    },
-    {
-      question: 'Comment contacter le service client ?',
-      answer: 'Vous pouvez nous contacter par email à amane.plus@email.com, par WhatsApp au +225 05 74 86 12 94, ou par téléphone fixe au +225 27 22 22 15 99. Notre équipe est disponible pour vous aider du lundi au vendredi de 8h à 18h.',
-    },
+    { question: t('aideSupportQ1'), answer: t('aideSupportA1') },
+    { question: t('aideSupportQ2'), answer: t('aideSupportA2') },
+    { question: t('aideSupportQ3'), answer: t('aideSupportA3') },
+    { question: t('aideSupportQ4'), answer: t('aideSupportA4') },
   ];
 
   return (
@@ -33,7 +23,7 @@ export default function AideSupportPage() {
         {/* FAQ Title */}
         <div className="rounded-t-2xl p-6">
           <h2 className="text-xl font-bold text-white">
-            Des réponses simples aux questions les plus courantes.
+            {t('aideSupportFaqTitle')}
           </h2>
         </div>
 
@@ -83,7 +73,7 @@ export default function AideSupportPage() {
         {/* Contact Title */}
         <div className=" rounded-t-2xl p-6">
           <h2 className="text-xl font-bold text-white">
-            Communiquez avec notre équipe support.
+            {t('aideSupportContactTitle')}
           </h2>
         </div>
 
@@ -93,7 +83,7 @@ export default function AideSupportPage() {
             {/* Left Column: Contact Methods */}
             <div>
               <h3 className="text-lg font-semibold text-white mb-6">
-                Comment nous contacter ?
+                {t('aideSupportHowToContact')}
               </h3>
               <div className="space-y-4">
                 {/* Email */}
@@ -102,12 +92,12 @@ export default function AideSupportPage() {
                     <Phone size={20} className="text-white" />
                   </div>
                   <div>
-                    <p className="text-white text-sm">Email :</p>
+                    <p className="text-white text-sm">{t('aideSupportEmail')}</p>
                     <a
-                      href="mailto:amane.plus@email.com"
+                      href="mailto:contact@amane.ci"
                       className="text-[#00D9A5] underline hover:text-[#00D9A5]/80 transition-colors"
                     >
-                      amane.plus@email.com
+                      contact@amane.ci
                     </a>
                   </div>
                 </div>
@@ -118,14 +108,14 @@ export default function AideSupportPage() {
                     <Phone size={20} className="text-white" />
                   </div>
                   <div>
-                    <p className="text-white text-sm">Whatsapp :</p>
+                    <p className="text-white text-sm">{t('aideSupportWhatsapp')}</p>
                     <a
-                      href="https://wa.me/2250574861294"
+                      href="https://wa.me/2250720000006"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#00D9A5] underline hover:text-[#00D9A5]/80 transition-colors"
                     >
-                      +225 05 74 86 12 94
+                      +225 07 20 00 00 06
                     </a>
                   </div>
                 </div>
@@ -136,12 +126,12 @@ export default function AideSupportPage() {
                     <Phone size={20} className="text-white" />
                   </div>
                   <div>
-                    <p className="text-white text-sm">Fixe :</p>
+                    <p className="text-white text-sm">{t('aideSupportPhone')}</p>
                     <a
-                      href="tel:+2252722221599"
+                      href="tel:+2252722223464"
                       className="text-[#00D9A5] underline hover:text-[#00D9A5]/80 transition-colors"
                     >
-                      +225 27 22 22 15 99
+                      +225 27 22 22 34 64
                     </a>
                   </div>
                 </div>
@@ -152,25 +142,22 @@ export default function AideSupportPage() {
             <div>
               <div className="flex items-center space-x-2 mb-6">
                 <MapPin size={20} className="text-[#00D9A5]" />
-                <h3 className="text-lg font-semibold text-white">Localisation</h3>
+                <h3 className="text-lg font-semibold text-white">{t('aideSupportLocation')}</h3>
               </div>
               <div className="space-y-2 mb-6">
-                <p className="text-white font-bold uppercase text-sm">NOS BUREAUX</p>
-                <p className="text-white">COCODY CORNICHE</p>
-                <p className="text-white">Rue B5, La Villa Nova</p>
-                <p className="text-white">Abidjan, CÔTE D'IVOIRE</p>
+                <p className="text-white font-bold uppercase text-sm">{t('aideSupportOffices')}</p>
+                <p className="text-white whitespace-pre-line">{t('aideSupportAddress')}</p>
               </div>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="flex items-center space-x-2 px-6 py-3 bg-[#00D9A5] text-white rounded-2xl hover:bg-[#00D9A5]/80 transition-colors"
                 onClick={() => {
-                  // Ouvrir Google Maps avec l'adresse
                   window.open('https://www.google.com/maps/search/?api=1&query=Cocody+Corniche+Rue+B5+La+Villa+Nova+Abidjan', '_blank');
                 }}
               >
                 <Map size={18} className="text-white" />
-                <span>Voir sur la carte</span>
+                <span>{t('aideSupportViewOnMap')}</span>
               </motion.button>
             </div>
           </div>

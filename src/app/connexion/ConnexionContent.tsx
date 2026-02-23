@@ -5,28 +5,17 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Users, Heart, Phone } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
+import { COUNTRY_DIAL_CODES, getFlagEmoji } from "@/data/countryDialCodes";
 
 /** Codes pays pour le téléphone (concaténés avec le numéro envoyé à l'API) */
-const COUNTRY_CODES = [
-  { code: '+225', label: 'Côte d\'Ivoire', flag: '🇨🇮' },
-  { code: '+221', label: 'Sénégal', flag: '🇸🇳' },
-  { code: '+223', label: 'Mali', flag: '🇲🇱' },
-  { code: '+226', label: 'Burkina Faso', flag: '🇧🇫' },
-  { code: '+228', label: 'Togo', flag: '🇹🇬' },
-  { code: '+229', label: 'Bénin', flag: '🇧🇯' },
-  { code: '+33', label: 'France', flag: '🇫🇷' },
-  { code: '+32', label: 'Belgique', flag: '🇧🇪' },
-  { code: '+39', label: 'Italie', flag: '🇮🇹' },
-  { code: '+1', label: 'Canada', flag: '🇨🇦' },
-  { code: '+1', label: 'USA', flag: '🇺🇸' },
-  { code: '+212', label: 'Maroc', flag: '🇲🇦' },
-  { code: '+213', label: 'Algérie', flag: '🇩🇿' },
-  { code: '+216', label: 'Tunisie', flag: '🇹🇳' },
-  { code: '+237', label: 'Cameroun', flag: '🇨🇲' },
-  { code: '+234', label: 'Nigeria', flag: '🇳🇬' },
-];
+const COUNTRY_CODES = COUNTRY_DIAL_CODES.map((c) => ({
+  code: c.dialCode,
+  label: c.name,
+  flag: getFlagEmoji(c.iso2),
+}));
 
 function isEmail(value: string): boolean {
   return value.includes('@') && value.length > 3;
@@ -37,6 +26,7 @@ function digitsOnly(value: string): string {
 }
 
 export default function ConnexionPage() {
+  const t = useTranslations('connexion');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, isAuthenticated, authReady } = useAuth();
@@ -50,8 +40,8 @@ export default function ConnexionPage() {
 
   const isEmailMode = isEmail(loginValue);
   const loginPlaceholder = isEmailMode
-    ? "exemple@email.com"
-    : "Numéro de téléphone";
+    ? t('placeholderEmail')
+    : t('placeholderPhone');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +57,7 @@ export default function ConnexionPage() {
           };
 
       if (!isEmailMode && digitsOnly(loginValue).length < 8) {
-        setError('Veuillez entrer un numéro de téléphone valide.');
+        setError(t('errorInvalidPhone'));
         setIsLoading(false);
         return;
       }
@@ -77,10 +67,10 @@ export default function ConnexionPage() {
         const redirectTo = searchParams.get('redirect');
         router.push(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/');
       } else {
-        setError('Email / numéro ou mot de passe incorrect.');
+        setError(t('errorInvalidCredentials'));
       }
     } catch {
-      setError('Une erreur est survenue. Veuillez réessayer.');
+      setError(t('errorGeneric'));
     } finally {
       setIsLoading(false);
     }
@@ -103,14 +93,13 @@ export default function ConnexionPage() {
             <div className="space-y-8 max-w-lg">
                 <div>
                   <h2 className="text-4xl font-bold text-white mb-4">
-                    Finance Islamique{" "}
+                    {t('leftTitle')}{" "}
                     <span className="text-[#00644D]">
-                      Éthique
+                      {t('leftTitleHighlight')}
                     </span>
                   </h2>
                   <p className="text-xl text-white/90 leading-relaxed">
-                    Rejoignez Amane+ pour accéder à des services financiers conformes 
-                    aux principes islamiques. Dons, zakat, investissements halal et protection takaful.
+                    {t('leftIntro')}
                   </p>
                 </div>
 
@@ -126,11 +115,10 @@ export default function ConnexionPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-[#00644D] mb-2">
-                        Dons & Zakat
+                        {t('cardDonZakat')}
                       </h3>
                       <p className="text-white/80">
-                        Faites des dons en toute transparence et calculez votre zakat 
-                        avec nos outils spécialisés.
+                        {t('cardDonZakatDesc')}
                       </p>
                     </div>
                   </motion.div>
@@ -146,11 +134,10 @@ export default function ConnexionPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-[#00644D] mb-2">
-                        Protection Takaful
+                        {t('cardTakaful')}
                       </h3>
                       <p className="text-white/80">
-                        Protégez-vous et vos proches avec nos solutions d'assurance 
-                        conformes aux principes islamiques.
+                        {t('cardTakafulDesc')}
                       </p>
                     </div>
                   </motion.div>
@@ -166,11 +153,10 @@ export default function ConnexionPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-[#00644D] mb-2">
-                        Investissements Halal
+                        {t('cardInvest')}
                       </h3>
                       <p className="text-white/80">
-                        Investissez dans des projets éthiques et durables qui respectent 
-                        les valeurs islamiques.
+                        {t('cardInvestDesc')}
                       </p>
                     </div>
                   </motion.div>
@@ -183,11 +169,10 @@ export default function ConnexionPage() {
                   className="bg-[#DCFCE7] backdrop-blur-sm rounded-2xl p-6 text-white border border-white/30"
                 >
                   <h3 className="text-xl font-semibold mb-2 text-[#00644D]">
-                    Rejoignez notre communauté
+                    {t('joinCommunityTitle')}
                   </h3>
                   <p className="text-[#00644D]/80">
-                    Plus de 10,000 membres font confiance à Amane+ pour leurs 
-                    besoins financiers éthiques.
+                    {t('joinCommunityDesc')}
                   </p>
                 </motion.div>
               </div>
@@ -217,10 +202,10 @@ export default function ConnexionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   className="mb-6 p-4 rounded-2xl bg-[#00644D]/90 text-white text-center"
                 >
-                  <p className="font-medium mb-3">Vous êtes déjà connecté.</p>
+                  <p className="font-medium mb-3">{t('alreadyConnected')}</p>
                   <div className="flex flex-wrap gap-3 justify-center">
                     <Link href="/" className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 font-medium transition">
-                      Retour à l&apos;accueil
+                      {t('backToHome')}
                     </Link>
                   </div>
                 </motion.div>
@@ -233,7 +218,7 @@ export default function ConnexionPage() {
                   className="w-24 h-24 mx-auto mb-6 flex items-center justify-center bg-gray-100/10 rounded-2xl"
                 >
                   <img 
-                    src="/logo/AMANE%201.svg" 
+                    src="/amane-logo.png" 
                     alt="Amane+ Logo" 
                     className="w-full h-full object-contain shadow-2xl rounded-2xl"
                   />
@@ -244,13 +229,13 @@ export default function ConnexionPage() {
                   transition={{ delay: 0.2 }}
                 >
                   <h1 className="text-4xl font-bold text-white mb-3">
-                    As-salamu Alaykum !
+                    {t('greeting')}
                   </h1>
                   <p className="text-white text-lg mb-2">
-                    Votre intention est noble, vos actions trouveront bénédiction.
+                    {t('subtitle1')}
                   </p>
                   <p className="text-white text-lg">
-                    Connectez-vous.
+                    {t('subtitle2')}
                   </p>
                 </motion.div>
               </div>
@@ -276,10 +261,10 @@ export default function ConnexionPage() {
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
                         className="pl-3 pr-8 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 appearance-none cursor-pointer min-w-[120px]"
-                        aria-label="Code pays"
+                        aria-label={t('countryCodeAria')}
                       >
                         {COUNTRY_CODES.map(({ code, label, flag }) => (
-                          <option key={`${code}-${flag}`} value={code}>
+                          <option key={`${code}-${label}`} value={code}>
                             {flag} {code}
                           </option>
                         ))}
@@ -317,14 +302,14 @@ export default function ConnexionPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full pl-12 pr-12 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500"
-                      placeholder="Mot de passe"
+                      placeholder={t('password')}
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                      aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                      aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -344,13 +329,13 @@ export default function ConnexionPage() {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="w-4 h-4 text-green-800 border-gray-400 rounded focus:ring-green-500 bg-white/80"
                     />
-                    <span className="ml-2 text-sm text-white">Se souvenir de moi</span>
+                    <span className="ml-2 text-sm text-white">{t('rememberMe')}</span>
                   </label>
                   <Link
                     href="/mot-de-passe-oublie"
                     className="text-sm text-green-300 hover:text-green-200 font-medium transition-colors underline"
                   >
-                    Mot de passe oublié ?
+                    {t('forgotPassword')}
                   </Link>
                 </motion.div>
 
@@ -371,7 +356,7 @@ export default function ConnexionPage() {
                     />
                   ) : (
                     <>
-                      Se connecter
+                      {t('signIn')}
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </>
                   )}
@@ -436,12 +421,12 @@ export default function ConnexionPage() {
                 className="text-center mt-8"
               >
                 <p className="text-white">
-                  Vous n'avez pas encore de compte ?{" "}
+                  {t('noAccount')}{" "}
                   <Link
                     href="/inscription"
                     className="text-green-300 hover:text-green-200 font-medium transition-colors underline"
                   >
-                    S'inscrire
+                    {t('signUp')}
                   </Link>
                 </p>
               </motion.div>

@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import TopBanner from "@/components/TopBanner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LocaleProvider } from "@/components/LocaleProvider";
+import { CampaignTranslationsProvider } from "@/contexts/CampaignTranslationsContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,14 +38,16 @@ export default function RootLayout({
       >
         <AuthProvider>
           <LocaleProvider>
-            <div className="min-h-screen flex flex-col">
-              <TopBanner />
-              <Navigation />
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer />
-            </div>
+            <CampaignTranslationsProvider>
+              <div className="min-h-screen flex flex-col">
+                <TopBanner />
+                <Navigation />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
+              </div>
+            </CampaignTranslationsProvider>
           </LocaleProvider>
         </AuthProvider>
       </body>

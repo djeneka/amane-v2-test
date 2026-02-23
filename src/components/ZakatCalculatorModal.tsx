@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, Info, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { useLocale } from '@/components/LocaleProvider';
 import { createZakat, PENDING_ZAKAT_STORAGE_KEY, type CreateZakatBody } from '@/services/zakat';
 import { getNissabByCountry } from '@/services/nissab';
 
@@ -34,13 +36,13 @@ export interface SavedZakat {
   remainingToPay: number;
 }
 
-const STEPS = [
-  { id: 1, label: 'Mes possessions' },
-  { id: 2, label: 'Le patrimoine' },
-  { id: 3, label: 'Bétail & Agriculture' },
-  { id: 4, label: 'Créances' },
-  { id: 5, label: 'Passif & Dettes' },
-  { id: 6, label: 'Confirmation' },
+const STEPS_IDS = [
+  { id: 1, key: 'step1' },
+  { id: 2, key: 'step2' },
+  { id: 3, key: 'step3' },
+  { id: 4, key: 'step4' },
+  { id: 5, key: 'step5' },
+  { id: 6, key: 'step6' },
 ];
 
 const currentYear = new Date().getFullYear();
@@ -56,7 +58,30 @@ function isStepInfoWithSections(info: StepInfo): info is StepInfoWithSections {
   return 'sections' in info && Array.isArray((info as StepInfoWithSections).sections);
 }
 
-const STEP_INFO: Record<number, StepInfo> = {
+function buildStepInfo(t: (key: string) => string): Record<number, StepInfo> {
+  return {
+    1: { title: t('stepInfo1Title'), items: [t('stepInfo1Item1'), t('stepInfo1Item2'), t('stepInfo1Item3'), t('stepInfo1Item4')] },
+    2: {
+      title: t('stepInfo2Title'),
+      sections: [
+        { subtitle: t('stepInfo2InvestSubtitle'), text: t('stepInfo2InvestText') },
+        { subtitle: t('stepInfo2ImmoSubtitle'), text: t('stepInfo2ImmoText') },
+        { subtitle: t('stepInfo2OthersSubtitle'), text: t('stepInfo2OthersText') },
+      ],
+    },
+    3: {
+      title: t('stepInfo3Title'),
+      sections: [
+        { subtitle: t('stepInfo3AgriSubtitle'), text: t('stepInfo3AgriText') },
+        { subtitle: t('stepInfo3BetailSubtitle'), text: t('stepInfo3BetailText') },
+      ],
+    },
+    4: { title: t('stepInfo4Title'), sections: [{ subtitle: t('stepInfo4Subtitle'), text: t('stepInfo4Text') }] },
+    5: { title: t('stepInfo5Title'), sections: [{ subtitle: t('stepInfo5Subtitle'), text: t('stepInfo5Text') }] },
+  };
+}
+
+const stepInfo: Record<number, StepInfo> = {
   1: {
     title: 'Liquidités & Valeurs',
     items: [
@@ -132,6 +157,10 @@ function onlyDigitsAndDecimal(value: string): string {
 }
 
 export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessToken, onSuccess, onRequestAuth }: ZakatCalculatorModalProps) {
+  const t = useTranslations('zakatCalculatorModal');
+  const { locale } = useLocale();
+  const STEPS = useMemo(() => STEPS_IDS.map((s) => ({ id: s.id, label: t(s.key) })), [t]);
+  const stepInfo = useMemo(() => buildStepInfo(t), [t]);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   // Step 1 - Mes possessions (Liquidités & Valeurs)
@@ -387,7 +416,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           handleClose();
         })
         .catch((err) => {
-          setSubmitError(err?.message ?? 'Impossible de créer la zakat');
+          setSubmitError(t('submitErrorCreate'));
         })
         .finally(() => {
           setSubmitLoading(false);
@@ -406,7 +435,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
     try {
       sessionStorage.setItem(PENDING_ZAKAT_STORAGE_KEY, JSON.stringify(body));
     } catch {
-      setSubmitError('Impossible de mémoriser le calcul.');
+      setSubmitError(t('submitErrorSave'));
       return;
     }
     onRequestAuth?.();
@@ -415,7 +444,8 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
 
   // Fonction pour formater les montants en F CFA
   const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
+    const localeCode = locale === 'en' ? 'en-GB' : 'fr-FR';
+    return new Intl.NumberFormat(localeCode, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -607,7 +637,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5ab678] font-bold text-xs">{orUnitePoids}</span>
           </div>
-          <p className="text-[#5ab678] text-xs">Résultat : {formatAmount(resultatXof)} XOF</p>
+          <p className="text-[#5ab678] text-xs">{t('resultXof', { amount: formatAmount(resultatXof) })}</p>
         </div>
       );
 
@@ -615,13 +645,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
         <div className="space-y-4 sm:space-y-6">
           {/* Année de calcul */}
           <div className="space-y-2">
-            <label htmlFor="zakat-year-step1" className="text-white/80 text-sm font-medium">Année de calcul</label>
+            <label htmlFor="zakat-year-step1" className="text-white/80 text-sm font-medium">{t('yearLabel')}</label>
             <select
               id="zakat-year-step1"
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
               className="w-full max-w-[140px] py-2 px-3 rounded-lg bg-[#0F1F1F] border border-white/10 text-white text-sm focus:outline-none focus:border-[#43B48F]"
-              aria-label="Année de calcul de la zakat"
+              aria-label={t('yearAria')}
             >
               {YEAR_OPTIONS.map((y) => (
                 <option key={y} value={y} className="bg-[#101919] text-white">
@@ -634,7 +664,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Barre de progression 20% */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-white/60">Progression</span>
+              <span className="text-white/60">{t('progression')}</span>
               <span className="text-white font-medium">20%</span>
             </div>
             <div className="h-2 bg-white rounded-full overflow-hidden">
@@ -651,13 +681,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Section Liquidités & Valeurs */}
           <div ref={infoPopoverRef} className="relative flex items-center gap-2">
             <h3 className="text-white font-bold text-base sm:text-lg">
-              Liquidités & Valeurs (Le &quot;Cash&quot; et les Métaux)
+              {t('section1Title')}
             </h3>
             <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 1 ? null : 1))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
-              aria-label="Afficher les informations"
+              aria-label={t('showInfo')}
               animate={{ scale: [1, 1.15, 1] }}
               transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
               whileHover={{ scale: 1.2 }}
@@ -666,7 +696,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               <Info size={18} />
             </motion.button>
             <AnimatePresence>
-              {infoPopoverStep === 1 && STEP_INFO[1] && (
+              {infoPopoverStep === 1 && stepInfo[1] && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -674,9 +704,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 top-full mt-2 z-20 w-[min(100%,320px)] rounded-xl border border-white/20 bg-[#0F1F1F] p-4 shadow-xl"
                 >
-                  <p className="text-[#5ab678] font-semibold text-sm mb-2">{STEP_INFO[1].title}</p>
+                  <p className="text-[#5ab678] font-semibold text-sm mb-2">{stepInfo[1].title}</p>
                   <ul className="text-white/80 text-xs sm:text-sm space-y-2 list-disc list-inside">
-                    {'items' in STEP_INFO[1] && STEP_INFO[1].items.map((item: string, i: number) => (
+                    {'items' in stepInfo[1] && stepInfo[1].items.map((item: string, i: number) => (
                       <li key={i}>{item}</li>
                     ))}
                   </ul>
@@ -696,7 +726,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/coin.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Argent</span>
+                <span className="text-white font-medium">{t('argent')}</span>
               </div>
               {openAccordion === 'argent' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -714,13 +744,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                       <div className="flex items-start gap-2">
                         <Info size={16} className="text-[#5ab678] flex-shrink-0 mt-0.5" />
                         <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
-                          La Zakat est due à hauteur de 2,5% sur vos espèces en liquide et en banque détenues pendant une année complète.
+                          {t('infoCash')}
                         </p>
                       </div>
                     </div>
                     <div className="space-y-3">
-                      {inputWrap(argentEspeces, setArgentEspeces, 'Espèces')}
-                      {inputWrap(argentBanque, setArgentBanque, 'Espèces en banque')}
+                      {inputWrap(argentEspeces, setArgentEspeces, t('especes'))}
+                      {inputWrap(argentBanque, setArgentBanque, t('especesBanque'))}
                     </div>
                   </div>
                 </motion.div>
@@ -739,7 +769,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/coin.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Or</span>
+                <span className="text-white font-medium">{t('or')}</span>
               </div>
               {openAccordion === 'or' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -756,27 +786,27 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                       <div className="flex items-start gap-2">
                         <Info size={16} className="text-[#5ab678] flex-shrink-0 mt-0.5" />
                         <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
-                          La Zakat est due à hauteur de 2,5% de la valeur marchande à la date de la valorisation.
+                          {t('infoOr')}
                         </p>
                       </div>
                     </div>
                     <div className="space-y-4">
                     <div className="flex flex-wrap gap-2 justify-start">
-                      {toggleBtn('valeur', orMode, setOrMode, 'Valeur')}
-                      {toggleBtn('poids', orMode, setOrMode, 'Poids')}
+                      {toggleBtn('valeur', orMode, setOrMode, t('value'))}
+                      {toggleBtn('poids', orMode, setOrMode, t('weight'))}
                     </div>
                     {orMode === 'valeur' && (
                       <>
-                        {inputWrap(or24Valeur, setOr24Valeur, 'Or 24 Carats')}
-                        {inputWrap(or22Valeur, setOr22Valeur, 'Or 22 Carats')}
-                        {inputWrap(or18Valeur, setOr18Valeur, 'Or 18 Carats')}
+                        {inputWrap(or24Valeur, setOr24Valeur, t('or24'))}
+                        {inputWrap(or22Valeur, setOr22Valeur, t('or22'))}
+                        {inputWrap(or18Valeur, setOr18Valeur, t('or18'))}
                       </>
                     )}
                     {orMode === 'poids' && (
                       <>
                         <div className="flex gap-2 items-end flex-wrap">
                           <div className="flex-1 min-w-[120px] space-y-1">
-                            <label className="text-white/80 text-xs">Prix de l&apos;or</label>
+                            <label className="text-white/80 text-xs">{t('goldPrice')}</label>
                             <div className="relative">
                               <input
                                 type="text"
@@ -796,7 +826,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                                   setOr18Poids('');
                                 }}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-[#43B48F]"
-                                aria-label="Effacer les 4 champs (prix et poids)"
+                                aria-label={t('clearGoldFields')}
                               >
                                 <RefreshCw size={18} />
                               </button>
@@ -804,15 +834,15 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2 items-center">
-                          <span className="text-white/80 text-xs">Unité du poids</span>
+                          <span className="text-white/80 text-xs">{t('weightUnit')}</span>
                           {toggleUnitePoids('g')}
                           {toggleUnitePoids('kg')}
                         </div>
-                        {inputWrapPoids(or24Poids, setOr24Poids, `Or 24 Carats (${orUnitePoids})`, orPoidsPur24 * orPrixParGramme)}
-                        {inputWrapPoids(or22Poids, setOr22Poids, `Or 22 Carats (${orUnitePoids})`, orPoidsPur22 * orPrixParGramme)}
-                        {inputWrapPoids(or18Poids, setOr18Poids, `Or 18 Carats (${orUnitePoids})`, orPoidsPur18 * orPrixParGramme)}
+                        {inputWrapPoids(or24Poids, setOr24Poids, `${t('or24')} (${orUnitePoids})`, orPoidsPur24 * orPrixParGramme)}
+                        {inputWrapPoids(or22Poids, setOr22Poids, `${t('or22')} (${orUnitePoids})`, orPoidsPur22 * orPrixParGramme)}
+                        {inputWrapPoids(or18Poids, setOr18Poids, `${t('or18')} (${orUnitePoids})`, orPoidsPur18 * orPrixParGramme)}
                         <div className="flex justify-between items-center pt-2">
-                          <span className="text-white/80 text-sm">Résultat</span>
+                          <span className="text-white/80 text-sm">{t('result')}</span>
                           <span className="text-[#5ab678] font-bold">{formatAmount(orResultatPoids)} XOF</span>
                         </div>
                       </>
@@ -835,7 +865,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/coin.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Argent (métal)</span>
+                <span className="text-white font-medium">{t('argentMetal')}</span>
               </div>
               {openAccordion === 'argent_metal' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -852,21 +882,21 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                       <div className="flex items-start gap-2">
                         <Info size={16} className="text-[#5ab678] flex-shrink-0 mt-0.5" />
                         <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
-                          La Zakat est due à hauteur de 2,5% sur tous les biens et objets en argent pur. Cela inclut notamment les bijoux, les objets décoratifs, les couverts en argent, etc.
+                          {t('infoArgentMetal')}
                         </p>
                       </div>
                     </div>
                     <div className="space-y-4">
                     <div className="flex flex-wrap gap-2 justify-start">
-                      {toggleBtn('valeur', argentMetalMode, setArgentMetalMode, 'Valeur')}
-                      {toggleBtn('poids', argentMetalMode, setArgentMetalMode, 'Poids')}
+                      {toggleBtn('valeur', argentMetalMode, setArgentMetalMode, t('value'))}
+                      {toggleBtn('poids', argentMetalMode, setArgentMetalMode, t('weight'))}
                     </div>
-                    {argentMetalMode === 'valeur' && inputWrap(argentMetalValeur, setArgentMetalValeur, 'Argent (métal)')}
+                    {argentMetalMode === 'valeur' && inputWrap(argentMetalValeur, setArgentMetalValeur, t('argentMetal'))}
                     {argentMetalMode === 'poids' && (
                       <>
                         <div className="flex gap-2 items-end flex-wrap">
                           <div className="flex-1 min-w-[120px] space-y-1">
-                            <label className="text-white/80 text-xs">Prix de l&apos;argent</label>
+                            <label className="text-white/80 text-xs">{t('silverPrice')}</label>
                             <div className="relative">
                               <input
                                 type="text"
@@ -884,7 +914,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                                   setArgentMetalPoids('');
                                 }}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-[#43B48F]"
-                                aria-label="Effacer le prix et le poids"
+                                aria-label={t('clearSilverFields')}
                               >
                                 <RefreshCw size={14} />
                               </button>
@@ -892,9 +922,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                           </div>
                           <div className="w-12 text-white/60 text-sm">g</div>
                         </div>
-                        {inputWrap(argentMetalPoids, setArgentMetalPoids, 'Argent (métal) en grammes')}
+                        {inputWrap(argentMetalPoids, setArgentMetalPoids, t('argentMetalGrams'))}
                         <div className="flex justify-between items-center pt-2">
-                          <span className="text-white/80 text-sm">Résultat</span>
+                          <span className="text-white/80 text-sm">{t('result')}</span>
                           <span className="text-[#5ab678] font-bold">{formatAmount(argentMetalResultatPoids)} XOF</span>
                         </div>
                       </>
@@ -917,7 +947,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/coin.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Pierres précieuses</span>
+                <span className="text-white font-medium">{t('pierres')}</span>
               </div>
               {openAccordion === 'pierres' ? <ChevronUp size={20} className="text-white/60" /> : <ChevronDown size={20} className="text-white/60" />}
             </button>
@@ -934,11 +964,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                       <div className="flex items-start gap-2">
                         <Info size={16} className="text-[#5ab678] flex-shrink-0 mt-0.5" />
                         <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
-                          Si elles ont une valeur marchande, les pierres précieuses contribuent alors à votre richesse sur laquelle la Zakat est due.
+                          {t('infoPierres')}
                         </p>
                       </div>
                     </div>
-                    {inputWrap(pierresValeur, setPierresValeur, 'Pierres précieuses')}
+                    {inputWrap(pierresValeur, setPierresValeur, t('pierres'))}
                   </div>
                 </motion.div>
               )}
@@ -974,7 +1004,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Barre de progression 40% */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-white/60">Progression</span>
+              <span className="text-white/60">{t('progression')}</span>
               <span className="text-white font-medium">40%</span>
             </div>
             <div className="h-2 bg-white rounded-full overflow-hidden">
@@ -991,13 +1021,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Section Placements & Immobilier (Le Patrimoine) */}
           <div ref={infoPopoverRef} className="relative flex items-center gap-2">
             <h3 className="text-white font-bold text-base sm:text-lg">
-              Placements & Immobilier (Le Patrimoine)
+              {t('section2Title')}
             </h3>
             <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 2 ? null : 2))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
-              aria-label="Afficher les informations"
+              aria-label={t('showInfo')}
               animate={{ scale: [1, 1.15, 1] }}
               transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
               whileHover={{ scale: 1.2 }}
@@ -1006,7 +1036,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               <Info size={18} />
             </motion.button>
             <AnimatePresence>
-              {infoPopoverStep === 2 && STEP_INFO[2] && (
+              {infoPopoverStep === 2 && stepInfo[2] && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1014,10 +1044,10 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 top-full mt-2 z-20 w-[min(100%,360px)] max-h-[70vh] overflow-y-auto rounded-xl border border-white/20 bg-[#0F1F1F] p-4 shadow-xl"
                 >
-                  <p className="text-[#5ab678] font-semibold text-sm mb-3">{STEP_INFO[2].title}</p>
-                  {isStepInfoWithSections(STEP_INFO[2]) ? (
+                  <p className="text-[#5ab678] font-semibold text-sm mb-3">{stepInfo[2].title}</p>
+                  {isStepInfoWithSections(stepInfo[2]) ? (
                     <div className="text-white/80 text-xs sm:text-sm space-y-4">
-                      {STEP_INFO[2].sections.map((section, i) => (
+                      {stepInfo[2].sections.map((section, i) => (
                         <div key={i}>
                           <p className="font-semibold text-white/90 mb-1">{section.subtitle}</p>
                           <p className="leading-relaxed">{section.text}</p>
@@ -1026,7 +1056,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                     </div>
                   ) : (
                     <ul className="text-white/80 text-xs sm:text-sm space-y-2 list-disc list-inside">
-                      {'items' in STEP_INFO[2] && STEP_INFO[2].items.map((item: string, i: number) => (
+                      {'items' in stepInfo[2] && stepInfo[2].items.map((item: string, i: number) => (
                         <li key={i}>{item}</li>
                       ))}
                     </ul>
@@ -1047,7 +1077,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/status-up.png" alt="" width={20} height={20}  />
                 </div>
-                <span className="text-white font-medium">Investissements</span>
+                <span className="text-white font-medium">{t('investissements')}</span>
               </div>
               {openAccordionStep2 === 'investissements' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -1061,8 +1091,8 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-4">
-                    {inputWrapStep2(actionsXof, setActionsXof, 'Actions XOF')}
-                    {inputWrapStep2(autresInvestissementsXof, setAutresInvestissementsXof, 'Autres investissements XOF')}
+                    {inputWrapStep2(actionsXof, setActionsXof, t('actionsXof'))}
+                    {inputWrapStep2(autresInvestissementsXof, setAutresInvestissementsXof, t('autresInvestissementsXof'))}
                   </div>
                 </motion.div>
               )}
@@ -1080,7 +1110,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/buliding.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Immobilier</span>
+                <span className="text-white font-medium">{t('immobilier')}</span>
               </div>
               {openAccordionStep2 === 'immobilier' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -1093,8 +1123,8 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-4">
-                    {inputWrapStep2(revenusLocatifs, setRevenusLocatifs, 'Revenus locatifs')}
-                    {inputWrapStep2(immobilier, setImmobilier, 'Immobilier')}
+                    {inputWrapStep2(revenusLocatifs, setRevenusLocatifs, t('revenusLocatifs'))}
+                    {inputWrapStep2(immobilier, setImmobilier, t('immobilier'))}
                   </div>
                 </motion.div>
               )}
@@ -1112,7 +1142,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/more.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Autres actifs</span>
+                <span className="text-white font-medium">{t('autresActifs')}</span>
               </div>
               {openAccordionStep2 === 'autres_actifs' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -1125,9 +1155,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-4">
-                    {inputWrapStep2(retraitesPensions, setRetraitesPensions, 'Retraites et pensions')}
-                    {inputWrapStep2(pretsFamilleAutrui, setPretsFamilleAutrui, 'Prêts à la famille et autrui')}
-                    {inputWrapStep2(autresActifsPossessions, setAutresActifsPossessions, 'Autres actifs et possessions')}
+                    {inputWrapStep2(retraitesPensions, setRetraitesPensions, t('retraitesPensions'))}
+                    {inputWrapStep2(pretsFamilleAutrui, setPretsFamilleAutrui, t('pretsFamilleAutrui'))}
+                    {inputWrapStep2(autresActifsPossessions, setAutresActifsPossessions, t('autresActifsPossessions'))}
                   </div>
                 </motion.div>
               )}
@@ -1177,7 +1207,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5ab678] font-bold text-xs">XOF</span>
             </div>
             <p className="text-[#5ab678] text-xs">
-              Zakat ({tauxLabel}) : {formatAmount(zakatChamp)} XOF
+              {t('zakatRate', { rate: tauxLabel, amount: formatAmount(zakatChamp) })}
             </p>
           </div>
         );
@@ -1188,7 +1218,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Barre de progression 60% */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-white/60">Progression</span>
+              <span className="text-white/60">{t('progression')}</span>
               <span className="text-white font-medium">60%</span>
             </div>
             <div className="h-2 bg-white rounded-full overflow-hidden">
@@ -1205,13 +1235,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Section Activités Rurales (Bétail & Agriculture) */}
           <div ref={infoPopoverRef} className="relative flex items-center gap-2">
             <h3 className="text-white font-bold text-base sm:text-lg">
-              Activités Rurales (Bétail & Agriculture)
+              {t('section3Title')}
             </h3>
             <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 3 ? null : 3))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
-              aria-label="Afficher les informations"
+              aria-label={t('showInfo')}
               animate={{ scale: [1, 1.15, 1] }}
               transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
               whileHover={{ scale: 1.2 }}
@@ -1220,7 +1250,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               <Info size={18} />
             </motion.button>
             <AnimatePresence>
-              {infoPopoverStep === 3 && STEP_INFO[3] && (
+              {infoPopoverStep === 3 && stepInfo[3] && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1228,10 +1258,10 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 top-full mt-2 z-20 w-[min(100%,360px)] max-h-[70vh] overflow-y-auto rounded-xl border border-white/20 bg-[#0F1F1F] p-4 shadow-xl"
                 >
-                  <p className="text-[#5ab678] font-semibold text-sm mb-3">{STEP_INFO[3].title}</p>
-                  {isStepInfoWithSections(STEP_INFO[3]) ? (
+                  <p className="text-[#5ab678] font-semibold text-sm mb-3">{stepInfo[3].title}</p>
+                  {isStepInfoWithSections(stepInfo[3]) ? (
                     <div className="text-white/80 text-xs sm:text-sm space-y-4">
-                      {STEP_INFO[3].sections.map((section, i) => (
+                      {stepInfo[3].sections.map((section, i) => (
                         <div key={i}>
                           <p className="font-semibold text-white/90 mb-1">{section.subtitle}</p>
                           <p className="leading-relaxed">{section.text}</p>
@@ -1240,7 +1270,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                     </div>
                   ) : (
                     <ul className="text-white/80 text-xs sm:text-sm space-y-2 list-disc list-inside">
-                      {'items' in STEP_INFO[3] && STEP_INFO[3].items.map((item: string, i: number) => (
+                      {'items' in stepInfo[3] && stepInfo[3].items.map((item: string, i: number) => (
                         <li key={i}>{item}</li>
                       ))}
                     </ul>
@@ -1261,7 +1291,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/betail.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Bétail</span>
+                <span className="text-white font-medium">{t('betail')}</span>
               </div>
               {openAccordionStep3 === 'betail' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -1275,9 +1305,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-4">
-                    {inputWrapStep3(betailVache, setBetailVache, 'Vache')}
-                    {inputWrapStep3(betailChameau, setBetailChameau, 'Chameau')}
-                    {inputWrapStep3(betailMouton, setBetailMouton, 'Mouton')}
+                    {inputWrapStep3(betailVache, setBetailVache, t('vache'))}
+                    {inputWrapStep3(betailChameau, setBetailChameau, t('chameau'))}
+                    {inputWrapStep3(betailMouton, setBetailMouton, t('mouton'))}
                   </div>
                 </motion.div>
               )}
@@ -1295,7 +1325,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/agri.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Agriculture</span>
+                <span className="text-white font-medium">{t('agriculture')}</span>
               </div>
               {openAccordionStep3 === 'agriculture' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -1309,11 +1339,11 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 >
                   <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-4">
                     <p className="text-white/60 text-xs mb-2">
-                      Les 2,5&nbsp;% ne s&apos;appliquent pas à ces champs. Taux selon le type d&apos;irrigation :
+                      {t('agricultureNote')}
                     </p>
-                    {inputWrapStep3Agriculture(agricultureEauPluie, setAgricultureEauPluie, 'À l\'eau de pluie', 0.1)}
-                    {inputWrapStep3Agriculture(agricultureIrrigation, setAgricultureIrrigation, 'À l\'irrigation', 0.05)}
-                    {inputWrapStep3Agriculture(agricultureIrrigationPluie, setAgricultureIrrigationPluie, 'Irrigation & pluie (mixte)', 0.075)}
+                    {inputWrapStep3Agriculture(agricultureEauPluie, setAgricultureEauPluie, t('agricultureEauPluie'), 0.1)}
+                    {inputWrapStep3Agriculture(agricultureIrrigation, setAgricultureIrrigation, t('agricultureIrrigation'), 0.05)}
+                    {inputWrapStep3Agriculture(agricultureIrrigationPluie, setAgricultureIrrigationPluie, t('agricultureMixte'), 0.075)}
                   </div>
                 </motion.div>
               )}
@@ -1349,7 +1379,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Barre de progression 80% */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-white/60">Progression</span>
+              <span className="text-white/60">{t('progression')}</span>
               <span className="text-white font-medium">80%</span>
             </div>
             <div className="h-2 bg-white rounded-full overflow-hidden">
@@ -1366,13 +1396,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Section Créances (Argent qu'on vous doit) */}
           <div ref={infoPopoverRef} className="relative flex items-center gap-2">
             <h3 className="text-white font-bold text-base sm:text-lg">
-              Créances (Argent qu&apos;on vous doit)
+              {t('section4Title')}
             </h3>
             <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 4 ? null : 4))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
-              aria-label="Afficher les informations"
+              aria-label={t('showInfo')}
               animate={{ scale: [1, 1.15, 1] }}
               transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
               whileHover={{ scale: 1.2 }}
@@ -1381,7 +1411,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               <Info size={18} />
             </motion.button>
             <AnimatePresence>
-              {infoPopoverStep === 4 && STEP_INFO[4] && (
+              {infoPopoverStep === 4 && stepInfo[4] && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1389,10 +1419,10 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 top-full mt-2 z-20 w-[min(100%,360px)] max-h-[70vh] overflow-y-auto rounded-xl border border-white/20 bg-[#0F1F1F] p-4 shadow-xl"
                 >
-                  <p className="text-[#5ab678] font-semibold text-sm mb-3">{STEP_INFO[4].title}</p>
-                  {isStepInfoWithSections(STEP_INFO[4]) ? (
+                  <p className="text-[#5ab678] font-semibold text-sm mb-3">{stepInfo[4].title}</p>
+                  {isStepInfoWithSections(stepInfo[4]) ? (
                     <div className="text-white/80 text-xs sm:text-sm space-y-4">
-                      {STEP_INFO[4].sections.map((section, i) => (
+                      {stepInfo[4].sections.map((section, i) => (
                         <div key={i}>
                           <p className="font-semibold text-white/90 mb-1">{section.subtitle}</p>
                           <p className="leading-relaxed">{section.text}</p>
@@ -1401,7 +1431,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                     </div>
                   ) : (
                     <ul className="text-white/80 text-xs sm:text-sm space-y-2 list-disc list-inside">
-                      {'items' in STEP_INFO[4] && STEP_INFO[4].items.map((item: string, i: number) => (
+                      {'items' in stepInfo[4] && stepInfo[4].items.map((item: string, i: number) => (
                         <li key={i}>{item}</li>
                       ))}
                     </ul>
@@ -1422,7 +1452,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/coin.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Prêts accordés</span>
+                <span className="text-white font-medium">{t('pretsAccordes')}</span>
               </div>
               {openAccordionStep4 === 'prets_accordes' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -1436,8 +1466,8 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-4">
-                    {inputWrapStep4(pretsFamilleStep4, setPretsFamilleStep4, 'Prêts à la famille')}
-                    {inputWrapStep4(pretsAutruiStep4, setPretsAutruiStep4, 'Prêts à autrui')}
+                    {inputWrapStep4(pretsFamilleStep4, setPretsFamilleStep4, t('pretsFamille'))}
+                    {inputWrapStep4(pretsAutruiStep4, setPretsAutruiStep4, t('pretsAutrui'))}
                   </div>
                 </motion.div>
               )}
@@ -1473,7 +1503,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Barre de progression 100% */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-white/60">Progression</span>
+              <span className="text-white/60">{t('progression')}</span>
               <span className="text-white font-medium">100%</span>
             </div>
             <div className="h-2 bg-white rounded-full overflow-hidden">
@@ -1490,13 +1520,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {/* Section Passif & Dettes (À déduire) */}
           <div ref={infoPopoverRef} className="relative flex items-center gap-2">
             <h3 className="text-white font-bold text-base sm:text-lg">
-              Passif & Dettes (À déduire)
+              {t('section5Title')}
             </h3>
             <motion.button
               type="button"
               onClick={() => setInfoPopoverStep((prev) => (prev === 5 ? null : 5))}
               className="text-[#43B48F] hover:opacity-80 shrink-0"
-              aria-label="Afficher les informations"
+              aria-label={t('showInfo')}
               animate={{ scale: [1, 1.15, 1] }}
               transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
               whileHover={{ scale: 1.2 }}
@@ -1505,7 +1535,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               <Info size={18} />
             </motion.button>
             <AnimatePresence>
-              {infoPopoverStep === 5 && STEP_INFO[5] && (
+              {infoPopoverStep === 5 && stepInfo[5] && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1513,10 +1543,10 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 top-full mt-2 z-20 w-[min(100%,360px)] max-h-[70vh] overflow-y-auto rounded-xl border border-white/20 bg-[#0F1F1F] p-4 shadow-xl"
                 >
-                  <p className="text-[#5ab678] font-semibold text-sm mb-3">{STEP_INFO[5].title}</p>
-                  {isStepInfoWithSections(STEP_INFO[5]) ? (
+                  <p className="text-[#5ab678] font-semibold text-sm mb-3">{stepInfo[5].title}</p>
+                  {isStepInfoWithSections(stepInfo[5]) ? (
                     <div className="text-white/80 text-xs sm:text-sm space-y-4">
-                      {STEP_INFO[5].sections.map((section, i) => (
+                      {stepInfo[5].sections.map((section, i) => (
                         <div key={i}>
                           <p className="font-semibold text-white/90 mb-1">{section.subtitle}</p>
                           <p className="leading-relaxed">{section.text}</p>
@@ -1525,7 +1555,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                     </div>
                   ) : (
                     <ul className="text-white/80 text-xs sm:text-sm space-y-2 list-disc list-inside">
-                      {'items' in STEP_INFO[5] && STEP_INFO[5].items.map((item: string, i: number) => (
+                      {'items' in stepInfo[5] && stepInfo[5].items.map((item: string, i: number) => (
                         <li key={i}>{item}</li>
                       ))}
                     </ul>
@@ -1546,7 +1576,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/status-up.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Dettes personnelles</span>
+                <span className="text-white font-medium">{t('dettesPersonnelles')}</span>
               </div>
               {openAccordionStep5 === 'dettes_personnelles' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -1560,9 +1590,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-4">
-                    {inputWrapStep5(dettesCartesCredit, setDettesCartesCredit, 'Cartes de crédit')}
-                    {inputWrapStep5(dettesFamille, setDettesFamille, 'Dettes à la famille')}
-                    {inputWrapStep5(dettesAutrui, setDettesAutrui, 'Dettes à autrui')}
+                    {inputWrapStep5(dettesCartesCredit, setDettesCartesCredit, t('cartesCredit'))}
+                    {inputWrapStep5(dettesFamille, setDettesFamille, t('dettesFamille'))}
+                    {inputWrapStep5(dettesAutrui, setDettesAutrui, t('dettesAutrui'))}
                   </div>
                 </motion.div>
               )}
@@ -1580,7 +1610,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/trend-up.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Prêts longs termes</span>
+                <span className="text-white font-medium">{t('pretsLongTermes')}</span>
               </div>
               {openAccordionStep5 === 'prets_long_termes' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -1593,8 +1623,8 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-4">
-                    {inputWrapStep5(pretsImmo, setPretsImmo, 'Prêts immobiliers')}
-                    {inputWrapStep5(pretsAuto, setPretsAuto, 'Prêts automobiles')}
+                    {inputWrapStep5(pretsImmo, setPretsImmo, t('pretsImmo'))}
+                    {inputWrapStep5(pretsAuto, setPretsAuto, t('pretsAuto'))}
                   </div>
                 </motion.div>
               )}
@@ -1612,7 +1642,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                 <div className="w-10 h-10 rounded-lg bg-[#101919]/80 flex items-center justify-center">
                   <Image src="/icons/hashtag.png" alt="" width={20} height={20} className="opacity-90" />
                 </div>
-                <span className="text-white font-medium">Professionnel</span>
+                <span className="text-white font-medium">{t('professionnel')}</span>
               </div>
               {openAccordionStep5 === 'professionnel' ? <ChevronUp size={20} className="text-[#5ab678]" /> : <ChevronDown size={20} className="text-[#5ab678]" />}
             </button>
@@ -1625,7 +1655,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 border-t border-white/10 pt-4">
-                    {inputWrapStep5(fraisPro, setFraisPro, 'Frais professionnels')}
+                    {inputWrapStep5(fraisPro, setFraisPro, t('fraisPro'))}
                   </div>
                 </motion.div>
               )}
@@ -1653,7 +1683,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           <div className="bg-[#101919] rounded-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
               <span className="text-white font-medium text-sm sm:text-lg">
-                Montant total des biens
+                {t('totalAssets')}
               </span>
               <div className="text-left sm:text-right">
                 <span className="text-white font-bold text-base sm:text-lg">
@@ -1668,7 +1698,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           <div className="bg-[#101919] rounded-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
               <span className="text-white font-medium text-sm sm:text-lg">
-                Zakat à payer
+                {t('zakatToPay')}
               </span>
               <div className="text-left sm:text-right">
                 <span 
@@ -1682,7 +1712,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
             </div>
             {zakatAgriculture > 0 && !isAgricultureOnly && (
               <p className="text-white/60 text-xs mt-2">
-                Inclut la zakat agricole (10&nbsp;% / 5&nbsp;% / 7,5&nbsp;%), les 2,5&nbsp;% ne s&apos;appliquant pas aux champs agriculture.
+                {t('includesAgriculture')}
               </p>
             )}
           </div>
@@ -1692,12 +1722,12 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
             <div className="bg-[#1D3B39] rounded-xl p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-medium text-sm sm:text-lg">Nissab</span>
+                  <span className="text-white font-medium text-sm sm:text-lg">{t('nissab')}</span>
                 <motion.button
                   type="button"
                   onClick={() => setShowNissabInfo((prev) => !prev)}
                   className="text-[#43B48F] hover:opacity-80 shrink-0"
-                  aria-label="Information sur le Nissab"
+                  aria-label={t('nissabAria')}
                   animate={{ scale: [1, 1.15, 1] }}
                   transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
                   whileHover={{ scale: 1.2 }}
@@ -1709,7 +1739,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               <div className="text-left sm:text-right">
                 {/* TODO: brancher le calcul du Nissab (seuil minimal d’assujettissement à la Zakat) */}
                 {nissabLoading ? (
-                  <span className="text-white/70 text-sm">Chargement…</span>
+                  <span className="text-white/70 text-sm">{t('nissabLoading')}</span>
                 ) : (
                   <>
                     <span className="text-white font-bold text-base sm:text-lg">{formatAmount(nissabAmount)}</span>
@@ -1732,7 +1762,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                     <div className="flex items-start gap-2">
                       <Info size={16} className="text-[#5ab678] flex-shrink-0 mt-0.5" />
                       <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
-                        Le Nissâb est le seuil minimum de richesse (l’épargne, les biens en votre possession) à partir duquel la Zakât Al Maal est obligatoire. Si pendant toute une année, votre richesse dépasse le Nissâb, vous devez alors vous acquitter de 2,5 % de vos ressources.
+                        {t('infoNissab')}
                       </p>
                     </div>
                   </div>
@@ -1745,10 +1775,10 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {isAgricultureOnly && (
             <div className="rounded-xl p-4 sm:p-6 bg-[#43B48F]/10 border border-[#43B48F]/30 space-y-3">
               <p className="text-[#8DD17F] text-sm sm:text-base">
-                Seule la zakat de votre agriculture est enregistrable, car vos autres biens ({formatAmount(totalSansAgriculture)} F CFA) sont en dessous du seuil nissab ({formatAmount(nissabAmount)} F CFA).
+                {t('agricultureOnlyMessage', { total: formatAmount(totalSansAgriculture), nissab: formatAmount(nissabAmount) })}
               </p>
               <p className="text-white/80 text-sm">
-                La zakat agricole ({formatAmount(remainingAmount)} F CFA) sera sauvegardée. Pour que les 2,5&nbsp;% s&apos;appliquent à vos autres biens, votre patrimoine hors agriculture doit dépasser le nissab.
+                {t('agricultureOnlyNote', { amount: formatAmount(remainingAmount) })}
               </p>
             </div>
           )}
@@ -1757,10 +1787,12 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
           {!nissabLoading && calculateTotalAssets() < nissabAmount && !isAgricultureOnly && (
             <div className="rounded-xl p-4 sm:p-6 bg-amber-500/10 border border-amber-500/30 space-y-3">
               <p className="text-amber-200 text-sm sm:text-base">
-                Le montant total de vos biens n&apos;est pas zakatable car il est inférieur au nissab.
+                {t('belowNissabMessage')}
               </p>
               <p className="text-white/80 text-sm">
-                Vous pouvez néanmoins faire une <Link href="/campagnes" className="text-[#43B48F] font-bold underline-offset-2 underline" onClick={handleClose}>sadaqah</Link> en soutenant nos campagnes.
+                {t('belowNissabSadaqahBefore')}
+                <Link href="/campagnes" className="text-[#43B48F] font-bold underline-offset-2 underline" onClick={handleClose}>sadaqah</Link>
+                {t('belowNissabSadaqahAfter')}
               </p>
             </div>
           )}
@@ -1772,9 +1804,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
     return (
       <div className="space-y-6">
         <h3 className="text-white font-bold text-lg">
-          Étape {currentStep} - {STEPS[currentStep - 1].label}
+          {t('stepContentFallback', { step: currentStep, label: STEPS[currentStep - 1].label })}
         </h3>
-        <p className="text-gray-400">Contenu à venir...</p>
+        <p className="text-gray-400">{t('contentComing')}</p>
       </div>
     );
   };
@@ -1811,7 +1843,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
               <button
                 onClick={handleClose}
                 className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 bg-[#8DD17F] rounded-full flex items-center justify-center hover:bg-[#7BC16F] transition-colors z-10"
-                aria-label="Fermer"
+                aria-label={t('close')}
               >
                 <X size={18} className="sm:w-5 sm:h-5 text-[#101919]" />
               </button>
@@ -1875,13 +1907,13 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                   {/* En-tête */}
                   <div className="flex-shrink-0 p-4 sm:p-8 border-b border-white/10">
                     <h2 className="text-white font-bold text-xl sm:text-2xl mb-2">
-                      Calculer ma Zakat
+                      {t('title')}
                     </h2>
                     <p className="text-white font-medium mb-1 text-sm sm:text-base">
-                      {currentStep === 1 ? 'Mes possessions' : STEPS[currentStep - 1]?.label ?? ''}
+                      {currentStep === 1 ? t('step1') : STEPS[currentStep - 1]?.label ?? ''}
                     </p>
                     <p className="text-gray-400 text-xs sm:text-sm">
-                      Calculez et archivez vos obligations annuelle
+                      {t('subtitle')}
                     </p>
                     
                     {/* Indicateur d'étapes mobile */}
@@ -1947,7 +1979,7 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                       className="w-full sm:flex-1 py-2 px-4 sm:py-4 sm:px-6 rounded-2xl sm:rounded-3xl bg-[#1F2A28] text-white font-medium hover:bg-[#2A3A38] transition-colors text-xs sm:text-base flex items-center justify-center gap-1.5 sm:space-x-2"
                     >
                       <ChevronLeft size={16} className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                      <span>Précédent</span>
+                      <span>{t('previous')}</span>
                     </button>
                     <button
                       onClick={currentStep === STEPS.length ? handleSave : handleNext}
@@ -1970,9 +2002,9 @@ export default function ZakatCalculatorModal({ isOpen, onClose, onSave, accessTo
                       <span>
                         {currentStep === STEPS.length
                           ? submitLoading
-                            ? 'Création...'
-                            : 'Sauvegarder'
-                          : 'Suivant'}
+                            ? t('creating')
+                            : t('save')
+                          : t('next')}
                       </span>
                       {currentStep !== STEPS.length && <ChevronRight size={16} className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />}
                     </button>

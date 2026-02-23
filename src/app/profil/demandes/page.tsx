@@ -18,38 +18,40 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getMyAidRequests, type AidRequest } from '@/services/help-requests';
+import { useTranslations } from 'next-intl';
+import { useLocale } from '@/components/LocaleProvider';
 
 const ITEMS_PER_PAGE = 5;
 
-const CATEGORY_LABELS: Record<string, string> = {
-  HEALTH: 'Santé',
-  EDUCATION: 'Éducation',
-  WIDOW_SUPPORT: 'Accompagnement veuves',
-  HABITATION: 'Habitation / Infrastructures',
-  OTHER: 'Autre',
+const CATEGORY_KEYS: Record<string, string> = {
+  HEALTH: 'categoryHealth',
+  EDUCATION: 'categoryEducation',
+  WIDOW_SUPPORT: 'categoryWidow',
+  HABITATION: 'categoryHabitation',
+  OTHER: 'categoryOther',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'En attente',
-  APPROVED: 'Approuvée',
-  REJECTED: 'Refusée',
+const STATUS_KEYS: Record<string, string> = {
+  PENDING: 'statusPending',
+  APPROVED: 'statusApproved',
+  REJECTED: 'statusRejected',
 };
 
-const URGENCY_LABELS: Record<string, string> = {
-  LOW: 'Basse',
-  MEDIUM: 'Moyenne',
-  HIGH: 'Haute',
+const URGENCY_KEYS: Record<string, string> = {
+  LOW: 'urgencyLow',
+  MEDIUM: 'urgencyMedium',
+  HIGH: 'urgencyHigh',
 };
 
-const TRANSMITTER_LABELS: Record<string, string> = {
-  SELF: 'Pour moi-même',
-  PARTNER: 'Partenaire / Organisation',
+const TRANSMITTER_KEYS: Record<string, string> = {
+  SELF: 'transmitterSelf',
+  PARTNER: 'transmitterPartner',
 };
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string): string {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString('fr-FR', {
+    return d.toLocaleDateString(locale === 'en' ? 'en-GB' : 'fr-FR', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -68,12 +70,14 @@ function DemandeDetailModal({
   demande: AidRequest;
   onClose: () => void;
 }) {
+  const t = useTranslations('profil');
+  const { locale } = useLocale();
   const beneficiary = demande.beneficiaryDetails;
   const transmitter = demande.transmitterDetails;
-  const categoryLabel = CATEGORY_LABELS[demande.campaignCategory] ?? demande.campaignCategory;
-  const statusLabel = STATUS_LABELS[demande.aidRequestStatus] ?? demande.aidRequestStatus;
-  const urgencyLabel = URGENCY_LABELS[demande.urgency] ?? demande.urgency;
-  const transmitterLabel = TRANSMITTER_LABELS[demande.transmitter] ?? demande.transmitter;
+  const categoryLabel = t(CATEGORY_KEYS[demande.campaignCategory] ?? 'categoryOther');
+  const statusLabel = t(STATUS_KEYS[demande.aidRequestStatus] ?? 'statusPending');
+  const urgencyLabel = t(URGENCY_KEYS[demande.urgency] ?? 'urgencyMedium');
+  const transmitterLabel = t(TRANSMITTER_KEYS[demande.transmitter] ?? 'transmitterSelf');
 
   const transmitterName =
     transmitter?.transmitterCompanyName ||
@@ -99,11 +103,11 @@ function DemandeDetailModal({
         className="bg-[#101919] rounded-2xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
       >
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 flex-shrink-0">
-          <h3 id="detail-modal-title" className="text-lg font-bold text-white">Détails de la demande</h3>
+          <h3 id="detail-modal-title" className="text-lg font-bold text-white">{t('demandeDetailTitle')}</h3>
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-            aria-label="Fermer"
+            aria-label={t('closeAria')}
           >
             <X size={24} />
           </button>
@@ -117,8 +121,8 @@ function DemandeDetailModal({
             <span className="px-3 py-1 rounded-full text-sm bg-white/10 text-white/90">
               {categoryLabel}
             </span>
-            <span className="px-3 py-1 rounded-full text-sm bg-white/10 text-white/90">
-              Urgence : {urgencyLabel}
+            <span className="px-3 py-1 rounded-full text-xs bg-white/10 text-white/70">
+              {t('urgencyLabel')} {urgencyLabel}
             </span>
             <span className="px-3 py-1 rounded-full text-xs bg-white/10 text-white/70">
               {transmitterLabel}
@@ -129,7 +133,7 @@ function DemandeDetailModal({
           <div>
             <h4 className="text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
               <Building2 size={16} />
-              Émetteur
+              {t('transmitter')}
             </h4>
             <p className="text-white/80 text-sm">{transmitterName}</p>
           </div>
@@ -138,7 +142,7 @@ function DemandeDetailModal({
           <div>
             <h4 className="text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
               <User size={16} />
-              Bénéficiaire
+              {t('beneficiary')}
             </h4>
             <div className="bg-[#0d1515] rounded-xl p-4 space-y-2 text-sm">
               <p className="text-white font-medium">{beneficiaryName}</p>
@@ -149,17 +153,17 @@ function DemandeDetailModal({
                 </p>
               )}
               {beneficiary?.beneficiaryActivity && (
-                <p className="text-white/70">Activité : {beneficiary.beneficiaryActivity}</p>
+                <p className="text-white/70">{t('activity')} {beneficiary.beneficiaryActivity}</p>
               )}
               {beneficiary?.beneficiaryMarialStatus && (
-                <p className="text-white/70">Situation : {beneficiary.beneficiaryMarialStatus}</p>
+                <p className="text-white/70">{t('situation')} {beneficiary.beneficiaryMarialStatus}</p>
               )}
               {beneficiary?.numberOfBeneficiaries != null && (
-                <p className="text-white/70">Nombre de bénéficiaires : {beneficiary.numberOfBeneficiaries}</p>
+                <p className="text-white/70">{t('beneficiariesCount')} {beneficiary.numberOfBeneficiaries}</p>
               )}
               {beneficiary?.monthlyIncomeOfBeneficiary != null && (
                 <p className="text-white/70">
-                  Revenus mensuels : {beneficiary.monthlyIncomeOfBeneficiary.toLocaleString()} F CFA
+                  {t('monthlyIncome')} {beneficiary.monthlyIncomeOfBeneficiary.toLocaleString()} F CFA
                 </p>
               )}
             </div>
@@ -170,17 +174,17 @@ function DemandeDetailModal({
             <div>
               <h4 className="text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
                 <FileText size={16} />
-                Détails santé
+                {t('healthDetails')}
               </h4>
               <div className="bg-[#0d1515] rounded-xl p-4 text-sm text-white/80 space-y-1">
                 {demande.healthDetails.establishmentName && (
-                  <p>Établissement : {demande.healthDetails.establishmentName}</p>
+                  <p>{t('establishment')} {demande.healthDetails.establishmentName}</p>
                 )}
                 {demande.healthDetails.totalQuote != null && demande.healthDetails.totalQuote > 0 && (
-                  <p>Devis total : {demande.healthDetails.totalQuote.toLocaleString()} F CFA</p>
+                  <p>{t('totalQuote')} {demande.healthDetails.totalQuote.toLocaleString()} F CFA</p>
                 )}
                 {demande.healthDetails.lifeThreateningEmergency && (
-                  <p>Urgence vitale : Oui</p>
+                  <p>{t('lifeThreatening')}</p>
                 )}
               </div>
             </div>
@@ -189,42 +193,42 @@ function DemandeDetailModal({
             <div>
               <h4 className="text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
                 <FileText size={16} />
-                Détails éducation
+                {t('educationDetails')}
               </h4>
               <div className="bg-[#0d1515] rounded-xl p-4 text-sm text-white/80 space-y-1">
                 {demande.educationDetails.typeOfNeed && (
-                  <p>Type de besoin : {demande.educationDetails.typeOfNeed}</p>
+                  <p>{t('needType')} {demande.educationDetails.typeOfNeed}</p>
                 )}
                 {demande.educationDetails.outstandingAmount != null &&
                   demande.educationDetails.outstandingAmount > 0 && (
-                    <p>Montant restant : {demande.educationDetails.outstandingAmount.toLocaleString()} F CFA</p>
+                    <p>{t('outstandingAmount')} {demande.educationDetails.outstandingAmount.toLocaleString()} F CFA</p>
                   )}
               </div>
             </div>
           )}
           {demande.widowSupportDetails && (
             <div>
-              <h4 className="text-sm font-semibold text-white/90 mb-2">Accompagnement veuves</h4>
+              <h4 className="text-sm font-semibold text-white/90 mb-2">{t('widowSupport')}</h4>
               <div className="bg-[#0d1515] rounded-xl p-4 text-sm text-white/80 space-y-1">
                 {demande.widowSupportDetails.whereSheLives && (
-                  <p>Lieu de vie : {demande.widowSupportDetails.whereSheLives}</p>
+                  <p>{t('whereSheLives')} {demande.widowSupportDetails.whereSheLives}</p>
                 )}
                 {demande.widowSupportDetails.kindOfSupport && (
-                  <p>Type d’accompagnement : {demande.widowSupportDetails.kindOfSupport}</p>
+                  <p>{t('kindOfSupport')} {demande.widowSupportDetails.kindOfSupport}</p>
                 )}
               </div>
             </div>
           )}
           {demande.habitationDetails && (
             <div>
-              <h4 className="text-sm font-semibold text-white/90 mb-2">Habitation / Infrastructures</h4>
+              <h4 className="text-sm font-semibold text-white/90 mb-2">{t('habitation')}</h4>
               <div className="bg-[#0d1515] rounded-xl p-4 text-sm text-white/80 space-y-1">
                 {demande.habitationDetails.kindOfInsfrastructure && (
-                  <p>Type : {demande.habitationDetails.kindOfInsfrastructure}</p>
+                  <p>{t('type')} {demande.habitationDetails.kindOfInsfrastructure}</p>
                 )}
                 {demande.habitationDetails.whatIsTheQuote != null &&
                   demande.habitationDetails.whatIsTheQuote > 0 && (
-                    <p>Devis : {demande.habitationDetails.whatIsTheQuote.toLocaleString()} F CFA</p>
+                    <p>{t('quote')} {demande.habitationDetails.whatIsTheQuote.toLocaleString()} F CFA</p>
                   )}
               </div>
             </div>
@@ -233,7 +237,7 @@ function DemandeDetailModal({
           {/* Pièces jointes */}
           {demande.attachments && demande.attachments.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold text-white/90 mb-2">Pièces jointes</h4>
+              <h4 className="text-sm font-semibold text-white/90 mb-2">{t('attachments')}</h4>
               <ul className="space-y-2">
                 {demande.attachments.map((att) => (
                   <li key={att.id}>
@@ -255,9 +259,9 @@ function DemandeDetailModal({
 
           {/* Dates */}
           <div className="text-white/50 text-xs border-t border-white/10 pt-4">
-            <p>Créée le {formatDate(demande.createdAt)}</p>
+            <p>{t('createdOn')} {formatDate(demande.createdAt, locale)}</p>
             {demande.updatedAt !== demande.createdAt && (
-              <p>Modifiée le {formatDate(demande.updatedAt)}</p>
+              <p>{t('modifiedOn')} {formatDate(demande.updatedAt, locale)}</p>
             )}
           </div>
         </div>
@@ -267,6 +271,8 @@ function DemandeDetailModal({
 }
 
 export default function MesDemandesPage() {
+  const t = useTranslations('profil');
+  const { locale } = useLocale();
   const { accessToken } = useAuth();
   const [demandes, setDemandes] = useState<AidRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -283,9 +289,9 @@ export default function MesDemandesPage() {
     setError(null);
     getMyAidRequests(accessToken)
       .then(setDemandes)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Erreur lors du chargement'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('loadError')))
       .finally(() => setLoading(false));
-  }, [accessToken]);
+  }, [accessToken, t]);
 
   const totalPages = Math.max(1, Math.ceil(demandes.length / ITEMS_PER_PAGE));
   const paginatedDemandes = useMemo(() => {
@@ -309,7 +315,7 @@ export default function MesDemandesPage() {
     return (
       <div className="space-y-6">
         <div className="rounded-t-2xl p-6">
-          <h2 className="text-xl font-bold text-white">Vos demandes d’aide</h2>
+          <h2 className="text-xl font-bold text-white">{t('demandesTitle')}</h2>
         </div>
         <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 flex items-center gap-3 text-red-200">
           <AlertCircle size={24} className="flex-shrink-0" />
@@ -323,10 +329,10 @@ export default function MesDemandesPage() {
     <div className="space-y-6">
       <div className="rounded-t-2xl p-6">
         <h2 className="text-xl font-bold text-white">
-          Vos demandes d’aide
+          {t('demandesTitle')}
         </h2>
         <p className="text-white/70 mt-1 text-sm">
-          Retrouvez ici toutes vos demandes d’aide.
+          {t('demandesSubtitle')}
         </p>
       </div>
 
@@ -340,9 +346,9 @@ export default function MesDemandesPage() {
             <div className="w-16 h-16 rounded-full bg-[#00644D]/30 flex items-center justify-center mb-4">
               <ClipboardList size={32} className="text-[#00D9A5]" />
             </div>
-            <p className="text-white font-medium mb-1">Aucune demande pour le moment</p>
+            <p className="text-white font-medium mb-1">{t('demandesEmpty')}</p>
             <p className="text-white/60 text-sm max-w-sm">
-              Vous n’avez pas encore de demande d’aide.
+              {t('demandesEmptyHint')}
             </p>
           </motion.div>
         ) : (
@@ -351,10 +357,10 @@ export default function MesDemandesPage() {
               {paginatedDemandes.map((demande, index) => {
                 const beneficiary = demande.beneficiaryDetails;
                 const subject = beneficiary
-                  ? `${beneficiary.beneficiaryFirstName || ''} ${beneficiary.beneficiaryLastName || ''}`.trim() || 'Demande d’aide'
-                  : 'Demande d’aide';
-                const categoryLabel = CATEGORY_LABELS[demande.campaignCategory] ?? demande.campaignCategory;
-                const statusLabel = STATUS_LABELS[demande.aidRequestStatus] ?? demande.aidRequestStatus;
+                  ? `${beneficiary.beneficiaryFirstName || ''} ${beneficiary.beneficiaryLastName || ''}`.trim() || t('helpRequestSubject')
+                  : t('helpRequestSubject');
+                const categoryLabel = t(CATEGORY_KEYS[demande.campaignCategory] ?? 'categoryOther');
+                const statusLabel = t(STATUS_KEYS[demande.aidRequestStatus] ?? 'statusPending');
                 return (
                   <li key={demande.id}>
                     <motion.div
@@ -375,7 +381,7 @@ export default function MesDemandesPage() {
                           </p>
                           <p className="text-white/50 text-xs flex items-center gap-1 mt-1">
                             <Calendar size={12} />
-                            {formatDate(demande.createdAt)}
+                            {formatDate(demande.createdAt, locale)}
                           </p>
                         </div>
                       </div>
@@ -386,7 +392,7 @@ export default function MesDemandesPage() {
                           onClick={() => setDetailDemande(demande)}
                           className="flex items-center gap-1 px-3 py-2 rounded-lg bg-[#00644D]/40 text-[#00D9A5] hover:bg-[#00644D]/60 transition-colors text-sm font-medium"
                         >
-                          Voir détails
+                          {t('viewDetails')}
                           <ChevronRight size={16} />
                         </button>
                       </div>
@@ -408,7 +414,7 @@ export default function MesDemandesPage() {
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1}
                     className="p-2 rounded-lg text-white/80 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    aria-label="Page précédente"
+                    aria-label={t('prevPageAria')}
                   >
                     <ChevronLeft size={20} />
                   </button>
@@ -420,7 +426,7 @@ export default function MesDemandesPage() {
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages}
                     className="p-2 rounded-lg text-white/80 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    aria-label="Page suivante"
+                    aria-label={t('nextPageAria')}
                   >
                     <ChevronRight size={20} />
                   </button>

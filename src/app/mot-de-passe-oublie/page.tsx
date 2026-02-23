@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Mail, ArrowLeft, Phone } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { forgotPassword, resendOtp, type ForgotPasswordBody } from "@/services/auth";
 import { COUNTRY_DIAL_CODES, getFlagEmoji } from "@/data/countryDialCodes";
 
@@ -16,6 +17,7 @@ function digitsOnly(value: string): string {
 }
 
 export default function MotDePasseOubliePage() {
+  const t = useTranslations('forgotPassword');
   const [loginValue, setLoginValue] = useState("");
   const [countryCode, setCountryCode] = useState("+225");
   const [isLoading, setIsLoading] = useState(false);
@@ -42,20 +44,20 @@ export default function MotDePasseOubliePage() {
   }, [resendCooldown]);
 
   const isEmailMode = isEmail(loginValue);
-  const placeholder = isEmailMode ? "exemple@email.com" : "Numéro de téléphone";
+  const placeholder = isEmailMode ? t('placeholderEmail') : t('placeholderPhone');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginValue.trim()) {
-      setError(isEmailMode ? "Veuillez saisir votre adresse email" : "Veuillez saisir votre numéro de téléphone");
+      setError(isEmailMode ? t('errorEmailRequired') : t('errorPhoneRequired'));
       return;
     }
     if (isEmailMode && !/\S+@\S+\.\S+/.test(loginValue)) {
-      setError("Format d'email invalide");
+      setError(t('errorEmailInvalid'));
       return;
     }
     if (!isEmailMode && digitsOnly(loginValue).length < 8) {
-      setError("Veuillez entrer un numéro de téléphone valide (8 chiffres min.).");
+      setError(t('errorPhoneInvalid'));
       return;
     }
 
@@ -71,7 +73,7 @@ export default function MotDePasseOubliePage() {
       setResetBody(body);
       setIsSubmitted(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue. Veuillez réessayer.");
+      setError(err instanceof Error ? err.message : t('errorGeneric'));
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +95,7 @@ export default function MotDePasseOubliePage() {
           {!showSuccessContent ? (
             <>
               <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-6" />
-              <p className="text-white text-lg font-medium">Envoi du code en cours...</p>
+              <p className="text-white text-lg font-medium">{t('sendingCode')}</p>
             </>
           ) : (
         <div className="container mx-auto px-4 py-8">
@@ -118,28 +120,28 @@ export default function MotDePasseOubliePage() {
               </motion.div>
               
               <h1 className="text-2xl font-bold text-white mb-4">
-                Code envoyé !
+                {t('codeSentTitle')}
               </h1>
               
               <p className="text-white/90 mb-6">
-                Si un compte existe avec ces informations, un code OTP a été envoyé à{" "}
+                {t('codeSentMessage')}{" "}
                 <span className="font-medium text-white">{sentTo}</span>
               </p>
               
               <div className="bg-white/15 rounded-xl p-4 mb-4 border border-white/20">
                 <p className="text-sm text-white/90">
-                  Vérifiez votre boîte de réception ou vos SMS.{" "}
+                  {t('checkInbox')}{" "}
                   <Link
                     href={resetBody ? `/reinitialiser-mot-de-passe?${"email" in resetBody ? "email=" + encodeURIComponent(resetBody.email) : "phoneNumber=" + encodeURIComponent(resetBody.phoneNumber)}` : "/reinitialiser-mot-de-passe"}
                     className="text-green-200 hover:text-white font-medium underline"
                   >
-                    Réinitialiser votre mot de passe
+                    {t('resetPasswordLink')}
                   </Link>
                 </p>
               </div>
 
               <p className="text-sm text-white/80 mb-6">
-                Si vous n&apos;avez pas reçu de code ?{" "}
+                {t('noCodeReceived')}{" "}
                 <button
                   type="button"
                   onClick={async () => {
@@ -160,12 +162,12 @@ export default function MotDePasseOubliePage() {
                   {resendLoading ? (
                     <>
                       <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      Envoi...
+                      {t('sending')}
                     </>
                   ) : resendCooldown > 0 ? (
-                    <>Renvoyer dans {resendCooldown}s</>
+                    <>{t('resendIn', { seconds: resendCooldown })}</>
                   ) : (
-                    "Renvoyer"
+                    t('resend')
                   )}
                 </button>
               </p>
@@ -175,7 +177,7 @@ export default function MotDePasseOubliePage() {
                 className="inline-flex items-center text-green-200 hover:text-white font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Retour à la connexion
+                {t('backToLogin')}
               </Link>
             </motion.div>
           </div>
@@ -219,10 +221,10 @@ export default function MotDePasseOubliePage() {
                 />
               </motion.div>
               <h1 className="text-2xl font-bold text-white mb-2">
-                Mot de passe oublié ?
+                {t('title')}
               </h1>
               <p className="text-white/90">
-                Entrez votre email ou numéro de téléphone pour recevoir un code OTP
+                {t('subtitle')}
               </p>
             </div>
 
@@ -233,7 +235,7 @@ export default function MotDePasseOubliePage() {
                 transition={{ delay: 0.3 }}
               >
                 <label className="block text-sm font-medium text-white/90 mb-2">
-                  Email ou numéro de téléphone
+                  {t('labelEmailOrPhone')}
                 </label>
                 <div className="flex gap-2">
                   {!isEmailMode && (
@@ -241,7 +243,7 @@ export default function MotDePasseOubliePage() {
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
                       className="pl-2 pr-1 py-3 bg-white/90 border border-white/30 rounded-xl focus:ring-2 focus:ring-[#00C48C] focus:border-transparent text-gray-900 appearance-none cursor-pointer w-[88px] flex-shrink-0 text-sm"
-                      aria-label="Code pays"
+                      aria-label={t('countryCodeAria')}
                     >
                       {COUNTRY_DIAL_CODES.map((country) => (
                         <option key={`${country.iso2}-${country.dialCode}-${country.name}`} value={country.dialCode} title={country.name}>
@@ -289,7 +291,7 @@ export default function MotDePasseOubliePage() {
                     className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                   />
                 ) : (
-                  "Envoyer le code OTP"
+                  t('submitButton')
                 )}
               </motion.button>
             </form>
@@ -305,7 +307,7 @@ export default function MotDePasseOubliePage() {
                 className="inline-flex items-center text-green-200 hover:text-white font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Retour à la connexion
+                {t('backToLogin')}
               </Link>
             </motion.div>
           </motion.div>

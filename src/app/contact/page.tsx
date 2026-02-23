@@ -5,8 +5,10 @@ import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { sendContactEmail } from '@/services/email';
+import { useTranslations } from 'next-intl';
 
 export default function ContactPage() {
+  const t = useTranslations('home.contact');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -30,13 +32,13 @@ export default function ContactPage() {
         message: formData.message.trim(),
       });
       if (res.success) {
-        setSubmitSuccess(res.message || 'Votre message a bien été envoyé.');
+        setSubmitSuccess(res.message || t('successMessage'));
         setFormData({ name: '', email: '', subject: '', message: '' });
       } else {
-        setSubmitError(res.message || 'L\'envoi a échoué. Veuillez réessayer.');
+        setSubmitError(res.message || t('errorSend'));
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Impossible d\'envoyer le message. Vérifiez votre connexion ou réessayez plus tard.';
+      const msg = err instanceof Error ? err.message : t('errorGeneric');
       setSubmitError(msg);
     } finally {
       setSending(false);
@@ -67,13 +69,13 @@ export default function ContactPage() {
           >
             <Link href="/" className="inline-flex items-center text-white/80 hover:text-white mb-6 transition-colors">
               <ArrowLeft size={20} className="mr-2" />
-              Retour à l'accueil
+              {t('backHome')}
             </Link>
             <h1 className="text-4xl lg:text-5xl font-bold mb-4">
-              Contactez-nous
+              {t('title')}
             </h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              Nous sommes là pour répondre à toutes vos questions et vous accompagner dans votre parcours avec Amane+
+              {t('subtitle')}
             </p>
           </motion.div>
         </div>
@@ -90,7 +92,7 @@ export default function ContactPage() {
               transition={{ duration: 0.8 }}
             >
               <h2 className="text-3xl font-bold text-white mb-8">
-                Informations de contact
+                {t('contactInfoTitle')}
               </h2>
               <div className="space-y-6">
                 <div className="flex items-start space-x-4">
@@ -98,7 +100,6 @@ export default function ContactPage() {
                     <Mail size={24} className="text-white" />
                   </div>
                   <div>
-                    {/* <h3 className="text-lg font-semibold text-white mb-1">Email</h3> */}
                     <p className="text-white/70">contact@amane.ci</p>
                     <p className="text-white/70">infos@amane.ci</p>
                   </div>
@@ -109,7 +110,6 @@ export default function ContactPage() {
                     <Phone size={24} className="text-white" />
                   </div>
                   <div>
-                    {/* <h3 className="text-lg font-semibold text-white mb-1">Téléphone</h3> */}
                     <p className="text-white/70">+225 07 20 00 00 06</p>
                     <p className="text-white/70">+225 27 22 22 34 64</p>
                   </div>
@@ -120,8 +120,8 @@ export default function ContactPage() {
                     <MapPin size={24} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">Adresse</h3>
-                    <p className="text-white/70">Siège social : Abidjan-Cocody, La Villa Nova Rue B5, Corniche</p>
+                    <h3 className="text-lg font-semibold text-white mb-1">{t('addressTitle')}</h3>
+                    <p className="text-white/70">{t('address')}</p>
                   </div>
                 </div>
               </div>
@@ -135,7 +135,7 @@ export default function ContactPage() {
             >
               <div className="bg-[#101919] rounded-2xl p-8">
                 <h2 className="text-3xl font-bold text-white mb-6">
-                  Envoyez-nous un message
+                  {t('sendMessageTitle')}
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {submitSuccess && (
@@ -150,7 +150,7 @@ export default function ContactPage() {
                   )}
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-white/80 mb-2">
-                      Nom complet
+                      {t('fullName')}
                     </label>
                     <input
                       type="text"
@@ -160,13 +160,13 @@ export default function ContactPage() {
                       onChange={handleChange}
                       required
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#5AB678] transition-colors"
-                      placeholder="Votre nom"
+                      placeholder={t('fullNamePlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-white/80 mb-2">
-                      Email
+                      {t('email')}
                     </label>
                     <input
                       type="email"
@@ -176,13 +176,13 @@ export default function ContactPage() {
                       onChange={handleChange}
                       required
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#5AB678] transition-colors"
-                      placeholder="votre@email.com"
+                      placeholder={t('emailPlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label htmlFor="subject" className="block text-sm font-medium text-white/80 mb-2">
-                      Sujet
+                      {t('subject')}
                     </label>
                     <input
                       type="text"
@@ -192,13 +192,13 @@ export default function ContactPage() {
                       onChange={handleChange}
                       required
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#5AB678] transition-colors"
-                      placeholder="Sujet de votre message"
+                      placeholder={t('subjectPlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label htmlFor="message" className="block text-sm font-medium text-white/80 mb-2">
-                      Message
+                      {t('message')}
                     </label>
                     <textarea
                       id="message"
@@ -208,7 +208,7 @@ export default function ContactPage() {
                       required
                       rows={6}
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#5AB678] transition-colors resize-none"
-                      placeholder="Votre message..."
+                      placeholder={t('messagePlaceholder')}
                     />
                   </div>
 
@@ -222,12 +222,12 @@ export default function ContactPage() {
                     {sending ? (
                       <>
                         <Loader2 size={20} className="animate-spin" />
-                        <span>Envoi en cours...</span>
+                        <span>{t('submitSending')}</span>
                       </>
                     ) : (
                       <>
                         <Send size={20} />
-                        <span>Envoyer le message</span>
+                        <span>{t('submitButton')}</span>
                       </>
                     )}
                   </motion.button>

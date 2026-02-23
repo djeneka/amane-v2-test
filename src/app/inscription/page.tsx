@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, Mail, Lock, User, Phone, Calendar, ArrowRight, Shield, CheckCircle, Heart, Users, CheckCircle2, Wallet, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { register as apiRegister, verifyAccount, resendOtp, type RegisterGender } from "@/services/auth";
 import AuthGuard from "@/components/AuthGuard";
 import { COUNTRY_DIAL_CODES, getFlagEmoji } from "@/data/countryDialCodes";
 
 export default function InscriptionPage() {
+  const t = useTranslations('inscription');
   const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: "",
@@ -49,29 +51,29 @@ export default function InscriptionPage() {
 
   /** Tranches de revenus prédéfinies pour encourager l'estimation (min, max en XOF) */
   const INCOME_PRESETS = [
-    { label: "50k - 150k", min: 50000, max: 150000 },
-    { label: "150k - 300k", min: 150000, max: 300000 },
-    { label: "300k - 600k", min: 300000, max: 600000 },
-    { label: "600k - 1M", min: 600000, max: 1000000 },
-    { label: "1M+", min: 1000000, max: 5000000 },
+    { label: t('incomePreset1'), min: 50000, max: 150000 },
+    { label: t('incomePreset2'), min: 150000, max: 300000 },
+    { label: t('incomePreset3'), min: 300000, max: 600000 },
+    { label: t('incomePreset4'), min: 600000, max: 1000000 },
+    { label: t('incomePreset5'), min: 1000000, max: 5000000 },
   ] as const;
 
   /** Options pour les centres d'intérêt (valeurs envoyées à l'API) */
   const INTERESTS_OPTIONS = [
-    { value: "DONATION", label: "Don / Sadaqah" },
-    { value: "ZAKAT", label: "Zakat" },
-    { value: "BENEVOLAT", label: "Bénévolat / volontariat" },
-    { value: "ORPHELINS", label: "Orphelins" },
-    { value: "EDUCATION", label: "Éducation, écoles coraniques" },
-    { value: "SANTE", label: "Santé, hôpitaux" },
-    { value: "EAU_POTABLE", label: "Eau potable, puits" },
-    { value: "PAUVRETE", label: "Lutte contre la pauvreté" },
-    { value: "SECOURS_URGENCE", label: "Secours d'urgence, catastrophes" },
-    { value: "MOSQUEES", label: "Mosquées, lieux de culte" },
-    { value: "RAMADAN", label: "Actions Ramadan, iftar" },
-    { value: "AIDES_FAMILLES", label: "Aide aux familles, veuves" },
-    { value: "ENVIRONNEMENT", label: "Environnement (en lien avec la foi)" },
-    { value: "CULTURE_ISLAMIQUE", label: "Culture islamique" },
+    { value: "DONATION", labelKey: "interestDonation" as const },
+    { value: "ZAKAT", labelKey: "interestZakat" as const },
+    { value: "BENEVOLAT", labelKey: "interestBenevolat" as const },
+    { value: "ORPHELINS", labelKey: "interestOrphelins" as const },
+    { value: "EDUCATION", labelKey: "interestEducation" as const },
+    { value: "SANTE", labelKey: "interestSante" as const },
+    { value: "EAU_POTABLE", labelKey: "interestEau" as const },
+    { value: "PAUVRETE", labelKey: "interestPauvrete" as const },
+    { value: "SECOURS_URGENCE", labelKey: "interestSecours" as const },
+    { value: "MOSQUEES", labelKey: "interestMosquees" as const },
+    { value: "RAMADAN", labelKey: "interestRamadan" as const },
+    { value: "AIDES_FAMILLES", labelKey: "interestAidesFamilles" as const },
+    { value: "ENVIRONNEMENT", labelKey: "interestEnvironnement" as const },
+    { value: "CULTURE_ISLAMIQUE", labelKey: "interestCulture" as const },
   ] as const;
 
   /** Étape 1 complète (infos personnelles + centres d'intérêt) — permet d'afficher "Suivant". Email et date de naissance optionnels. */
@@ -142,60 +144,60 @@ export default function InscriptionPage() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = "Le prénom est requis";
+      newErrors.firstName = t('errorFirstName');
     }
 
     if (!formData.lastName.trim()) {
-      newErrors.lastName = "Le nom est requis";
+      newErrors.lastName = t('errorLastName');
     }
 
     if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email.trim())) {
-      newErrors.email = "Format d'email invalide";
+      newErrors.email = t('errorEmailInvalid');
     }
 
     const phoneDigits = formData.phone.replace(/\D/g, "");
     if (!formData.phone.trim()) {
-      newErrors.phone = "Le numéro de téléphone est requis";
+      newErrors.phone = t('errorPhoneRequired');
     } else if (phoneDigits.length < 8) {
-      newErrors.phone = "Le numéro doit contenir au moins 8 chiffres";
+      newErrors.phone = t('errorPhoneMinDigits');
     }
 
     if (formData.gender !== "MALE" && formData.gender !== "FEMALE") {
-      newErrors.gender = "Veuillez sélectionner votre genre";
+      newErrors.gender = t('errorGender');
     }
 
     if (hasInterests && formData.interests.length === 0) {
-      newErrors.interests = "Veuillez sélectionner au moins un centre d'intérêt";
+      newErrors.interests = t('errorInterests');
     }
 
     const minIncome = parseInt(formData.monthlyMinIncome.replace(/\D/g, ""), 10) || 0;
     const maxIncome = parseInt(formData.monthlyMaxIncome.replace(/\D/g, ""), 10) || 0;
     if (!formData.monthlyMinIncome.trim()) {
-      newErrors.monthlyMinIncome = "Revenu minimum requis";
+      newErrors.monthlyMinIncome = t('errorIncomeMin');
     }
     if (!formData.monthlyMaxIncome.trim()) {
-      newErrors.monthlyMaxIncome = "Revenu maximum requis";
+      newErrors.monthlyMaxIncome = t('errorIncomeMax');
     } else if (maxIncome < minIncome) {
-      newErrors.monthlyMaxIncome = "Le revenu max doit être supérieur au min";
+      newErrors.monthlyMaxIncome = t('errorIncomeMaxLower');
     }
 
     const walletDigits = formData.walletCode.replace(/\D/g, "");
     if (walletDigits.length !== 4) {
-      newErrors.walletCode = "Le code portefeuille doit contenir exactement 4 chiffres";
+      newErrors.walletCode = t('errorWalletCode');
     }
 
     if (!formData.password) {
-      newErrors.password = "Le mot de passe est requis";
+      newErrors.password = t('errorPasswordRequired');
     } else if (formData.password.length < 8) {
-      newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
+      newErrors.password = t('errorPasswordMin');
     }
 
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Les mots de passe ne correspondent pas";
+      newErrors.confirmPassword = t('errorPasswordMismatch');
     }
 
     if (!acceptTerms) {
-      newErrors.terms = "Vous devez accepter les conditions d'utilisation";
+      newErrors.terms = t('errorTerms');
     }
 
     setErrors(newErrors);
@@ -253,12 +255,12 @@ export default function InscriptionPage() {
         const data = JSON.parse(message) as { message?: string };
         setErrors((prev) => ({
           ...prev,
-          general: data.message ?? 'Une erreur est survenue. Veuillez réessayer.',
+          general: data.message ?? t('errorGeneric'),
         }));
       } catch {
         setErrors((prev) => ({
           ...prev,
-          general: message || 'Une erreur est survenue. Veuillez réessayer.',
+          general: message || t('errorGeneric'),
         }));
       }
     } finally {
@@ -293,19 +295,19 @@ export default function InscriptionPage() {
     const code = verificationCode.join('');
 
     if (code.length !== 4) {
-      setVerificationError('Veuillez entrer le code complet');
+      setVerificationError(t('errorVerificationComplete'));
       return;
     }
 
     const pendingData = localStorage.getItem('pending-registration');
     if (!pendingData) {
-      setVerificationError('Une erreur est survenue. Veuillez réessayer.');
+      setVerificationError(t('errorVerificationGeneric'));
       return;
     }
 
     const userData = JSON.parse(pendingData) as { phone: string };
     if (!userData.phone) {
-      setVerificationError('Données d\'inscription invalides. Veuillez réessayer.');
+      setVerificationError(t('errorVerificationInvalidData'));
       return;
     }
 
@@ -322,9 +324,9 @@ export default function InscriptionPage() {
       const message = err instanceof Error ? err.message : String(err);
       try {
         const data = JSON.parse(message) as { message?: string };
-        setVerificationError(data.message ?? 'Code incorrect. Veuillez réessayer.');
+        setVerificationError(data.message ?? t('errorVerificationWrongCode'));
       } catch {
-        setVerificationError(message || 'Code incorrect. Veuillez réessayer.');
+        setVerificationError(message || t('errorVerificationWrongCode'));
       }
     } finally {
       setIsVerifying(false);
@@ -342,12 +344,12 @@ export default function InscriptionPage() {
   const handleResendCode = async () => {
     const pendingData = localStorage.getItem('pending-registration');
     if (!pendingData) {
-      setVerificationError('Données d\'inscription introuvables. Veuillez réessayer l\'inscription.');
+      setVerificationError(t('errorResendNoData'));
       return;
     }
     const userData = JSON.parse(pendingData) as { phone: string };
     if (!userData.phone) {
-      setVerificationError('Numéro de téléphone introuvable.');
+      setVerificationError(t('errorResendNoPhone'));
       return;
     }
     setIsResending(true);
@@ -362,9 +364,9 @@ export default function InscriptionPage() {
       const message = err instanceof Error ? err.message : String(err);
       try {
         const data = JSON.parse(message) as { message?: string };
-        setVerificationError(data.message ?? 'Impossible de renvoyer le code. Réessayez.');
+        setVerificationError(data.message ?? t('errorResendFailed'));
       } catch {
-        setVerificationError(message || 'Impossible de renvoyer le code. Réessayez.');
+        setVerificationError(message || t('errorResendFailed'));
       }
     } finally {
       setIsResending(false);
@@ -388,14 +390,13 @@ export default function InscriptionPage() {
             <div className="space-y-8 max-w-lg">
                 <div>
                   <h2 className="text-4xl font-bold text-white mb-4">
-                    Finance Islamique{" "}
+                    {t('leftTitle')}{" "}
                     <span className="text-[#00644D]">
-                      Éthique
+                      {t('leftTitleHighlight')}
                     </span>
                   </h2>
                   <p className="text-xl text-white/90 leading-relaxed">
-                    Rejoignez Amane+ pour accéder à des services financiers conformes 
-                    aux principes islamiques. Dons, zakat, investissements halal et protection takaful.
+                    {t('leftIntro')}
                   </p>
                 </div>
 
@@ -411,11 +412,10 @@ export default function InscriptionPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-[#00644D] mb-2">
-                        Dons & Zakat
+                        {t('cardDonZakat')}
                       </h3>
                       <p className="text-white/80">
-                        Faites des dons en toute transparence et calculez votre zakat 
-                        avec nos outils spécialisés.
+                        {t('cardDonZakatDesc')}
                       </p>
                     </div>
                   </motion.div>
@@ -431,11 +431,10 @@ export default function InscriptionPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-[#00644D] mb-2">
-                        Protection Takaful
+                        {t('cardTakaful')}
                       </h3>
                       <p className="text-white/80">
-                        Protégez-vous et vos proches avec nos solutions d'assurance 
-                        conformes aux principes islamiques.
+                        {t('cardTakafulDesc')}
                       </p>
                     </div>
                   </motion.div>
@@ -451,11 +450,10 @@ export default function InscriptionPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-[#00644D] mb-2">
-                        Investissements Halal
+                        {t('cardInvest')}
                       </h3>
                       <p className="text-white/80">
-                        Investissez dans des projets éthiques et durables qui respectent 
-                        les valeurs islamiques.
+                        {t('cardInvestDesc')}
                       </p>
                     </div>
                   </motion.div>
@@ -468,11 +466,10 @@ export default function InscriptionPage() {
                   className="bg-[#DCFCE7] backdrop-blur-sm rounded-2xl p-6 text-white border border-white/30"
                 >
                   <h3 className="text-xl font-semibold mb-2 text-[#00644D]">
-                    Rejoignez notre communauté
+                    {t('joinCommunityTitle')}
                   </h3>
                   <p className="text-[#00644D]/80">
-                    Plus de 10,000 membres font confiance à Amane+ pour leurs 
-                    besoins financiers éthiques.
+                    {t('joinCommunityDesc')}
                   </p>
                 </motion.div>
               </div>
@@ -516,10 +513,10 @@ export default function InscriptionPage() {
                         transition={{ delay: 0.2 }}
                       >
                         <h1 className="text-4xl font-bold text-white mb-3">
-                          As-salamu Alaykum !
+                          {t('greeting')}
                         </h1>
                         <p className="text-white text-lg mb-2">
-                          Votre intention est noble, vos actions trouveront bénédiction. Inscrivez-vous pour commencer.
+                          {t('subtitle')}
                         </p>
                       </motion.div>
                     </div>
@@ -530,14 +527,14 @@ export default function InscriptionPage() {
                         <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
                           formStep >= 1 ? "bg-[#5AB678] text-white" : "bg-white/20 text-white/70"
                         }`}>1</span>
-                        <span className="text-white/80 text-sm hidden sm:inline">Infos & centres d&apos;intérêt</span>
+                        <span className="text-white/80 text-sm hidden sm:inline">{t('step1Label')}</span>
                       </div>
                       <div className="w-8 h-0.5 bg-white/30" />
                       <div className="flex items-center gap-2">
                         <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
                           formStep >= 2 ? "bg-[#5AB678] text-white" : "bg-white/20 text-white/70"
                         }`}>2</span>
-                        <span className="text-white/80 text-sm hidden sm:inline">Revenus & sécurité</span>
+                        <span className="text-white/80 text-sm hidden sm:inline">{t('step2Label')}</span>
                       </div>
                     </div>
 
@@ -558,7 +555,7 @@ export default function InscriptionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <label className="block text-xs font-medium text-white/90 mb-2">Prénom</label>
+                  <label className="block text-xs font-medium text-white/90 mb-2">{t('firstName')}</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                     <input
@@ -568,7 +565,7 @@ export default function InscriptionPage() {
                       className={`w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                         errors.firstName ? "ring-2 ring-red-500" : ""
                       }`}
-                      placeholder="Prénom"
+                      placeholder={t('firstName')}
                     />
                   </div>
                   {errors.firstName && (
@@ -581,7 +578,7 @@ export default function InscriptionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <label className="block text-xs font-medium text-white/90 mb-2">Nom</label>
+                  <label className="block text-xs font-medium text-white/90 mb-2">{t('lastName')}</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                     <input
@@ -591,7 +588,7 @@ export default function InscriptionPage() {
                       className={`w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                         errors.lastName ? "ring-2 ring-red-500" : ""
                       }`}
-                      placeholder="Nom"
+                      placeholder={t('lastName')}
                     />
                   </div>
                   {errors.lastName && (
@@ -605,7 +602,7 @@ export default function InscriptionPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
-                <label className="block text-xs font-medium text-white/90 mb-2">Email (optionnel)</label>
+                <label className="block text-xs font-medium text-white/90 mb-2">{t('emailOptional')}</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                   <input
@@ -615,7 +612,7 @@ export default function InscriptionPage() {
                     className={`w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.email ? "ring-2 ring-red-500" : ""
                     }`}
-                    placeholder="Votre Email"
+                    placeholder={t('emailPlaceholder')}
                   />
                 </div>
                 {errors.email && (
@@ -629,13 +626,13 @@ export default function InscriptionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
                 >
-                  <label className="block text-xs font-medium text-white/90 mb-2">Numéro de téléphone</label>
+                  <label className="block text-xs font-medium text-white/90 mb-2">{t('phone')}</label>
 
                   <div className="flex rounded-2xl overflow-hidden bg-white/80 backdrop-blur-sm border-0 focus-within:ring-2 focus-within:ring-white/50 focus-within:bg-white/90">
                     <select
                       value={phoneCountryCode}
                       onChange={(e) => setPhoneCountryCode(e.target.value)}
-                      aria-label="Indicatif pays"
+                      aria-label={t('countryCodeAria')}
                       className="pl-2 pr-1 py-4 bg-white/50 text-gray-700 font-medium border-0 focus:ring-0 focus:outline-none cursor-pointer w-[88px] flex-shrink-0 text-sm"
                     >
                       {COUNTRY_DIAL_CODES.map((country) => (
@@ -653,7 +650,7 @@ export default function InscriptionPage() {
                         className={`w-full min-w-0 pl-10 pr-4 py-4 bg-transparent border-0 focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-500 ${
                           errors.phone ? "ring-2 ring-red-500 rounded-r-2xl" : ""
                         }`}
-                        placeholder="0701020304"
+                        placeholder={t('phonePlaceholder')}
                       />
                     </div>
                   </div>
@@ -667,14 +664,14 @@ export default function InscriptionPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 }}
                 >
-                  <label className="block text-xs font-medium text-white/90 mb-2">Date de naissance (optionnel)</label>
+                  <label className="block text-xs font-medium text-white/90 mb-2">{t('birthDateOptional')}</label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                     <input
                       type="date"
                       value={formData.birthDate}
                       onChange={(e) => handleInputChange("birthDate", e.target.value)}
-                      aria-label="Date de naissance (optionnel)"
+                      aria-label={t('birthDateAria')}
                       className={`w-full pl-12 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                         errors.birthDate ? "ring-2 ring-red-500" : ""
                       }`}
@@ -691,18 +688,18 @@ export default function InscriptionPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.72 }}
               >
-                <label className="block text-sm font-medium text-white/90 mb-2">Genre</label>
+                <label className="block text-sm font-medium text-white/90 mb-2">{t('gender')}</label>
                 <select
                   value={formData.gender}
                   onChange={(e) => handleInputChange("gender", e.target.value as RegisterGender | "")}
-                  aria-label="Genre"
+                  aria-label={t('gender')}
                   className={`w-full pl-4 pr-4 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 ${
                     errors.gender ? "ring-2 ring-red-500" : ""
                   }`}
                 >
-                  <option value="">Sélectionnez</option>
-                  <option value="MALE">Homme</option>
-                  <option value="FEMALE">Femme</option>
+                  <option value="">{t('genderSelect')}</option>
+                  <option value="MALE">{t('genderMale')}</option>
+                  <option value="FEMALE">{t('genderFemale')}</option>
                 </select>
                 {errors.gender && (
                   <p className="text-red-300 text-sm mt-1">{errors.gender}</p>
@@ -722,7 +719,7 @@ export default function InscriptionPage() {
                     onChange={(e) => setFormData((prev) => ({ ...prev, isMuslim: e.target.checked }))}
                     className="w-5 h-5 rounded border-2 border-white/40 text-[#5AB678] focus:ring-[#5AB678]/50 focus:ring-2 bg-white/10"
                   />
-                  <span className="text-white font-medium">Êtes-vous musulman ?</span>
+                  <span className="text-white font-medium">{t('isMuslim')}</span>
                 </label>
               </motion.div>
 
@@ -739,7 +736,7 @@ export default function InscriptionPage() {
                     onChange={(e) => handleHasInterestsChange(e.target.checked)}
                     className="w-5 h-5 rounded border-2 border-white/40 text-[#5AB678] focus:ring-[#5AB678]/50 focus:ring-2 bg-white/10"
                   />
-                  <span className="text-white font-medium">Avez-vous des centres d&apos;intérêts ?</span>
+                  <span className="text-white font-medium">{t('hasInterests')}</span>
                 </label>
                 {hasInterests && (
                   <motion.div
@@ -749,7 +746,7 @@ export default function InscriptionPage() {
                     transition={{ duration: 0.25 }}
                     className="border-t border-white/10 px-4 pb-4 pt-2"
                   >
-                    <p className="text-white/70 text-sm mb-3">Sélectionnez un ou plusieurs centres d&apos;intérêt :</p>
+                    <p className="text-white/70 text-sm mb-3">{t('selectInterests')}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
                       {INTERESTS_OPTIONS.map((opt) => {
                         const isChecked = formData.interests.includes(opt.value);
@@ -777,14 +774,14 @@ export default function InscriptionPage() {
                               onChange={() => handleInterestToggle(opt.value)}
                               className="sr-only"
                             />
-                            <span className="text-sm font-medium">{opt.label}</span>
+                            <span className="text-sm font-medium">{t(opt.labelKey)}</span>
                           </label>
                         );
                       })}
                     </div>
                     {formData.interests.length > 0 && (
                       <p className="text-[#5AB678] text-xs mt-2">
-                        {formData.interests.length} centre{formData.interests.length > 1 ? "s" : ""} sélectionné{formData.interests.length > 1 ? "s" : ""}
+                        {t('interestsSelected', { count: formData.interests.length })}
                       </p>
                     )}
                     {errors.interests && (
@@ -801,7 +798,7 @@ export default function InscriptionPage() {
                           className="w-full text-white py-4 px-6 rounded-2xl font-medium hover:opacity-90 focus:ring-4 focus:ring-white/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                           style={{ background: 'linear-gradient(to right, #8FC99E, #20B6B3)' }}
                         >
-                          Suivant
+                          {t('next')}
                           <ArrowRight className="ml-2 w-4 h-4" />
                         </button>
                       </motion.div>
@@ -822,7 +819,7 @@ export default function InscriptionPage() {
                           className="flex items-center gap-2 text-white/90 hover:text-white text-sm font-medium transition-colors"
                         >
                           <ArrowRight className="w-4 h-4 rotate-180" />
-                          Précédent
+                          {t('previous')}
                         </button>
 
               <motion.div
@@ -837,16 +834,16 @@ export default function InscriptionPage() {
                       <TrendingUp className="w-5 h-5 text-[#5AB678]" />
                     </div>
                     <div>
-                      <h3 className="text-white font-semibold">Revenus mensuels</h3>
+                      <h3 className="text-white font-semibold">{t('monthlyIncome')}</h3>
                       <p className="text-white/70 text-sm mt-0.5">
-                        Une estimation suffit — elle nous aide à personnaliser votre expérience sur Amane.
+                        {t('monthlyIncomeHint')}
                       </p>
                     </div>
                   </div>
                 </div>
                 <div className="px-4 pb-4 space-y-4">
                   <div>
-                    <p className="text-white/80 text-xs font-medium mb-2">Choisissez une fourchette ou estimez la vôtre :</p>
+                    <p className="text-white/80 text-xs font-medium mb-2">{t('chooseRangeOrCustom')}</p>
                     <div className="flex flex-wrap gap-2">
                       {INCOME_PRESETS.map((preset) => {
                         const isSelected =
@@ -870,17 +867,17 @@ export default function InscriptionPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-white/60 text-sm">
-                    <span>Ou précisez :</span>
+                    <span>{t('orSpecify')}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-white/70 text-xs mb-1.5">Minimum (XOF)</label>
+                      <label className="block text-white/70 text-xs mb-1.5">{t('minXOF')}</label>
                       <input
                         type="text"
                         inputMode="numeric"
                         value={formData.monthlyMinIncome}
                         onChange={(e) => handleInputChange("monthlyMinIncome", e.target.value.replace(/\D/g, ""))}
-                        placeholder="Ex. 100 000"
+                        placeholder={t('incomePlaceholder')}
                         className={`w-full pl-3 pr-3 py-3 rounded-xl bg-white/90 text-gray-900 placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#5AB678]/50 focus:outline-none border ${
                           errors.monthlyMinIncome ? "border-red-400" : "border-transparent"
                         }`}
@@ -893,13 +890,13 @@ export default function InscriptionPage() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-white/70 text-xs mb-1.5">Maximum (XOF)</label>
+                      <label className="block text-white/70 text-xs mb-1.5">{t('maxXOF')}</label>
                       <input
                         type="text"
                         inputMode="numeric"
                         value={formData.monthlyMaxIncome}
                         onChange={(e) => handleInputChange("monthlyMaxIncome", e.target.value.replace(/\D/g, ""))}
-                        placeholder="Ex. 300 000"
+                        placeholder={t('incomePlaceholderMax')}
                         className={`w-full pl-3 pr-3 py-3 rounded-xl bg-white/90 text-gray-900 placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#5AB678]/50 focus:outline-none border ${
                           errors.monthlyMaxIncome ? "border-red-400" : "border-transparent"
                         }`}
@@ -922,9 +919,9 @@ export default function InscriptionPage() {
                 transition={{ delay: 0.78 }}
                 className="rounded-2xl border border-white/20 bg-white/5 backdrop-blur-sm p-4"
               >
-                <label className="block text-sm font-medium text-white/90 mb-1">Code portefeuille</label>
+                <label className="block text-sm font-medium text-white/90 mb-1">{t('walletCodeLabel')}</label>
                 <p className="text-white/80 text-xs mb-3">
-                  Ce code (4 chiffres) servira à confirmer vos transactions sur Amane. Il est distinct de votre mot de passe de connexion.
+                  {t('walletCodeHint')}
                 </p>
                 <div className="relative">
                   <Wallet className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
@@ -937,14 +934,14 @@ export default function InscriptionPage() {
                     className={`w-full pl-12 pr-12 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.walletCode ? "ring-2 ring-red-500" : ""
                     }`}
-                    placeholder="4 chiffres"
-                    aria-label="Code portefeuille (4 chiffres)"
+                    placeholder={t('walletCodePlaceholder')}
+                    aria-label={t('walletCodeAria')}
                   />
                   <button
                     type="button"
                     onClick={() => setShowWalletCode(!showWalletCode)}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                    aria-label={showWalletCode ? "Masquer le code" : "Afficher le code"}
+                    aria-label={showWalletCode ? t('hideCode') : t('showCode')}
                   >
                     {showWalletCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -956,7 +953,7 @@ export default function InscriptionPage() {
 
               {/* Séparateur visuel : mot de passe de connexion */}
               <div className="border-t border-white/20 pt-2 mt-1">
-                <p className="text-white/70 text-sm font-medium mb-3">Mot de passe de connexion</p>
+                <p className="text-white/70 text-sm font-medium mb-3">{t('loginPasswordSection')}</p>
               </div>
 
               <motion.div
@@ -964,7 +961,7 @@ export default function InscriptionPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
               >
-                <label htmlFor="inscription-password" className="block text-sm font-medium text-white/90 mb-2">Mot de passe</label>
+                <label htmlFor="inscription-password" className="block text-sm font-medium text-white/90 mb-2">{t('passwordLabel')}</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                   <input
@@ -975,14 +972,14 @@ export default function InscriptionPage() {
                     className={`w-full pl-12 pr-12 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.password ? "ring-2 ring-red-500" : ""
                     }`}
-                    placeholder="Minimum 8 caractères"
-                    aria-label="Mot de passe"
+                    placeholder={t('passwordPlaceholder')}
+                    aria-label={t('passwordAria')}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -997,7 +994,7 @@ export default function InscriptionPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9 }}
               >
-                <label htmlFor="inscription-confirm-password" className="block text-sm font-medium text-white/90 mb-2">Confirmer le mot de passe</label>
+                <label htmlFor="inscription-confirm-password" className="block text-sm font-medium text-white/90 mb-2">{t('confirmPassword')}</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5 z-10" />
                   <input
@@ -1008,14 +1005,14 @@ export default function InscriptionPage() {
                     className={`w-full pl-12 pr-12 py-4 bg-white/80 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-white/50 focus:bg-white/90 transition-all duration-200 text-gray-900 placeholder-gray-500 ${
                       errors.confirmPassword ? "ring-2 ring-red-500" : ""
                     }`}
-                    placeholder="Resaisir le mot de passe"
-                    aria-label="Confirmer le mot de passe"
+                    placeholder={t('confirmPasswordPlaceholder')}
+                    aria-label={t('confirmPasswordAria')}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                    aria-label={showConfirmPassword ? "Masquer la confirmation du mot de passe" : "Afficher la confirmation du mot de passe"}
+                    aria-label={showConfirmPassword ? t('hideConfirmPassword') : t('showConfirmPassword')}
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -1039,15 +1036,15 @@ export default function InscriptionPage() {
                     className="w-4 h-4 text-green-800 border-gray-400 rounded focus:ring-green-500 mt-1 bg-white/80"
                   />
                   <span className="ml-3 text-sm text-white">
-                    J'accepte les{" "}
+                    {t('acceptTerms')}{" "}
                     <Link href="/conditions" className="text-[#5AB678] hover:text-green-200 font-medium underline">
-                      conditions d'utilisation
+                      {t('termsLink')}
                     </Link>{" "}
-                    et la{" "}
+                    {t('and')}{" "}
                     <Link href="/politique-confidentialite" className="text-[#5AB678] hover:text-green-200 font-medium underline">
-                      politique de confidentialité
+                      {t('privacyLink')}
                     </Link>{" "}
-                    d'Amane+
+                    {t('ofAmane')}
                   </span>
                 </label>
                 {errors.terms && (
@@ -1058,8 +1055,8 @@ export default function InscriptionPage() {
                   <div className="flex items-start space-x-3">
                     <CheckCircle className="w-5 h-5 text-[#5AB678] mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-white/90">
-                      <p className="font-medium mb-1 text-[#5AB678]">Vos données sont protégées</p>
-                      <p>Nous respectons les principes islamiques et les réglementations RGPD. Vos informations personnelles sont sécurisées et ne seront jamais partagées sans votre consentement.</p>
+                      <p className="font-medium mb-1 text-[#5AB678]">{t('dataProtected')}</p>
+                      <p>{t('dataProtectedDesc')}</p>
                     </div>
                   </div>
                 </div>
@@ -1085,7 +1082,7 @@ export default function InscriptionPage() {
                   />
                 ) : (
                   <>
-                    Créer mon compte
+                    {t('createAccount')}
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </>
                 )}
@@ -1149,12 +1146,12 @@ export default function InscriptionPage() {
               className="mt-8 text-center"
             >
               <p className="text-white">
-                Déjà un compte ?{" "}
+                {t('alreadyAccount')}{" "}
                 <Link
                   href="/connexion"
                   className="text-[#5AB678] hover:text-green-200 font-medium transition-colors underline"
                 >
-                  Se connecter
+                  {t('signIn')}
                 </Link>
               </p>
             </motion.div>
@@ -1188,7 +1185,7 @@ export default function InscriptionPage() {
                       transition={{ delay: 0.1 }}
                       className="text-3xl font-bold text-white mb-4"
                     >
-                      Code de vérification
+                      {t('verificationTitle')}
                     </motion.h1>
 
                     {/* Texte d'instruction */}
@@ -1198,7 +1195,7 @@ export default function InscriptionPage() {
                       transition={{ delay: 0.2 }}
                       className="text-white/90 mb-8"
                     >
-                      Veuillez entrer le code que nous venons de vous envoyer sur votre numéro de telephone / e-mail enregistré.
+                      {t('verificationInstruction')}
                     </motion.p>
 
                     {/* Champs de code */}
@@ -1218,7 +1215,7 @@ export default function InscriptionPage() {
                           value={digit}
                           onChange={(e) => handleCodeChange(index, e.target.value)}
                           onKeyDown={(e) => handleCodeKeyDown(index, e)}
-                          aria-label={`Chiffre ${index + 1} du code`}
+                          aria-label={t('digitAria', { n: index + 1 })}
                           className="w-14 h-14 bg-transparent border border-white/30 rounded-xl text-center text-white text-2xl font-semibold focus:border-[#5AB678] focus:ring-2 focus:ring-[#5AB678]/50 transition-all"
                         />
                       ))}
@@ -1251,7 +1248,7 @@ export default function InscriptionPage() {
                           className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                         />
                       ) : (
-                        'Vérifier'
+                        t('verify')
                       )}
                     </motion.button>
 
@@ -1262,14 +1259,14 @@ export default function InscriptionPage() {
                       transition={{ delay: 0.5 }}
                       className="text-white/80 text-sm"
                     >
-                      Vous n'avez pas reçu de code ?{" "}
+                      {t('noCodeReceived')}{" "}
                       <button
                         type="button"
                         onClick={handleResendCode}
                         disabled={isResending}
                         className="text-[#5AB678] hover:text-[#5AB678]/80 font-medium underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isResending ? 'Envoi…' : resendSuccess ? 'Code renvoyé !' : 'Renvoyer'}
+                        {isResending ? t('resending') : resendSuccess ? t('codeReverified') : t('resend')}
                       </button>
                     </motion.p>
                   </motion.div>
@@ -1318,7 +1315,7 @@ export default function InscriptionPage() {
               transition={{ delay: 0.3 }}
               className="text-3xl font-bold text-white mb-2"
             >
-              Alhamdulillah 🎉
+              {t('successTitle')}
             </motion.h2>
 
             {/* Message de statut */}
@@ -1328,7 +1325,7 @@ export default function InscriptionPage() {
               transition={{ delay: 0.4 }}
               className="text-lg text-white mb-4"
             >
-              Inscription réussie.
+              {t('successMessage')}
             </motion.p>
 
             {/* Message motivationnel */}
@@ -1338,7 +1335,7 @@ export default function InscriptionPage() {
               transition={{ delay: 0.5 }}
               className="text-white/90 mb-8 leading-relaxed"
             >
-              Votre intention sincère est le premier pas vers un avenir halal et béni 🌱
+              {t('successSubtitle')}
             </motion.p>
 
             {/* Bouton Se connecter */}
@@ -1353,7 +1350,7 @@ export default function InscriptionPage() {
                 borderRadius: '9999px'
               }}
             >
-              Se connecter
+              {t('signIn')}
             </motion.button>
           </motion.div>
         </div>

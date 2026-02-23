@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { 
+import {
   Edit, Lock, Trash2, User, Mail, Phone, X, Save, CheckCircle, Eye, EyeOff, ArrowRight, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { updateUser } from '@/services/user';
 import { uploadProfileImage, dataUrlToFile } from '@/lib/upload';
 import { changePassword } from '@/services/auth';
@@ -20,6 +21,7 @@ const defaultUserData = {
 };
 
 export default function ProfilPage() {
+  const t = useTranslations('profil');
   const { user, logout, refreshUser, accessToken } = useAuth();
   const router = useRouter();
   const [userLoading, setUserLoading] = useState(true);
@@ -156,7 +158,7 @@ export default function ProfilPage() {
       setCurrentStep(2);
       setShowSuccessScreen(true);
     } catch (err) {
-      setChangePasswordError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      setChangePasswordError(err instanceof Error ? err.message : t('changePasswordError'));
     } finally {
       setChangePasswordLoading(false);
     }
@@ -256,7 +258,7 @@ export default function ProfilPage() {
       setTimeout(() => setShowToast(false), 3000);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      setSaveError(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde');
+      setSaveError(error instanceof Error ? error.message : t('saveError'));
     } finally {
       setSaving(false);
     }
@@ -290,24 +292,24 @@ export default function ProfilPage() {
                   <button 
                     onClick={handleEditPhoto}
                     className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 bg-[#00644D] rounded-lg flex items-center justify-center z-10 hover:bg-[#00644D]/80 transition-colors cursor-pointer"
-                    title="Modifier la photo de profil"
-                    aria-label="Modifier la photo de profil"
+                    title={t('editPhotoAria')}
+                    aria-label={t('editPhotoAria')}
                   >
                     <Edit size={12} className="sm:w-[14px] sm:h-[14px] text-white" />
                   </button>
                   <button 
                     onClick={handleDeletePhoto}
                     className="absolute top-5 -right-3.5 w-7 h-7 sm:w-8 sm:h-8 bg-[#00644D] rounded-lg flex items-center justify-center z-10 hover:bg-red-500 transition-colors cursor-pointer"
-                    title="Supprimer la photo de profil"
-                    aria-label="Supprimer la photo de profil"
+                    title={t('deletePhotoAria')}
+                    aria-label={t('deletePhotoAria')}
                   >
                     <Trash2 size={12} className="sm:w-[14px] sm:h-[14px] text-white" />
                   </button>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-bold text-base sm:text-lg leading-relaxed mt-3">
-                    <span className="block lg:block">Ajustez votre profil et façonnez</span>
-                    <span className="block lg:block">une expérience Amane+ qui vous ressemble.</span>
+                    <span className="block lg:block">{t('pageSubtitleLine1')}</span>
+                    <span className="block lg:block">{t('pageSubtitleLine2')}</span>
                   </p>
                 </div>
               </div>
@@ -327,7 +329,7 @@ export default function ProfilPage() {
                   onChange={(e) => setUserData({ ...userData, lastName: e.target.value })}
                   disabled={!isEditing}
                   className="w-full pl-12 pr-4 py-4 bg-[#101919]/50 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#00644D] disabled:opacity-70 disabled:cursor-not-allowed"
-                  placeholder="Cissé"
+                  placeholder={t('lastNamePlaceholder')}
                 />
               </div>
               <div className="relative">
@@ -340,7 +342,7 @@ export default function ProfilPage() {
                   onChange={(e) => setUserData({ ...userData, firstName: e.target.value })}
                   disabled={!isEditing}
                   className="w-full pl-12 pr-4 py-4 bg-[#101919]/50 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#00644D] disabled:opacity-70 disabled:cursor-not-allowed"
-                  placeholder="Mariam"
+                  placeholder={t('firstNamePlaceholder')}
                 />
               </div>
             </div>
@@ -357,7 +359,7 @@ export default function ProfilPage() {
                   onChange={(e) => setUserData({ ...userData, email: e.target.value })}
                   disabled={!isEditing}
                   className="w-full pl-12 pr-4 py-4 bg-[#101919]/50 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#00644D] disabled:opacity-70 disabled:cursor-not-allowed text-sm sm:text-base"
-                  placeholder="mariam.cisse@email.com"
+                      placeholder={t('emailPlaceholder')}
                 />
               </div>
               <div className="relative">
@@ -370,7 +372,7 @@ export default function ProfilPage() {
                   onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
                   disabled={!isEditing}
                   className="w-full pl-12 pr-4 py-4 bg-[#101919]/50 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#00644D] disabled:opacity-70 disabled:cursor-not-allowed"
-                  placeholder="+225 01 23 45 67 89"
+                  placeholder={t('phonePlaceholder')}
                 />
               </div>
             </div>
@@ -393,7 +395,7 @@ export default function ProfilPage() {
                       className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 bg-[#00644D] text-white rounded-3xl hover:bg-[#00644D]/90 transition-colors text-sm sm:text-base"
                     >
                       <Edit size={20} />
-                      <span>Modifier</span>
+                      <span>{t('edit')}</span>
                     </motion.button>
                   ) : (
                     <>
@@ -409,7 +411,7 @@ export default function ProfilPage() {
                         ) : (
                           <Save size={20} />
                         )}
-                        <span>{saving ? 'Enregistrement...' : 'Sauvegarder'}</span>
+                        <span>{saving ? t('saving') : t('save')}</span>
                       </motion.button>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -418,7 +420,7 @@ export default function ProfilPage() {
                         className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 border border-white/20 text-white rounded-3xl hover:bg-white/10 transition-colors text-sm sm:text-base"
                       >
                         <X size={20} />
-                        <span>Annuler</span>
+                        <span>{t('cancel')}</span>
                       </motion.button>
                     </>
                   )}
@@ -431,7 +433,7 @@ export default function ProfilPage() {
                     className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl hover:opacity-90 transition-colors text-sm sm:text-base"
                   >
                     <Lock size={20} />
-                    <span>Changer mon mot de passe</span>
+                    <span>{t('changePassword')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -440,7 +442,7 @@ export default function ProfilPage() {
                     className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 border border-red-500 text-red-500 rounded-3xl hover:bg-red-500/10 transition-colors text-sm sm:text-base"
                   >
                     <User size={20} />
-                    <span>Supprimer mon compte</span>
+                    <span>{t('deleteAccount')}</span>
                   </motion.button>
                 </div>
               </div>
@@ -454,9 +456,9 @@ export default function ProfilPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-[#101919] rounded-2xl p-6 max-w-md w-full border border-white/10"
           >
-            <h3 className="text-xl font-bold text-white mb-4">Confirmer la suppression</h3>
+            <h3 className="text-xl font-bold text-white mb-4">{t('confirmDeletePhotoTitle')}</h3>
             <p className="text-white/80 mb-6">
-              Êtes-vous sûr de vouloir supprimer votre photo de profil ? Cette action est irréversible.
+              {t('confirmDeletePhotoMessage')}
             </p>
             <div className="flex space-x-4">
               <motion.button
@@ -465,7 +467,7 @@ export default function ProfilPage() {
                 onClick={cancelDeletePhoto}
                 className="flex-1 px-4 py-3 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-colors"
               >
-                Annuler
+                {t('cancel')}
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -473,7 +475,7 @@ export default function ProfilPage() {
                 onClick={confirmDeletePhoto}
                 className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
-                Supprimer
+                {t('delete')}
               </motion.button>
             </div>
           </motion.div>
@@ -495,7 +497,7 @@ export default function ProfilPage() {
               <button
                 onClick={handleClosePasswordModal}
                 className="absolute top-4 right-4 w-10 h-10 bg-[#00C48C] rounded-full flex items-center justify-center z-10 hover:bg-[#00C48C]/80 transition-colors"
-                aria-label="Fermer"
+                aria-label={t('closeAria')}
               >
                 <X size={20} className="text-white" />
               </button>
@@ -520,7 +522,7 @@ export default function ProfilPage() {
                       <span className={`font-medium ${
                         currentStep >= 1 ? 'text-white' : 'text-[#888888]'
                       }`}>
-                        Mot de passe
+                        {t('passwordStepLabel')}
                       </span>
                     </div>
 
@@ -541,7 +543,7 @@ export default function ProfilPage() {
                       <span className={`font-medium ${
                         currentStep >= 2 ? 'text-white' : 'text-[#888888]'
                       }`}>
-                        Vérification
+                        {t('verificationStepLabel')}
                       </span>
                     </div>
                   </div>
@@ -552,9 +554,9 @@ export default function ProfilPage() {
                   {currentStep === 1 && (
                     <div className="space-y-6">
                       <div>
-                        <h2 className="text-3xl font-bold text-white mb-2">Mot de passe</h2>
-                        <p className="text-white text-lg mb-1">Changer mon mot de passe</p>
-                        <p className="text-[#888888] text-sm">Veuillez remplir le formulaire ci-dessous</p>
+                        <h2 className="text-3xl font-bold text-white mb-2">{t('passwordTitle')}</h2>
+                        <p className="text-white text-lg mb-1">{t('changePasswordSubtitle')}</p>
+                        <p className="text-[#888888] text-sm">{t('fillFormHint')}</p>
                       </div>
 
                       <div className="space-y-4 bg-[#00644D]/10 rounded-lg p-4">
@@ -567,7 +569,7 @@ export default function ProfilPage() {
                             type={showPasswords.current ? 'text' : 'password'}
                             value={passwordData.current}
                             onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
-                            placeholder="Mot de passe actuel"
+                            placeholder={t('currentPasswordPlaceholder')}
                             className="w-full pl-12 pr-12 py-4 bg-[#101919] border border-white/60 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#00C48C]"
                           />
                           <button
@@ -588,7 +590,7 @@ export default function ProfilPage() {
                             type={showPasswords.new ? 'text' : 'password'}
                             value={passwordData.new}
                             onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
-                            placeholder="Nouveau mot de passe"
+                            placeholder={t('newPasswordPlaceholder')}
                             className="w-full pl-12 pr-12 py-4 bg-[#101919] border border-white/60 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#00C48C]"
                           />
                           <button
@@ -609,7 +611,7 @@ export default function ProfilPage() {
                             type={showPasswords.confirm ? 'text' : 'password'}
                             value={passwordData.confirm}
                             onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
-                            placeholder="Confirmer nouveau mot de passe"
+                            placeholder={t('confirmPasswordPlaceholder')}
                             className="w-full pl-12 pr-12 py-4 bg-[#101919] border border-white/60 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#00C48C]"
                           />
                           <button
@@ -638,7 +640,7 @@ export default function ProfilPage() {
                           disabled={changePasswordLoading}
                           className="flex-1 px-6 py-3 bg-[#00644d]/10 text-[#20b6b3] rounded-3xl hover:bg-[#00644d]/20 transition-colors border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Quitter
+                          {t('quit')}
                         </motion.button>
                         <motion.button
                           whileHover={{ scale: 1.02 }}
@@ -650,11 +652,11 @@ export default function ProfilPage() {
                           {changePasswordLoading ? (
                             <>
                               <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              <span>Enregistrement...</span>
+                              <span>{t('saving')}</span>
                             </>
                           ) : (
                             <>
-                              <span>Suivant</span>
+                              <span>{t('next')}</span>
                               <ArrowRight size={20} />
                             </>
                           )}
@@ -666,14 +668,14 @@ export default function ProfilPage() {
                   {currentStep === 2 && !showSuccessScreen && (
                     <div className="space-y-6">
                       <div>
-                        <h2 className="text-3xl font-bold text-white mb-2">Vérification</h2>
+                        <h2 className="text-3xl font-bold text-white mb-2">{t('verificationTitle')}</h2>
                       </div>
 
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-white font-bold mb-2">Code OTP</label>
+                          <label className="block text-white font-bold mb-2">{t('otpLabel')}</label>
                           <p className="text-white text-sm">
-                            Veuillez entrer le code que nous venons de vous envoyer sur votre e-mail enregistré.
+                            {t('otpHint')}
                           </p>
                         </div>
 
@@ -689,8 +691,8 @@ export default function ProfilPage() {
                               value={digit}
                               onChange={(e) => handleOtpChange(index, e.target.value)}
                               onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                              aria-label={`Chiffre ${index + 1} du code OTP`}
-                              title={`Chiffre ${index + 1} du code OTP`}
+                              aria-label={t('otpDigitAria', { n: index + 1 })}
+                              title={t('otpDigitAria', { n: index + 1 })}
                               className="w-14 h-14 text-center text-2xl font-bold bg-[#101919] border border-[#00C48C] rounded-lg text-white focus:outline-none focus:border-[#00C48C] focus:ring-2 focus:ring-[#00C48C]/50"
                             />
                           ))}
@@ -705,24 +707,24 @@ export default function ProfilPage() {
                             disabled={otpCode.join('').length !== 5}
                             className="px-8 py-3 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl text-lg font-medium hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Vérifier
+                            {t('verify')}
                           </motion.button>
                         </div>
 
                         {/* Resend Code */}
                         <div className="text-center pt-4">
                           <p className="text-white text-sm">
-                            Vous n'avez pas reçu de code ?{' '}
+                            {t('noCodeReceived')}{' '}
                             {canResend ? (
                               <button
                                 onClick={handleResendCode}
                                 className="text-[#00C48C] hover:text-[#00C48C]/80 font-medium underline"
                               >
-                                Renvoyer
+                                {t('resend')}
                               </button>
                             ) : (
                               <span>
-                                Renvoyer dans{' '}
+                                {t('resendIn')}{' '}
                                 <span className="text-[#00C48C] font-bold">
                                   {String(Math.floor(resendTimer / 60)).padStart(2, '0')}:
                                   {String(resendTimer % 60).padStart(2, '0')}s
@@ -763,9 +765,9 @@ export default function ProfilPage() {
                         transition={{ delay: 0.2 }}
                         className="text-center"
                       >
-                        <h2 className="text-3xl font-bold text-white mb-4">Succès !</h2>
+                        <h2 className="text-3xl font-bold text-white mb-4">{t('successTitle')}</h2>
                         <p className="text-white text-lg">
-                          Votre mot de passe a été réinitialisé avec succès.
+                          {t('passwordResetSuccess')}
                         </p>
                       </motion.div>
 
@@ -779,7 +781,7 @@ export default function ProfilPage() {
                         onClick={handleSuccessOk}
                         className="px-12 py-4 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl hover:opacity-90 transition-colors font-medium text-lg"
                       >
-                        Ok
+                        {t('ok')}
                       </motion.button>
                     </div>
                   )}
@@ -809,7 +811,7 @@ export default function ProfilPage() {
                   setDeleteConfirmText('');
                 }}
                 className="absolute top-4 right-4 w-10 h-10 bg-[#00C48C] rounded-full flex items-center justify-center z-10 hover:bg-[#00C48C]/80 transition-colors"
-                aria-label="Fermer"
+                aria-label={t('closeAria')}
               >
                 <X size={20} className="text-white" />
               </button>
@@ -833,22 +835,22 @@ export default function ProfilPage() {
 
                 {/* Title */}
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-bold text-white">Supprimer mon compte 😞</h2>
+                  <h2 className="text-2xl font-bold text-white">{t('deleteAccountTitle')}</h2>
                   {!showDeleteConfirmation ? (
                     <>
-                      <p className="text-white text-base">Cette action est irréversible.</p>
+                      <p className="text-white text-base">{t('deleteAccountIrreversible')}</p>
                       <p className="text-white text-base">
-                        Êtes-vous sûr de vouloir supprimer votre compte ?
+                        {t('deleteAccountConfirm')}
                       </p>
                     </>
                   ) : (
                     <>
-                      <p className="text-white text-base">Cette action est irréversible.</p>
+                      <p className="text-white text-base">{t('deleteAccountIrreversible')}</p>
                       <p className="text-white text-base">
-                        Êtes-vous sûr de vouloir supprimer votre compte ?
+                        {t('deleteAccountConfirm')}
                       </p>
                       <p className="text-white text-base mt-4">
-                        Si vous souhaitez vraiment supprimer votre compte, écrivez <strong className="text-[#ea4335] font-bold">"supprimer"</strong> dans le champ ci-dessous.
+                        {t('deleteAccountTypeConfirm')}
                       </p>
                       <div className="pt-4">
                         <input
@@ -857,7 +859,7 @@ export default function ProfilPage() {
                           onChange={(e) => {
                             setDeleteConfirmText(e.target.value);
                           }}
-                          placeholder="Ecrivez ici..."
+                          placeholder={t('writeHerePlaceholder')}
                           className="w-full px-4 py-3 bg-[#101919] border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#00C48C]"
                         />
                       </div>
@@ -876,7 +878,7 @@ export default function ProfilPage() {
                       }}
                       className="flex-1 px-6 py-3 bg-[#ea4335]/20 text-white rounded-3xl hover:opacity-90 transition-colors font-medium"
                     >
-                      Oui, supprimer
+                      {t('yesDelete')}
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -888,11 +890,11 @@ export default function ProfilPage() {
                       }}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl hover:opacity-90 transition-colors font-medium"
                     >
-                      Non
+                      {t('no')}
                     </motion.button>
                   </div>
                 ) : (
-                  deleteConfirmText.toLowerCase().trim() === 'supprimer' && (
+                  deleteConfirmText.toLowerCase().trim() === t('deleteAccountConfirmWord') && (
                     <div className="flex space-x-4 w-full pt-4">
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -905,7 +907,7 @@ export default function ProfilPage() {
                         }}
                         className="flex-1 px-6 py-3 bg-gradient-to-r from-[#9B4242] to-[#D65E5E] text-white rounded-3xl hover:opacity-90 transition-colors font-medium"
                       >
-                        Supprimer
+                        {t('delete')}
                       </motion.button>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -916,7 +918,7 @@ export default function ProfilPage() {
                         }}
                         className="flex-1 px-6 py-3 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl hover:opacity-90 transition-colors font-medium"
                       >
-                        Annuler
+                        {t('cancel')}
                       </motion.button>
                     </div>
                   )
@@ -956,9 +958,9 @@ export default function ProfilPage() {
                   transition={{ delay: 0.2 }}
                   className="space-y-2"
                 >
-                  <h2 className="text-2xl font-bold text-white">Compte supprimé</h2>
+                  <h2 className="text-2xl font-bold text-white">{t('accountDeletedTitle')}</h2>
                   <p className="text-white/70 text-base">
-                    Nous espérons vous revoir bientôt.
+                    {t('accountDeletedMessage')}
                   </p>
                 </motion.div>
 
@@ -998,8 +1000,8 @@ export default function ProfilPage() {
             <div className="bg-[#00644D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center space-x-3 min-w-[300px]">
               <CheckCircle size={24} className="flex-shrink-0" />
               <div>
-                <p className="font-semibold">Succès !</p>
-                <p className="text-sm text-white/90">Vos informations ont été sauvegardées</p>
+                <p className="font-semibold">{t('toastSuccessTitle')}</p>
+                <p className="text-sm text-white/90">{t('toastSuccessMessage')}</p>
               </div>
             </div>
           </motion.div>

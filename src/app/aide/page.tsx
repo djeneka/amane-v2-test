@@ -3,33 +3,16 @@
 import { motion } from 'framer-motion';
 import { HelpCircle, BookOpen, MessageCircle, FileText, Scale, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 export default function AidePage() {
+  const t = useTranslations('home.aide');
+
   const ressources = [
-    {
-      title: 'FAQ',
-      description: 'Consultez les réponses aux questions les plus fréquentes.',
-      href: '/faq',
-      icon: HelpCircle,
-    },
-    {
-      title: 'Support',
-      description: 'Contactez notre équipe pour toute assistance personnalisée.',
-      href: '/contact',
-      icon: MessageCircle,
-    },
-    {
-      title: 'Confidentialité',
-      description: 'Découvrez comment nous protégeons vos données.',
-      href: '/confidentialite',
-      icon: FileText,
-    },
-    {
-      title: 'Termes et conditions',
-      description: 'Consultez les conditions générales d\'utilisation.',
-      href: '/termes-conditions',
-      icon: Scale,
-    },
+    { titleKey: 'faqTitle' as const, descKey: 'faqDesc' as const, href: '/faq', icon: HelpCircle },
+    { titleKey: 'supportTitle' as const, descKey: 'supportDesc' as const, href: '/contact', icon: MessageCircle },
+    { titleKey: 'privacyTitle' as const, descKey: 'privacyDesc' as const, href: '/confidentialite', icon: FileText },
+    { titleKey: 'termsTitle' as const, descKey: 'termsDesc' as const, href: '/termes-conditions', icon: Scale },
   ];
 
   return (
@@ -48,16 +31,16 @@ export default function AidePage() {
           >
             <Link href="/" className="inline-flex items-center text-white/80 hover:text-white mb-6 transition-colors">
               <ArrowLeft size={20} className="mr-2" />
-              Retour à l&apos;accueil
+              {t('backHome')}
             </Link>
             <div className="flex justify-center mb-4">
               <BookOpen size={48} className="text-white/90" />
             </div>
             <h1 className="text-4xl lg:text-5xl font-bold mb-4">
-              Centre d&apos;aide
+              {t('title')}
             </h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              Trouvez rapidement les réponses et ressources dont vous avez besoin pour utiliser Amane+
+              {t('subtitle')}
             </p>
           </motion.div>
         </div>
@@ -81,10 +64,10 @@ export default function AidePage() {
                     <item.icon size={28} className="text-[#5AB678]" />
                   </div>
                   <h2 className="text-xl font-semibold text-white mb-2 group-hover:text-[#5AB678] transition-colors">
-                    {item.title}
+                    {t(item.titleKey)}
                   </h2>
                   <p className="text-white/70 leading-relaxed">
-                    {item.description}
+                    {t(item.descKey)}
                   </p>
                 </Link>
               </motion.div>
@@ -97,13 +80,13 @@ export default function AidePage() {
             transition={{ delay: 0.4 }}
             className="mt-16 text-center"
           >
-            <p className="text-white/70 mb-4">Vous ne trouvez pas ce que vous cherchez ?</p>
+            <p className="text-white/70 mb-4">{t('notFound')}</p>
             <Link
               href="/contact"
               className="inline-flex items-center gap-2 bg-[#5AB678] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#4a9565] transition-colors"
             >
               <MessageCircle size={20} />
-              Contacter le support
+              {t('contactSupport')}
             </Link>
           </motion.div>
         </div>

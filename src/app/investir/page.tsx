@@ -11,7 +11,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { getInvestmentProducts, getMyInvestments, mapInvestmentToDisplay, API_CATEGORY_LABELS, API_CATEGORY_TO_SLUG, type InvestmentProductDisplay, type InvestmentCategorySlug, type MyInvestment } from '@/services/investments';
+import { getInvestmentProducts, getMyInvestments, mapInvestmentToDisplay, API_CATEGORY_TO_SLUG, type InvestmentProductDisplay, type InvestmentCategorySlug, type MyInvestment } from '@/services/investments';
 import MakeInvestmentModal from '@/components/MakeInvestmentModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { subscribeNewsletter } from '@/services/newsletter';
@@ -64,7 +64,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
             className="bg-transparent text-gray-600 font-medium py-4 pr-2 focus:ring-0 focus:outline-none cursor-pointer appearance-none"
             aria-label={t('countryCodeLabel')}
           >
-            <optgroup label="Afrique de l'Ouest">
+            <optgroup label={t('optgroupWestAfrica')}>
               <option value="+225">🇨🇮 +225</option>
               <option value="+221">🇸🇳 +221</option>
               <option value="+223">🇲🇱 +223</option>
@@ -79,7 +79,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
               <option value="+232">🇸🇱 +232</option>
               <option value="+238">🇨🇻 +238</option>
             </optgroup>
-            <optgroup label="Europe">
+            <optgroup label={t('optgroupEurope')}>
               <option value="+33">🇫🇷 +33</option>
               <option value="+32">🇧🇪 +32</option>
               <option value="+41">🇨🇭 +41</option>
@@ -91,7 +91,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
               <option value="+351">🇵🇹 +351</option>
               <option value="+48">🇵🇱 +48</option>
             </optgroup>
-            <optgroup label="Amérique du Nord">
+            <optgroup label={t('optgroupNorthAmerica')}>
               <option value="+1">🇺🇸 🇨🇦 +1</option>
             </optgroup>
           </select>
@@ -258,6 +258,17 @@ export default function InvestirPage() {
   const hasMultipleImages = (_product: InvestmentProductDisplay) => false;
 
   /** Filtres : "Toutes" + catégories API des investissements, dédupliquées et ordonnées */
+  const getApiCategoryName = (apiCat: string) => {
+    const key: Record<string, string> = {
+      REAL_ESTATE: 'categoryRealEstate',
+      AGRICULTURE: 'categoryAgriculture',
+      ETHICAL: 'categoryEthical',
+      TECHNOLOGY: 'categoryTechnology',
+      TECH: 'categoryTechnology',
+      ENERGY: 'categoryEnergy',
+    };
+    return key[apiCat] ? t(key[apiCat] as 'categoryRealEstate' | 'categoryAgriculture' | 'categoryEthical' | 'categoryTechnology' | 'categoryEnergy') : apiCat.replace(/_/g, ' ');
+  };
   const categories = useMemo(() => {
     const uniqueApiCategories = Array.from(
       new Set(products.flatMap((p) => p.categories).filter(Boolean))
@@ -273,13 +284,13 @@ export default function InvestirPage() {
         const slug = API_CATEGORY_TO_SLUG[apiCat] ?? 'immobilier';
         return {
           id: apiCat,
-          name: API_CATEGORY_LABELS[apiCat] ?? apiCat.replace(/_/g, ' '),
+          name: getApiCategoryName(apiCat),
           icon: categoryIcons[slug],
           color: categoryColors[slug],
         };
       }),
     ];
-  }, [products]);
+  }, [products, t]);
 
   const sortOptions = [
     { id: 'popular', name: t('sortPopular') },
@@ -368,6 +379,17 @@ export default function InvestirPage() {
     { label: t('yearsExperience'), value: '15+', icon: Star },
   ];
 
+  /** Libellé de catégorie produit pour affichage (badge) */
+  const getProductCategoryLabel = (slug: InvestmentCategorySlug) => {
+    const key: Record<InvestmentCategorySlug, string> = {
+      immobilier: 'categoryRealEstate',
+      agriculture: 'categoryAgriculture',
+      technologie: 'categoryTechnology',
+      energie: 'categoryEnergy',
+    };
+    return t(key[slug] as 'categoryRealEstate' | 'categoryAgriculture' | 'categoryTechnology' | 'categoryEnergy');
+  };
+
   /** Icône par mot-clé dans le titre du produit */
   const getInvestmentIcon = (title: string) => {
     const t = (title || '').toLowerCase();
@@ -404,7 +426,7 @@ export default function InvestirPage() {
   const myInvestmentsDisplay = useMemo(() => {
     return investments.map((inv) => {
       const product = inv.investmentSubscription?.investmentProduct;
-      const title = product?.title ?? 'Investissement';
+      const title = product?.title ?? t('defaultProductTitle');
       const returnVal = parseFloat(product?.estimatedReturn ?? '0') || 0;
       return {
         id: inv.id,
@@ -414,17 +436,17 @@ export default function InvestirPage() {
         category: getInvestmentCategory(title),
         amount: formatAmount(inv.amount),
         amountValue: inv.amount,
-        status: inv.status === 'ACTIVE' ? 'Actif' : inv.status,
+        status: inv.status === 'ACTIVE' ? t('statusActive') : inv.status,
         returnRate: `${returnVal}%`,
         returnRateValue: returnVal,
         startDate: formatInvestmentDate(inv.investmentDate),
         startDateValue: new Date(inv.investmentDate),
-        description: `Investissement de ${formatAmount(inv.amount)} — Durée ${product?.duration ?? '–'} mois.`,
-        benefits: [`Rendement estimé ${returnVal}%`, `Durée ${product?.duration ?? '–'} mois`],
+        description: t('investmentOfDesc', { amount: formatAmount(inv.amount), duration: product?.duration ?? '–' }),
+        benefits: [t('estimatedReturnLabel') + ' ' + returnVal + '%', t('durationLabel') + ' ' + (product?.duration ?? '–') + ' ' + t('durationMonths')],
         raw: inv,
       };
     });
-  }, [investments]);
+  }, [investments, t]);
 
   // Filtrer et trier les investissements
   const filteredInvestments = myInvestmentsDisplay
@@ -486,7 +508,7 @@ export default function InvestirPage() {
             className="flex flex-col items-start mb-8"
           >
             {/* Fil d'Ariane */}
-            <h3 className="text-white text-xl font-bold mb-2">Investir</h3>
+            <h3 className="text-white text-xl font-bold mb-2">{t('investir')}</h3>
             <nav className="text-sm mb-2">
               <Link href="/">
                 <span className="text-gray-300 font-bold">{t('home')}</span>
@@ -509,7 +531,7 @@ export default function InvestirPage() {
                   className="inline-block mb-8"
                 >
                   <div className="bg-[#00644d] rounded-full flex items-center justify-center shadow-2xl">
-                    <Image src="/images/Image(8).png" alt="Investir" width={100} height={100} />
+                    <Image src="/images/Image(8).png" alt={t('investir')} width={100} height={100} />
                   </div>
                 </motion.div>
                 <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
@@ -523,7 +545,7 @@ export default function InvestirPage() {
               <div className="relative w-full min-h-[400px] rounded-2xl overflow-hidden mb-16 bg-[#0d1414]">
                 <Image
                   src="/images/invest-bg.png"
-                  alt="Investissement éthique"
+                  alt={t('altEthicalInvestment')}
                   fill
                   className="object-cover"
                   sizes="(max-width: 1200px) 100vw, 1200px"
@@ -540,9 +562,9 @@ export default function InvestirPage() {
                   <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4">
                     <p>🚫</p>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-3">Sans Riba (Intérêts)</h3>
+                  <h3 className="text-xl font-bold text-white mb-3">{t('cardNoRibaTitle')}</h3>
                   <p className="text-white/80 leading-relaxed">
-                    Votre argent ne génère pas d'intérêts usuraires. Il produit des profits basés sur le partage des risques et des bénéfices.
+                    {t('cardNoRibaDesc')}
                   </p>
                 </motion.div>
                 <motion.div
@@ -554,9 +576,9 @@ export default function InvestirPage() {
                   <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4">
                     <BarChart3 size={24} className="text-blue-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-3">Économie Réelle</h3>
+                  <h3 className="text-xl font-bold text-white mb-3">{t('cardRealEconomyTitle')}</h3>
                   <p className="text-white/80 leading-relaxed">
-                    Investissez dans des projets tangibles : Immobilier, Agriculture, PME locales, Pas de spéculation floue.
+                    {t('cardRealEconomyDesc')}
                   </p>
                 </motion.div>
                 <motion.div
@@ -568,25 +590,25 @@ export default function InvestirPage() {
                   <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4">
                     <p>✅</p>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-3">Certifié Sharia-Compliant</h3>
+                  <h3 className="text-xl font-bold text-white mb-3">{t('cardShariaTitle')}</h3>
                   <p className="text-white/80 leading-relaxed">
-                    Investissez dans des projets tangibles : Immobilier, Agriculture, PME locales, Pas de spéculation floue.
+                    {t('cardShariaDesc')}
                   </p>
                 </motion.div>
               </div>
 
               <h2 className="text-3xl lg:text-4xl font-bold text-white text-center mb-10">
-                Nos opportunités à venir
+                {t('opportunitiesComingTitle')}
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-12">
                 {[
-                  { title: 'Immobilier locatif', desc: 'Investissez dans la pierre et recevez des loyers périodiques.', image: '/images/invest-immo.png' },
-                  { title: 'Sukuk (Obligations Islamiques)', desc: 'Pour une rentabilité stable et sécurisée', image: '/images/sukuk.png' },
-                  { title: 'Mudaraba (Partenariat)', desc: 'Financez des entrepreneurs talentueux et partagez leurs succès', image: '/images/mudaraba.png' },
+                  { titleKey: 'opportunityImmo' as const, descKey: 'opportunityImmoDesc' as const, image: '/images/invest-immo.png' },
+                  { titleKey: 'opportunitySukuk' as const, descKey: 'opportunitySukukDesc' as const, image: '/images/sukuk.png' },
+                  { titleKey: 'opportunityMudaraba' as const, descKey: 'opportunityMudarabaDesc' as const, image: '/images/mudaraba.png' },
                 ].map((card, index) => (
                   <motion.div
-                    key={card.title}
+                    key={card.titleKey}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
@@ -596,15 +618,15 @@ export default function InvestirPage() {
                     <div className="relative w-full aspect-[4/5]">
                       <Image
                         src={card.image}
-                        alt={card.title}
+                        alt={t(card.titleKey)}
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="(max-width: 768px) 100vw, 33vw"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                        <h3 className="text-xl font-bold mb-2">{card.title}</h3>
-                        <p className="text-white/90 text-sm">{card.desc}</p>
+                        <h3 className="text-xl font-bold mb-2">{t(card.titleKey)}</h3>
+                        <p className="text-white/90 text-sm">{t(card.descKey)}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -624,7 +646,7 @@ export default function InvestirPage() {
                   className="inline-block mb-8"
                 >
                   <div className="bg-[#00644d] rounded-full flex items-center justify-center shadow-2xl">
-                    <Image src="/images/Image(8).png" alt="Investir" width={100} height={100} />
+                    <Image src="/images/Image(8).png" alt={t('investir')} width={100} height={100} />
                   </div>
                 </motion.div>
                 
@@ -746,7 +768,7 @@ export default function InvestirPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 border-2 border-green-400 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-white placeholder-white/80 bg-transparent"
-                  title={activeTab === 'products' ? "Rechercher un produit d'investissement" : "Rechercher un investissement"}
+                  title={activeTab === 'products' ? t('searchPlaceholder') : t('searchMyPlaceholder')}
                 />
               </div>
             </div>
@@ -912,7 +934,7 @@ export default function InvestirPage() {
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
                               className="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
-                              title="Voir les détails du produit"
+                              title={t('viewDetailsProduct')}
                             >
                               <Eye size={16} />
                             </motion.button>
@@ -922,15 +944,15 @@ export default function InvestirPage() {
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
                             categoryColors[product.category]
                           }`}>
-                            {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
+                            {getProductCategoryLabel(product.category)}
                           </span>
                         </div>
                         <div className="absolute top-4 right-12">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
-                            riskColors[product.riskLevel]
-                          }`}>
-                            Risque {product.riskLevel}
-                          </span>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
+                              riskColors[product.riskLevel]
+                            }`}>
+                              {t('riskLabel')} {product.riskLevel === 'faible' ? t('riskLow') : product.riskLevel === 'modere' ? t('riskModerate') : t('riskHigh')}
+                            </span>
                         </div>
                       </div>
 
@@ -945,19 +967,19 @@ export default function InvestirPage() {
                           <div className="space-y-4">
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
-                              <span className="text-white/80">Rendement attendu</span>
+                              <span className="text-white/80">{t('expectedReturnLabel')}</span>
                               <span className="font-semibold text-white">
                                 {product.expectedReturn}%
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-white/80">Investissement min.</span>
+                              <span className="text-white/80">{t('minInvestmentLabel')}</span>
                               <span className="font-semibold text-white truncate">
                                 {formatCompactAmount(product.minInvestment)}
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
-                              <span className="text-white/80">Durée</span>
+                              <span className="text-white/80">{t('durationLabel')}</span>
                               <span className="font-semibold text-white">
                                 {product.duration}
                               </span>
@@ -965,7 +987,7 @@ export default function InvestirPage() {
                           </div>
 
                           <div className="mb-4">
-                            <h4 className="font-bold text-white mb-3">Avantages inclus :</h4>
+                            <h4 className="font-bold text-white mb-3">{t('benefitsIncludedLabel')}</h4>
                             <ul className="space-y-2">
                               {(product.benefits?.length ? product.benefits : [t('benefit1'), t('benefit2'), t('benefit3')]).map((benefit, i) => (
                                 <li key={i} className="flex items-center space-x-2 text-sm text-white/80">
@@ -983,7 +1005,7 @@ export default function InvestirPage() {
                               onClick={() => handleInvest(product)}
                               className="w-full px-3 py-2 bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white rounded-2xl font-semibold hover:from-[#20b6b3] hover:to-[#00644d] transition-all duration-200 text-sm flex-shrink-0 ml-2"
                             >
-                              Investir
+                              {t('invest')}
                             </motion.button>
                           </div>
                         </div>
@@ -1057,7 +1079,7 @@ export default function InvestirPage() {
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                                 className="absolute top-1 right-1 w-6 h-6 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
-                                title="Voir les détails du produit"
+                                title={t('viewDetailsProduct')}
                               >
                                 <Eye size={12} />
                               </motion.button>
@@ -1067,14 +1089,14 @@ export default function InvestirPage() {
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${
                               categoryColors[product.category]
                             }`}>
-                              {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
+                              {getProductCategoryLabel(product.category)}
                             </span>
                           </div>
                           <div className="absolute top-2 right-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${
                               riskColors[product.riskLevel]
                             }`}>
-                              Risque {product.riskLevel}
+                              {t('riskLabel')} {product.riskLevel === 'faible' ? t('riskLow') : product.riskLevel === 'modere' ? t('riskModerate') : t('riskHigh')}
                             </span>
                           </div>
                         </div>
@@ -1090,11 +1112,11 @@ export default function InvestirPage() {
                           <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
                             <div className="flex items-center space-x-1">
                               <TrendingUp size={16} />
-                              <span>Rendement: {product.expectedReturn}%</span>
+                              <span>{t('returnLabel')}: {product.expectedReturn}%</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Calendar size={16} />
-                              <span>Durée: {product.duration}</span>
+                              <span>{t('durationLabel')}: {product.duration}</span>
                             </div>
                           </div>
 
@@ -1183,8 +1205,8 @@ export default function InvestirPage() {
                 <div className="w-24 h-24 bg-[#2C3E3E] rounded-full flex items-center justify-center mx-auto mb-6">
                   <TrendingUp size={32} className="text-[#5FB678]" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">Connectez-vous</h3>
-                <p className="text-white/80">Connectez-vous pour voir vos investissements.</p>
+                <h3 className="text-xl font-semibold text-white mb-2">{t('signIn')}</h3>
+                <p className="text-white/80">{t('signInToInvestments')}</p>
               </motion.div>
             ) : filteredInvestments.length > 0 ? (
               filteredInvestments.map((investment, index) => {
@@ -1266,10 +1288,10 @@ export default function InvestirPage() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-              Pourquoi investir halal ?
+              {t('whyInvestHalalTitle')}
             </h2>
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
-              Découvrez les avantages de l'investissement éthique islamique
+              {t('whyInvestHalalSubtitle')}
             </p>
           </motion.div>
 
@@ -1285,11 +1307,10 @@ export default function InvestirPage() {
                 <CheckCircle size={32} className="text-green-600" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">
-                Éthique et Responsable
+                {t('whyEthicalTitle')}
               </h3>
               <p className="text-white/80 leading-relaxed">
-                Nos investissements excluent les secteurs non conformes aux principes islamiques 
-                et privilégient les projets à impact positif.
+                {t('whyEthicalDesc')}
               </p>
             </motion.div>
 
@@ -1304,11 +1325,10 @@ export default function InvestirPage() {
                 <BarChart3 size={32} className="text-blue-600" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">
-                Performance Éprouvée
+                {t('whyPerformanceTitle')}
               </h3>
               <p className="text-white/80 leading-relaxed">
-                Des rendements compétitifs avec une gestion de risque rigoureuse 
-                et une transparence totale sur les investissements.
+                {t('whyPerformanceDesc')}
               </p>
             </motion.div>
 
@@ -1323,11 +1343,10 @@ export default function InvestirPage() {
                 <Target size={32} className="text-purple-600" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">
-                Diversification Optimale
+                {t('whyDiversificationTitle')}
               </h3>
               <p className="text-white/80 leading-relaxed">
-                Portefeuille diversifié dans des secteurs variés pour optimiser 
-                les rendements tout en minimisant les risques.
+                {t('whyDiversificationDesc')}
               </p>
             </motion.div>
           </div>

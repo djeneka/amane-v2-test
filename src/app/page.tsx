@@ -1803,7 +1803,7 @@ export default function Home() {
             viewport={{ once: true }}
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-8">
-              Prêt à rejoindre notre communauté ou nous contacter ?
+              {t('joinCommunity.title')}
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/inscription">

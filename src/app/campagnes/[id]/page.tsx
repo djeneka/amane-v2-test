@@ -1,4 +1,5 @@
 import CampaignDetailClient from './CampaignDetailClient';
+import CampaignNotFoundBlock from './CampaignNotFoundBlock';
 import { getCampaignById } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
 
@@ -17,17 +18,7 @@ export default async function CampaignDetailPage({ params }: CampaignDetailPageP
   ]);
 
   if (!campaign) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #0d4d3d, #001a14)' }}>
-        <div className="text-center text-white px-4">
-          <h1 className="text-2xl font-bold mb-4">Campagne non trouvée</h1>
-          <p className="text-white/80 mb-6">La campagne que vous recherchez n'existe pas ou a été supprimée.</p>
-          <a href="/campagnes" className="text-green-400 hover:text-green-300 font-medium underline">
-            Retour aux campagnes
-          </a>
-        </div>
-      </div>
-    );
+    return <CampaignNotFoundBlock />;
   }
 
   const donorCount = stats.byCampaign.find((b) => b.campaignId === id)?.count ?? 0;

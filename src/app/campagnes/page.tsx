@@ -17,6 +17,8 @@ import MakeDepositModal from '@/components/MakeDepositModal';
 import { getActiveCampaigns } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslations } from 'next-intl';
+import { useCampaignTranslations } from '@/contexts/CampaignTranslationsContext';
 
 const COUNTRY_LABELS: Record<string, string> = {
   ci: "côte d'ivoire",
@@ -29,9 +31,30 @@ const CITY_LABELS: Record<string, string> = {
   bamako: 'bamako',
 };
 
+const CATEGORY_KEYS: Record<string, string> = {
+  all: 'categoryAll',
+  urgence: 'categoryUrgence',
+  education: 'categoryEducation',
+  sante: 'categorySante',
+  developpement: 'categoryDeveloppement',
+  refugies: 'categoryRefugies',
+  'special-ramadan': 'categorySpecialRamadan',
+  'special-tabaski': 'categorySpecialTabaski',
+  autres: 'categoryOther',
+};
+
+const SORT_KEYS: Record<string, string> = {
+  recent: 'sortRecent',
+  popular: 'sortPopular',
+  ending: 'sortEnding',
+  amount: 'sortAmount',
+};
+
 const TOAST_DURATION_MS = 4000;
 
 export default function CampagnesPage() {
+  const t = useTranslations('campagnes');
+  const { getTranslatedCampaign } = useCampaignTranslations();
   const { user, accessToken, isAuthenticated } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +86,7 @@ export default function CampagnesPage() {
     setError(null);
     getActiveCampaigns()
       .then((list) => { if (!cancelled) setCampaigns(list); })
-      .catch((err) => { if (!cancelled) setError(err?.message ?? 'Erreur chargement des campagnes'); })
+      .catch((err) => { if (!cancelled) setError(err?.message ?? t('loadError')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -94,43 +117,41 @@ export default function CampagnesPage() {
   const walletBalance = user?.wallet?.balance ?? 0;
 
   const categories = [
-    { id: 'all', name: 'Toutes', icon: Globe, color: 'bg-gray-500' },
-    { id: 'urgence', name: 'Urgence', icon: Zap, color: 'bg-red-500' },
-    { id: 'education', name: 'Éducation', icon: Bookmark, color: 'bg-green-500' },
-    { id: 'sante', name: 'Santé', icon: Heart, color: 'bg-green-600' },
-    { id: 'developpement', name: 'Développement', icon: TrendingUp, color: 'bg-green-700' },
-    { id: 'refugies', name: 'Réfugiés', icon: Users, color: 'bg-orange-500' },
-    { id: 'special-ramadan', name: 'Spécial Ramadan', iconSrc: '/icons/moon-w.png', color: 'bg-amber-600' },
-    { id: 'special-tabaski', name: 'Spécial Tabaski', iconSrc: '/icons/moon-w.png', color: 'bg-amber-600' },
-    { id: 'autres', name: 'Autre', icon: Star, color: 'bg-gray-500' },
+    { id: 'all', nameKey: 'categoryAllLabel', icon: Globe, color: 'bg-gray-500' },
+    { id: 'urgence', nameKey: 'categoryUrgence', icon: Zap, color: 'bg-red-500' },
+    { id: 'education', nameKey: 'categoryEducation', icon: Bookmark, color: 'bg-green-500' },
+    { id: 'sante', nameKey: 'categorySante', icon: Heart, color: 'bg-green-600' },
+    { id: 'developpement', nameKey: 'categoryDeveloppement', icon: TrendingUp, color: 'bg-green-700' },
+    { id: 'refugies', nameKey: 'categoryRefugies', icon: Users, color: 'bg-orange-500' },
+    { id: 'special-ramadan', nameKey: 'categorySpecialRamadan', iconSrc: '/icons/moon-w.png', color: 'bg-amber-600' },
+    { id: 'special-tabaski', nameKey: 'categorySpecialTabaski', iconSrc: '/icons/moon-w.png', color: 'bg-amber-600' },
+    { id: 'autres', nameKey: 'categoryOther', icon: Star, color: 'bg-gray-500' },
   ];
 
-  const categoryLabels: Record<string, string> = {
-    urgence: 'Urgence', education: 'Éducation', sante: 'Santé',
-    developpement: 'Développement', refugies: 'Réfugiés',
-    'special-ramadan': 'Spécial Ramadan', 'special-tabaski': 'Spécial Tabaski',
-    autres: 'Autre',
-  };
+  const categoryLabels: Record<string, string> = Object.fromEntries(
+    Object.entries(CATEGORY_KEYS).map(([k, key]) => [k, t(key)])
+  );
 
   const typeLabels: Record<string, string> = {
-    ZAKAT: 'Zakat',
-    SADAQAH: 'Sadaqah',
+    ZAKAT: t('typeZakat'),
+    SADAQAH: t('typeSadaqah'),
   };
 
   const sortOptions = [
-    { id: 'recent', name: 'Plus récentes' },
-    { id: 'popular', name: 'Plus populaires' },
-    { id: 'ending', name: 'Se terminant bientôt' },
-    { id: 'amount', name: 'Montant élevé' },
+    { id: 'recent', nameKey: 'sortRecent' },
+    { id: 'popular', nameKey: 'sortPopular' },
+    { id: 'ending', nameKey: 'sortEnding' },
+    { id: 'amount', nameKey: 'sortAmount' },
   ];
 
   const filteredCampaigns = campaigns
     .filter((campaign) => {
+      const tc = getTranslatedCampaign(campaign);
       const term = searchTerm.toLowerCase().trim();
       const matchesSearch =
         !term ||
-        campaign.title.toLowerCase().includes(term) ||
-        campaign.description.toLowerCase().includes(term);
+        tc.title.toLowerCase().includes(term) ||
+        tc.description.toLowerCase().includes(term);
       const matchesCategory = selectedCategory === 'all' || campaign.category === selectedCategory;
       const endTime = campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime())
         ? new Date(campaign.endDate).getTime()
@@ -140,7 +161,7 @@ export default function CampagnesPage() {
         (endTime != null && dateRange.start && dateRange.end && endTime >= new Date(dateRange.start).getTime() && endTime <= new Date(dateRange.end).getTime()) ||
         (endTime != null && dateRange.start && !dateRange.end && endTime >= new Date(dateRange.start).getTime()) ||
         (endTime != null && !dateRange.start && dateRange.end && endTime <= new Date(dateRange.end).getTime());
-      const loc = (campaign.location || '').toLowerCase();
+      const loc = (tc.location || '').toLowerCase();
       const matchesCountry = !selectedCountry || loc.includes(COUNTRY_LABELS[selectedCountry] ?? selectedCountry);
       const matchesCity = !selectedCity || loc.includes(CITY_LABELS[selectedCity] ?? selectedCity);
       return matchesSearch && matchesCategory && matchesDate && matchesCountry && matchesCity;
@@ -179,10 +200,10 @@ export default function CampagnesPage() {
   const effectivePonctualSlideIndex = Math.min(ponctualSlideIndex, ponctualSlideMax);
   const totalDonors = campaigns.reduce((sum, c) => sum + (donorCountByCampaignId[c.id] ?? 0), 0);
   const statsCards = [
-    { icon: '/icons/volume-high.png', value: campaigns.length, label: 'Campagnes actives', rotateDirection: 1, cardRotate: 5 },
-    { icon: '/icons/people.png', value: totalDonors.toLocaleString(), label: 'Donateurs', rotateDirection: -1, cardRotate: -5 },
-    { icon: '/icons/hand-coin(2).png', value: formatAmount(campaigns.reduce((sum, c) => sum + c.currentAmount, 0)), label: 'Collecté', rotateDirection: 1, cardRotate: 5 },
-    { icon: '/icons/global.png', value: new Set(campaigns.map((c) => c.location).filter(Boolean)).size || 0, label: 'Pays', rotateDirection: -1, cardRotate: -5 },
+    { icon: '/icons/volume-high.png', value: campaigns.length, labelKey: 'statsActiveCampaigns', rotateDirection: 1, cardRotate: 5 },
+    { icon: '/icons/people.png', value: totalDonors.toLocaleString(), labelKey: 'statsDonors', rotateDirection: -1, cardRotate: -5 },
+    { icon: '/icons/hand-coin(2).png', value: formatAmount(campaigns.reduce((sum, c) => sum + c.currentAmount, 0)), labelKey: 'statsCollected', rotateDirection: 1, cardRotate: 5 },
+    { icon: '/icons/global.png', value: new Set(campaigns.map((c) => c.location).filter(Boolean)).size || 0, labelKey: 'statsCountries', rotateDirection: -1, cardRotate: -5 },
   ];
 
   return (
@@ -220,13 +241,13 @@ export default function CampagnesPage() {
             className="flex flex-col items-start mb-8"
           >
             {/* Fil d'Ariane */}
-            <h3 className="text-white text-xl font-bold mb-2">Dons</h3>
+            <h3 className="text-white text-xl font-bold mb-2">{t('breadcrumbDonations')}</h3>
             <nav className="text-sm mb-2">
               <Link href="/">
-                <span className="text-gray-300 font-bold">Accueil</span>
+                <span className="text-gray-300 font-bold">{t('breadcrumbHome')}</span>
               </Link>
               <span className="text-gray-300 mx-2">/</span>
-              <span className="text-green-400">Dons</span>
+              <span className="text-green-400">{t('breadcrumbDonations')}</span>
             </nav>
           </motion.div>
 
@@ -246,10 +267,10 @@ export default function CampagnesPage() {
             </motion.div>
             
             <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
-              Campagnes de <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-[#00644d]/80">Solidarité</span>
+              {t('title')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-[#00644d]/80">{t('titleSolidarity')}</span>
             </h1>
             <p className="text-xl text-white mb-12 max-w-3xl mx-auto leading-relaxed">
-              Découvrez et soutenez des causes importantes. Chaque don compte pour construire un monde meilleur.
+              {t('discoverText')}
             </p>
 
             {/* Bouton Offrir Sans Choisir */}
@@ -259,7 +280,7 @@ export default function CampagnesPage() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   if (!isAuthenticated || !user) {
-                    setToastMessage('Veuillez vous connecter pour faire un don.');
+                    setToastMessage(t('loginToDonate'));
                     setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
                     return;
                   }
@@ -284,7 +305,7 @@ export default function CampagnesPage() {
                     className="object-contain"
                   />
                 </div>
-                <span>Laisser Amane+ choisir</span>
+                <span>{t('letAmaneChoose')}</span>
               </motion.button>
             </div>
 
@@ -294,7 +315,7 @@ export default function CampagnesPage() {
               </div>
             )}
             {loading && (
-              <div className="mb-6 text-white/80 text-center py-4">Chargement des campagnes...</div>
+              <div className="mb-6 text-white/80 text-center py-4">{t('loading')}</div>
             )}
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mb-12">
@@ -316,10 +337,10 @@ export default function CampagnesPage() {
                         animate={{ rotate: [0, stat.rotateDirection * 360] }}
                         transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
                       >
-                        <Image src={stat.icon} alt={stat.label} width={26} height={26} className="object-contain" />
+                        <Image src={stat.icon} alt={t(stat.labelKey)} width={26} height={26} className="object-contain" />
                       </motion.div>
                       <p className="text-2xl font-bold text-white">{stat?.value}</p>
-                      <p className="text-sm text-white">{stat.label}</p>
+                      <p className="text-sm text-white">{t(stat.labelKey)}</p>
                     </div>
                   </motion.div>
                 );
@@ -343,23 +364,23 @@ export default function CampagnesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               {/* Search */}
               <div className="lg:col-span-1">
-                <label className="block text-white text-sm font-medium mb-2">Recherche</label>
+                <label className="block text-white text-sm font-medium mb-2">{t('search')}</label>
                 <div className="relative">
                   <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-green-400" />
                   <input
                     type="text"
-                    placeholder="Rechercher une campagne ici..."
+                    placeholder={t('searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-12 pr-4 py-3 border-2 border-green-400 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 text-white placeholder-gray-400 bg-transparent"
-                    title="Rechercher une campagne"
+                    title={t('searchTitle')}
                   />
                 </div>
               </div>
 
               {/* Period - Du / Au (2 colonnes pour bien séparer de Pays) */}
               <div className="lg:col-span-2 min-w-0">
-                <label className="block text-white text-sm font-medium mb-2">Période</label>
+                <label className="block text-white text-sm font-medium mb-2">{t('period')}</label>
                 <div className="flex gap-2">
                   <div className="relative flex-1 min-w-0">
                     <Calendar size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/70 z-10 pointer-events-none" />
@@ -387,19 +408,19 @@ export default function CampagnesPage() {
 
               {/* Country */}
               <div className="lg:col-span-1">
-                <label className="block text-white text-sm font-medium mb-2">Pays</label>
+                <label className="block text-white text-sm font-medium mb-2">{t('country')}</label>
                 <div className="relative">
                   <select
                     value={selectedCountry}
                     onChange={(e) => setSelectedCountry(e.target.value)}
-                    title="Sélectionner un pays"
-                    aria-label="Sélectionner un pays"
+                    title={t('selectCountry')}
+                    aria-label={t('selectCountry')}
                     className="w-full pl-4 pr-10 py-3 rounded-xl text-white bg-gray-800/50 border border-gray-700 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 appearance-none"
                   >
-                    <option value="" className="bg-gray-800">Sélectionner un pays</option>
-                    <option value="ci" className="bg-gray-800">Côte d'Ivoire</option>
-                    <option value="sn" className="bg-gray-800">Sénégal</option>
-                    <option value="ml" className="bg-gray-800">Mali</option>
+                    <option value="" className="bg-gray-800">{t('selectCountry')}</option>
+                    <option value="ci" className="bg-gray-800">{t('countryCI')}</option>
+                    <option value="sn" className="bg-gray-800">{t('countrySN')}</option>
+                    <option value="ml" className="bg-gray-800">{t('countryML')}</option>
                   </select>
                   <ChevronDown size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 pointer-events-none" />
                 </div>
@@ -407,19 +428,19 @@ export default function CampagnesPage() {
 
               {/* City */}
               <div className="lg:col-span-1">
-                <label className="block text-white text-sm font-medium mb-2">Ville</label>
+                <label className="block text-white text-sm font-medium mb-2">{t('city')}</label>
                 <div className="relative">
                   <select
                     value={selectedCity}
                     onChange={(e) => setSelectedCity(e.target.value)}
-                    title="Sélectionner une ville"
-                    aria-label="Sélectionner une ville"
+                    title={t('selectCity')}
+                    aria-label={t('selectCity')}
                     className="w-full pl-4 pr-10 py-3 rounded-xl text-white bg-gray-800/50 border border-gray-700 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-all duration-200 appearance-none"
                   >
-                    <option value="" className="bg-gray-800">Sélectionner une ville</option>
-                    <option value="abidjan" className="bg-gray-800">Abidjan</option>
-                    <option value="dakar" className="bg-gray-800">Dakar</option>
-                    <option value="bamako" className="bg-gray-800">Bamako</option>
+                    <option value="" className="bg-gray-800">{t('selectCity')}</option>
+                    <option value="abidjan" className="bg-gray-800">{t('cityAbidjan')}</option>
+                    <option value="dakar" className="bg-gray-800">{t('cityDakar')}</option>
+                    <option value="bamako" className="bg-gray-800">{t('cityBamako')}</option>
                   </select>
                   <ChevronDown size={18} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 pointer-events-none" />
                 </div>
@@ -436,7 +457,7 @@ export default function CampagnesPage() {
                   className="w-full py-3 rounded-3xl font-semibold text-white transition-all duration-200"
                   style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                 >
-                  Appliquer
+                  {t('apply')}
                 </motion.button>
               </div>
             </div>
@@ -465,7 +486,7 @@ export default function CampagnesPage() {
                     ) : (
                       'icon' in category && category.icon && <category.icon size={16} className={selectedCategory === category.id ? 'text-white' : 'text-[#00644D]'} />
                     )}
-                    <span>{category.name === 'Toutes' ? 'Tout' : category.name}</span>
+                    <span>{category.id === 'all' ? t('categoryAll') : t(category.nameKey)}</span>
                   </motion.button>
                 ))}
               </div>
@@ -515,13 +536,13 @@ export default function CampagnesPage() {
           <section className="mb-12">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h2 className="text-xl lg:text-2xl font-bold text-white text-left">
-                Programmes en vedette
+                {t('featuredPrograms')}
               </h2>
               <Link
                 href="#programmes"
                 className="text-[#5AB678] hover:text-[#5AB678]/80 font-semibold inline-flex items-center gap-1"
               >
-                Voir plus
+                {t('seeMore')}
                 <ArrowRight size={18} className="inline" />
               </Link>
             </div>
@@ -529,6 +550,7 @@ export default function CampagnesPage() {
             {featuredCampaigns.length <= 3 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {featuredCampaigns.map((campaign, index) => {
+                  const tc = getTranslatedCampaign(campaign);
                   const categoryConfig = categories.find((c) => c.id === campaign.category);
                   return (
                     <motion.div
@@ -598,13 +620,14 @@ export default function CampagnesPage() {
                         style={{ width: `${100 / Math.ceil(featuredCampaigns.length / 3)}%` }}
                       >
                         {featuredCampaigns.slice(pageIndex * 3, pageIndex * 3 + 3).map((campaign, index) => {
+                          const tc = getTranslatedCampaign(campaign);
                           const categoryConfig = categories.find((c) => c.id === campaign.category);
                           return (
                             <Link key={campaign.id} href={`/campagnes/${campaign.id}`}>
                               <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
                                 <img
                                   src={campaign.image || '/images/no-picture.png'}
-                                  alt={campaign.title}
+                                  alt={tc.title}
                                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
@@ -623,7 +646,7 @@ export default function CampagnesPage() {
                                   </div>
                                   <div className="relative">
                                     <h3 className="text-xl font-bold text-white leading-tight">
-                                      {campaign.title}
+                                      {tc.title}
                                     </h3>
                                     {/* {campaign.description?.trim() && (
                                       campaign.description.includes('<') ? (
@@ -652,7 +675,7 @@ export default function CampagnesPage() {
                   onClick={() => setFeaturedSlideIndex((i) => Math.max(0, i - 1))}
                   disabled={effectiveFeaturedSlideIndex === 0}
                   className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 lg:-translate-x-4 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-[#00644D] shadow-lg flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
-                  aria-label="Programmes précédents"
+                  aria-label={t('ariaFeaturedPrev')}
                 >
                   <ChevronLeft size={24} />
                 </button>
@@ -661,7 +684,7 @@ export default function CampagnesPage() {
                   onClick={() => setFeaturedSlideIndex((i) => Math.min(featuredSlideMax, i + 1))}
                   disabled={effectiveFeaturedSlideIndex >= featuredSlideMax}
                   className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 lg:translate-x-4 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-[#00644D] shadow-lg flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
-                  aria-label="Programmes suivants"
+                  aria-label={t('ariaFeaturedNext')}
                 >
                   <ChevronRight size={24} />
                 </button>
@@ -688,13 +711,13 @@ export default function CampagnesPage() {
           <section className="mb-12">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h2 className="text-xl lg:text-2xl font-bold text-white text-left">
-                Programmes ponctuels
+                {t('ponctualPrograms')}
               </h2>
               <Link
                 href="#programmes"
                 className="text-[#5AB678] hover:text-[#5AB678]/80 font-semibold inline-flex items-center gap-1"
               >
-                Voir plus
+                {t('seeMore')}
                 <ArrowRight size={18} className="inline" />
               </Link>
             </div>
@@ -702,6 +725,7 @@ export default function CampagnesPage() {
             {ponctualCampaigns.length <= 3 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {ponctualCampaigns.map((campaign, index) => {
+                  const tc = getTranslatedCampaign(campaign);
                   const categoryConfig = categories.find((c) => c.id === campaign.category);
                   return (
                     <motion.div
@@ -714,7 +738,7 @@ export default function CampagnesPage() {
                         <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
                           <img
                             src={campaign.image || '/images/no-picture.png'}
-                            alt={campaign.title}
+                            alt={tc.title}
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
@@ -733,7 +757,7 @@ export default function CampagnesPage() {
                             </div>
                             <div className="relative">
                               <h3 className="text-xl font-bold text-white leading-tight">
-                                {campaign.title}
+                                {tc.title}
                               </h3>
                               {/* {campaign.description?.trim() && (
                                 campaign.description.includes('<') ? (
@@ -771,13 +795,14 @@ export default function CampagnesPage() {
                         style={{ width: `${100 / Math.ceil(ponctualCampaigns.length / 3)}%` }}
                       >
                         {ponctualCampaigns.slice(pageIndex * 3, pageIndex * 3 + 3).map((campaign, index) => {
+                          const tc = getTranslatedCampaign(campaign);
                           const categoryConfig = categories.find((c) => c.id === campaign.category);
                           return (
                             <Link key={campaign.id} href={`/campagnes/${campaign.id}`}>
                               <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
                                 <img
                                   src={campaign.image || '/images/no-picture.png'}
-                                  alt={campaign.title}
+                                  alt={tc.title}
                                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
@@ -796,7 +821,7 @@ export default function CampagnesPage() {
                                   </div>
                                   <div className="relative">
                                     <h3 className="text-xl font-bold text-white leading-tight">
-                                      {campaign.title}
+                                      {tc.title}
                                     </h3>
                                     {/* {campaign.description?.trim() && (
                                       campaign.description.includes('<') ? (
@@ -825,7 +850,7 @@ export default function CampagnesPage() {
                   onClick={() => setPonctualSlideIndex((i) => Math.max(0, i - 1))}
                   disabled={effectivePonctualSlideIndex === 0}
                   className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 lg:-translate-x-4 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-[#00644D] shadow-lg flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
-                  aria-label="Programmes ponctuels précédents"
+                  aria-label={t('ariaPonctualPrev')}
                 >
                   <ChevronLeft size={24} />
                 </button>
@@ -834,7 +859,7 @@ export default function CampagnesPage() {
                   onClick={() => setPonctualSlideIndex((i) => Math.min(ponctualSlideMax, i + 1))}
                   disabled={effectivePonctualSlideIndex >= ponctualSlideMax}
                   className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 lg:translate-x-4 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-[#00644D] shadow-lg flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all"
-                  aria-label="Programmes ponctuels suivants"
+                  aria-label={t('ariaPonctualNext')}
                 >
                   <ChevronRight size={24} />
                 </button>
@@ -856,15 +881,14 @@ export default function CampagnesPage() {
           </section>
         )}
 
-        {/* Titre section programmes */}
         <h2 id="programmes" className="text-xl lg:text-2xl font-bold text-white mb-6 text-left scroll-mt-6">
-          Tous les programmes
+          {t('allPrograms')}
         </h2>
 
         {/* Campaigns Grid */}
         <AnimatePresence mode="wait">
           {loading ? (
-            <div className="text-center py-12 text-white/80">Chargement des campagnes...</div>
+            <div className="text-center py-12 text-white/80">{t('loading')}</div>
           ) : viewMode === 'grid' ? (
             <motion.div
               key="grid"
@@ -875,6 +899,7 @@ export default function CampagnesPage() {
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10"
             >
               {filteredCampaigns.map((campaign, index) => {
+                const tc = getTranslatedCampaign(campaign);
                 const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
                 const amountSpent = campaign.amountSpent ?? 0;
                 const currentAmount = campaign.currentAmount;
@@ -896,7 +921,7 @@ export default function CampagnesPage() {
                         <div className="absolute inset-0">
                           <img
                             src={campaign.image || '/images/no-picture.png'}
-                            alt={campaign.title}
+                            alt={tc.title}
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
@@ -925,20 +950,20 @@ export default function CampagnesPage() {
 
                           {/* Donateurs (vert) + Titre (blanc) — juste au-dessus de la barre */}
                           <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
-                            {donorCount.toLocaleString('fr-FR')} donateurs
+                            {donorCount.toLocaleString('fr-FR')} {t('donors')}
                           </p>
                           <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
-                            {campaign.title}
+                            {tc.title}
                           </h3>
 
                           {/* Montants + barre de progression */}
                           <div className="space-y-2">
                             <div className="flex justify-between items-center gap-2 text-sm">
                               <span className="text-[#5AB678] font-semibold">
-                                {formatAmount(amountSpent)} déboursés
+                                {formatAmount(amountSpent)} {t('disbursed')}
                               </span>
                               <span className="text-white font-medium">
-                                {formatAmount(currentAmount)} collectés
+                                {formatAmount(currentAmount)} {t('collected')}
                               </span>
                             </div>
                             <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
@@ -961,7 +986,7 @@ export default function CampagnesPage() {
                             style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                           >
                             <Heart size={18} className="fill-white" />
-                            <span>Soutenir cette campagne</span>
+                            <span>{t('supportCampaign')}</span>
                             <ArrowRight size={18} />
                           </motion.div>
                         </div>
@@ -980,7 +1005,9 @@ export default function CampagnesPage() {
               transition={{ duration: 0.3 }}
               className="space-y-6"
             >
-              {filteredCampaigns.map((campaign, index) => (
+              {filteredCampaigns.map((campaign, index) => {
+                const tc = getTranslatedCampaign(campaign);
+                return (
                 <motion.div
                   key={campaign.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -995,7 +1022,7 @@ export default function CampagnesPage() {
                         <div className="relative w-full sm:w-32 h-48 sm:h-32 flex-shrink-0">
                           <img
                             src={campaign.image || '/images/no-picture.png'}
-                            alt={campaign.title}
+                            alt={tc.title}
                             className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute top-2 left-2 flex flex-wrap gap-1">
@@ -1018,34 +1045,34 @@ export default function CampagnesPage() {
 
                         <div className="flex-1 w-full min-w-0">
                           <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 group-hover:text-blue-600 transition-colors break-words">
-                            {campaign.title}
+                            {tc.title}
                           </h3>
-                          {campaign.description?.includes('<') ? (
+                          {tc.description?.includes('<') ? (
                             <div
                               className="text-white/70 mb-4 text-sm sm:text-base line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
-                              dangerouslySetInnerHTML={{ __html: campaign.description ?? '' }}
+                              dangerouslySetInnerHTML={{ __html: tc.description ?? '' }}
                             />
                           ) : (
                             <p className="text-white/70 mb-4 text-sm sm:text-base line-clamp-2">
-                              {campaign.description}
+                              {tc.description}
                             </p>
                           )}
 
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-xs sm:text-sm text-white/70 mb-4">
                             <div className="flex items-center space-x-1">
                               <Users size={14} className="sm:w-4 sm:h-4" />
-                              <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString()} donateurs</span>
+                              <span>{(donorCountByCampaignId[campaign.id] ?? 0).toLocaleString()} {t('donors')}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <MapPin size={14} className="sm:w-4 sm:h-4" />
-                              <span className="truncate">{campaign.location || '—'}</span>
+                              <span className="truncate">{tc.location || '—'}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Calendar size={14} className="sm:w-4 sm:h-4" />
                               <span className="truncate">
                                 {campaign.endDate && !Number.isNaN(new Date(campaign.endDate).getTime())
-                                  ? `Se termine le ${new Date(campaign.endDate).toLocaleDateString('fr-FR')}`
-                                  : 'N/A'}
+                                  ? `${t('endsOn')} ${new Date(campaign.endDate).toLocaleDateString('fr-FR')}`
+                                  : t('na')}
                               </span>
                             </div>
                           </div>
@@ -1053,10 +1080,10 @@ export default function CampagnesPage() {
                           <div className="space-y-3">
                             <div className="flex justify-between text-sm gap-4">
                               <span className="text-[#5AB678] font-semibold">
-                                {formatAmount(campaign.amountSpent ?? 0)} déboursés
+                                {formatAmount(campaign.amountSpent ?? 0)} {t('disbursed')}
                               </span>
                               <span className="text-white font-medium">
-                                {formatAmount(campaign.currentAmount)} collectés
+                                {formatAmount(campaign.currentAmount)} {t('collected')}
                               </span>
                             </div>
                             {(campaign.targetAmount > 0 || (campaign.currentAmount > 0 || (campaign.amountSpent ?? 0) > 0)) && (
@@ -1076,7 +1103,7 @@ export default function CampagnesPage() {
                                 whileTap={{ scale: 0.95 }}
                                 className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-[#00644d]/40 text-white rounded-xl font-semibold hover:bg-[#00644d]/20 transition-all duration-200 flex items-center justify-center space-x-2"
                               >
-                                <span>Soutenir</span>
+                                <span>{t('support')}</span>
                                 <ArrowRight size={14} className="sm:w-4 sm:h-4" />
                               </motion.button>
                             </div>
@@ -1086,7 +1113,8 @@ export default function CampagnesPage() {
                     </div>
                   </Link>
                 </motion.div>
-              ))}
+              );
+              })}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1102,10 +1130,10 @@ export default function CampagnesPage() {
               <Search size={32} className="text-gray-400" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">
-              Aucune campagne trouvée
+              {t('noCampaignsFound')}
             </h3>
             <p className="text-white/70">
-              {campaigns.length === 0 ? 'Aucune campagne active pour le moment.' : 'Essayez de modifier vos critères de recherche ou de filtres.'}
+              {campaigns.length === 0 ? t('noCampaignsActive') : t('tryFilters')}
             </p>
           </motion.div>
         )}
@@ -1130,10 +1158,10 @@ export default function CampagnesPage() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-6xl font-extrabold mb-6 text-[#00644d]">
-                  Emportez Amane+ partout avec vous
+                  {t('takeAmaneEverywhere')}
                 </h2>
                 <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                Retrouvez toutes les fonctionnalités d’Amane+ dans une seule application. Faites vos dons, suivez vos rendements, automatisez votre Zakat et participez à des actions solidaires, où que vous soyez.
+                {t('takeAmaneDescription')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <motion.button
@@ -1142,7 +1170,7 @@ export default function CampagnesPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Apple size={24} />
-                    <span>Disponible sur l'App Store</span>
+                    <span>{t('appStore')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -1150,7 +1178,7 @@ export default function CampagnesPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Play size={24} />
-                    <span>Télécharger sur Google Play</span>
+                    <span>{t('googlePlay')}</span>
                   </motion.button>
                 </div>
               </motion.div>

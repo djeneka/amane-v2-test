@@ -5,21 +5,12 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Calculator, HandCoins, Apple, Play, Trash2, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import { useLocale } from '@/components/LocaleProvider';
 import ZakatCalculatorModal from '@/components/ZakatCalculatorModal';
 import PayZakatModal from '@/components/PayZakatModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { getMyZakats, deleteZakat, createZakat, PENDING_ZAKAT_STORAGE_KEY, type Zakat, type CreateZakatBody } from '@/services/zakat';
-
-/** Citations et hadiths affichés dans les bulles d'info */
-const ZAKAT_QUOTES: { text: string; source: string }[] = [
-  { text: "La richesse d'une personne ne diminue pas lorsqu'elle paie la Zakat", source: "Sahih Bukhari" },
-  { text: "Celui qui s'acquitte de la Zakat, Allah augmentera sa richesse.", source: "Sahih Bukhari" },
-  { text: "La meilleure aumône consiste à s'acquitter de la Zakat sur ses biens", source: "Sahih Muslim" },
-  { text: "La zakat est un droit que les pauvres ont sur les riches", source: "Sahih Bukhari" },
-  { text: "L'aumône légale (Zakat) est plus aimée d'Allah que toutes les œuvres de charité faites durant toute l'année.", source: "Sahih Bukhari" },
-  { text: "Accomplissez la prière et acquittez-vous de la Zakat. Tout bien que vous aurez accompli pour vous-mêmes, vous le retrouverez auprès d'Allah.", source: "2:110 Coran" },
-  { text: "Ô Muhammad, prélève sur leurs biens une aumône qui les purifie et leur permette de prospérer, et invoque sur eux la bénédiction d'Allah. Tes invocations sont pour eux une source de réconfort. Allah est Celui qui entend et qui sait.", source: "9:103 Coran" },
-];
 
 // Composant pour l'icône personnalisée de la main tenant une bourse avec "2,5"
 const ZakatIcon = () => {
@@ -91,8 +82,21 @@ const ZakatIcon = () => {
 };
 
 export default function ZakatPage() {
+  const t = useTranslations('zakatPage');
+  const { locale } = useLocale();
   const router = useRouter();
   const { accessToken } = useAuth();
+
+  /** Citations et hadiths (traduits) */
+  const ZAKAT_QUOTES: { text: string; source: string }[] = [
+    { text: t('quote1Text'), source: t('quote1Source') },
+    { text: t('quote2Text'), source: t('quote2Source') },
+    { text: t('quote3Text'), source: t('quote3Source') },
+    { text: t('quote4Text'), source: t('quote4Source') },
+    { text: t('quote5Text'), source: t('quote5Source') },
+    { text: t('quote6Text'), source: t('quote6Source') },
+    { text: t('quote7Text'), source: t('quote7Source') },
+  ];
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [myZakats, setMyZakats] = useState<Zakat[]>([]);
   const [zakatsLoading, setZakatsLoading] = useState(true);
@@ -167,14 +171,14 @@ export default function ZakatPage() {
     createZakat(accessToken, body)
       .then(() => {
         setToastVariant('success');
-        setToastMessage('Zakat créée avec succès');
+        setToastMessage(t('toastCreated'));
         getMyZakats(accessToken).then(setMyZakats).catch(() => {});
         setTimeout(() => setToastMessage(null), 3000);
       })
       .catch((err: unknown) => {
         setToastVariant('error');
         const raw = err instanceof Error ? err.message : '';
-        let msg = 'Impossible de créer la zakat. Veuillez réessayer.';
+        let msg = t('toastCreateError');
         try {
           const data = JSON.parse(raw);
           if (data && typeof data.message === 'string') msg = data.message;
@@ -193,7 +197,7 @@ export default function ZakatPage() {
 
   const handleZakatCreated = () => {
     setToastVariant('success');
-    setToastMessage('Zakat créée avec succès');
+    setToastMessage(t('toastCreated'));
     refetchZakats();
     setTimeout(() => setToastMessage(null), 3000);
   };
@@ -206,13 +210,13 @@ export default function ZakatPage() {
     try {
       await deleteZakat(accessToken, id);
       setToastVariant('success');
-      setToastMessage('Zakat supprimée');
+      setToastMessage(t('toastDeleted'));
       refetchZakats();
       setTimeout(() => setToastMessage(null), 3000);
     } catch (err: unknown) {
       setToastVariant('error');
       const raw = err instanceof Error ? err.message : '';
-      let msg = 'Impossible de supprimer la zakat';
+      let msg = t('toastDeleteError');
       try {
         const data = JSON.parse(raw);
         if (data && typeof data.message === 'string') msg = data.message;
@@ -227,7 +231,8 @@ export default function ZakatPage() {
   };
 
   const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
+    const localeCode = locale === 'en' ? 'en-GB' : 'fr-FR';
+    return new Intl.NumberFormat(localeCode, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -235,7 +240,8 @@ export default function ZakatPage() {
 
   const formatCalculationDate = (isoDate: string) => {
     const d = new Date(isoDate);
-    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const localeCode = locale === 'en' ? 'en-GB' : 'fr-FR';
+    return d.toLocaleDateString(localeCode, { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   return (
@@ -272,7 +278,7 @@ export default function ZakatPage() {
               onClick={() => setOpenQuoteIndex((prev) => (prev === index ? null : index))}
               className="zakat-bubble-blink w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/25 hover:bg-white/40 border border-white/50 flex items-center justify-center transition-colors shadow-lg focus:outline-none focus:ring-2 focus:ring-[#8DD17F]"
               style={{ animationPlayState: openQuoteIndex === index ? 'paused' : 'running' }}
-              aria-label="Voir une citation sur la Zakat"
+              aria-label={t('quoteAria')}
             >
               <Info size={20} className="text-white" />
             </motion.button>
@@ -320,8 +326,8 @@ export default function ZakatPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4"
         >
-          Calculateur de{' '}
-          <span style={{ color: '#8DD17F' }}>Zakat</span>
+          {t('title')}{' '}
+          <span style={{ color: '#8DD17F' }}>{t('titleHighlight')}</span>
         </motion.h1>
 
         {/* Description */}
@@ -331,8 +337,8 @@ export default function ZakatPage() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="space-y-2 text-white text-lg md:text-xl mb-8"
         >
-          <p>Calculez facilement votre zakat annuelle selon les principes islamiques.</p>
-          <p>Purifiez vos biens et aidez les nécessiteux.</p>
+          <p>{t('description1')}</p>
+          <p>{t('description2')}</p>
         </motion.div>
 
         {/* Bouton "Calculer Ma Zakat" */}
@@ -349,7 +355,7 @@ export default function ZakatPage() {
           }}
         >
           <Calculator size={24} />
-          <span>Calculer Ma Zakat</span>
+          <span>{t('calculateButton')}</span>
         </motion.button>
 
         {/* Toast */}
@@ -374,11 +380,11 @@ export default function ZakatPage() {
             className="mt-12 w-full max-w-2xl mx-auto"
           >
             {zakatsLoading ? (
-              <p className="text-white/80 text-center py-8">Chargement de vos zakats...</p>
+              <p className="text-white/80 text-center py-8">{t('loadingZakats')}</p>
             ) : myZakats.length > 0 ? (
               <div className="space-y-6">
                 <h2 className="text-xl font-bold mb-6 text-white text-left">
-                  Liste de mes calculs de zakat
+                  {t('listTitle')}
                 </h2>
                 <div className="space-y-4">
                   {myZakats.map((zakat) => {
@@ -399,7 +405,7 @@ export default function ZakatPage() {
                               <Calculator size={20} className="text-gray-300" />
                             </div>
                             <span className="text-white font-medium">
-                              Calcul du {formatCalculationDate(zakat.createdAt)}
+                              {t('calculationOf', { date: formatCalculationDate(zakat.createdAt) })}
                             </span>
                           </div>
                           {isExpanded ? (
@@ -411,22 +417,22 @@ export default function ZakatPage() {
                         {isExpanded && (
                           <div className="px-6 pb-6 pt-0 space-y-3 border-t border-white/10">
                             <p className="text-white/70 text-sm pt-4">
-                              Zakat pour l'année : {zakat.year}
+                              {t('zakatForYear', { year: zakat.year })}
                             </p>
                             <div className="flex justify-between items-center">
-                              <span className="text-white">Montant total des biens :</span>
+                              <span className="text-white">{t('totalAssets')}</span>
                               <span className="text-white font-bold">
                                 {formatAmount(zakat.totalAmount)} F CFA
                               </span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-white">Zakat à payer :</span>
+                              <span className="text-white">{t('zakatToPay')}</span>
                               <span className="font-bold" style={{ color: '#8DD17F' }}>
-                                {formatAmount(zakatDue)} F CFA
+                                {formatAmount(zakatDue ?? 0)} F CFA
                               </span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-white">Reste à payer :</span>
+                              <span className="text-white">{t('remainingToPay')}</span>
                               <span className="font-bold" style={{ color: '#F59E0B' }}>
                                 {formatAmount(zakat.remainingAmount)} F CFA
                               </span>
@@ -446,7 +452,7 @@ export default function ZakatPage() {
                                   }}
                                 >
                                   <Trash2 size={20} style={{ color: '#E74C3C' }} />
-                                  <span>{deletingId === zakat.id ? 'Suppression...' : 'Supprimer ma zakat'}</span>
+                                  <span>{deletingId === zakat.id ? t('deleting') : t('deleteZakat')}</span>
                                 </button>
                                 <button
                                   onClick={() => {
@@ -466,7 +472,7 @@ export default function ZakatPage() {
                                   }}
                                 >
                                   <HandCoins size={20} />
-                                  <span>Verser ma zakat</span>
+                                  <span>{t('payMyZakat')}</span>
                                 </button>
                               </div>
                             )}
@@ -490,13 +496,13 @@ export default function ZakatPage() {
 
                   {/* Titre */}
                   <h2 className="text-2xl font-bold text-white">
-                    Aucune archive
+                    {t('noArchive')}
                   </h2>
 
                   {/* Description */}
                   <div className="text-white text-center space-y-1">
-                    <p>Cliquez sur le bouton ci-dessus et calculez</p>
-                    <p>votre première Zakat sur Amane+</p>
+                    <p>{t('noArchiveDesc1')}</p>
+                    <p>{t('noArchiveDesc2')}</p>
                   </div>
                 </div>
               </div>
@@ -510,9 +516,9 @@ export default function ZakatPage() {
       {zakatToDeleteId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#1A2A28] rounded-2xl p-6 max-w-md w-full shadow-xl border border-white/10">
-            <h3 className="text-white font-bold text-lg mb-2">Confirmer la suppression</h3>
+            <h3 className="text-white font-bold text-lg mb-2">{t('confirmDeleteTitle')}</h3>
             <p className="text-white/80 text-sm mb-6">
-              Êtes-vous sûr de vouloir supprimer cette zakat ? Cette action est irréversible.
+              {t('confirmDeleteMessage')}
             </p>
             <div className="flex gap-3">
               <button
@@ -520,7 +526,7 @@ export default function ZakatPage() {
                 onClick={() => setZakatToDeleteId(null)}
                 className="flex-1 py-3 px-4 rounded-xl bg-[#2A3A38] text-white font-medium hover:bg-[#3A4A48] transition-colors"
               >
-                Annuler
+                {t('cancel')}
               </button>
               <button
                 type="button"
@@ -532,7 +538,7 @@ export default function ZakatPage() {
                 }}
               >
                 <Trash2 size={18} />
-                Supprimer
+                {t('delete')}
               </button>
             </div>
           </div>
@@ -558,10 +564,10 @@ export default function ZakatPage() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-6xl font-extrabold mb-6 text-[#00644d]">
-                  Emportez Amane+ partout avec vous
+                  {t('takeWithYouTitle')}
                 </h2>
                 <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                Retrouvez toutes les fonctionnalités d'Amane+ dans une seule application. Faites vos dons, suivez vos rendements, automatisez votre Zakat et participez à des actions solidaires, où que vous soyez.
+                  {t('takeWithYouDesc')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <motion.button
@@ -570,7 +576,7 @@ export default function ZakatPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Apple size={24} />
-                    <span>Disponible sur l'App Store</span>
+                    <span>{t('appStore')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -578,7 +584,7 @@ export default function ZakatPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Play size={24} />
-                    <span>Télécharger sur Google Play</span>
+                    <span>{t('googlePlay')}</span>
                   </motion.button>
                 </div>
               </motion.div>

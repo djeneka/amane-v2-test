@@ -59,14 +59,6 @@ function getDisplayCategory(plan: TakafulPlan): 'sante' | 'automobile' | 'habita
   return 'autres';
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  sante: 'Santé',
-  automobile: 'Automobile',
-  habitation: 'Habitation',
-  vie: 'Vie',
-  autres: 'Autre',
-};
-
 /** Catégorie affichée à partir du titre du plan (pour filtrage souscriptions) */
 function getDisplayCategoryFromTitle(title: string): 'sante' | 'automobile' | 'habitation' | 'vie' | 'autres' {
   const t = title.toLowerCase();
@@ -149,7 +141,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
             className="bg-transparent text-gray-600 font-medium py-4 pr-2 focus:ring-0 focus:outline-none cursor-pointer appearance-none"
             aria-label={t('countryCodeLabel')}
           >
-            <optgroup label="Afrique de l'Ouest">
+            <optgroup label={t('optgroupWestAfrica')}>
               <option value="+225">🇨🇮 +225</option>
               <option value="+221">🇸🇳 +221</option>
               <option value="+223">🇲🇱 +223</option>
@@ -164,7 +156,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
               <option value="+232">🇸🇱 +232</option>
               <option value="+238">🇨🇻 +238</option>
             </optgroup>
-            <optgroup label="Europe">
+            <optgroup label={t('optgroupEurope')}>
               <option value="+33">🇫🇷 +33</option>
               <option value="+32">🇧🇪 +32</option>
               <option value="+41">🇨🇭 +41</option>
@@ -176,7 +168,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
               <option value="+351">🇵🇹 +351</option>
               <option value="+48">🇵🇱 +48</option>
             </optgroup>
-            <optgroup label="Amérique du Nord">
+            <optgroup label={t('optgroupNorthAmerica')}>
               <option value="+1">🇺🇸 🇨🇦 +1</option>
             </optgroup>
           </select>
@@ -220,6 +212,10 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
 
 export default function TakafulPage() {
   const t = useTranslations('takaful');
+  const getCategoryLabel = (displayCat: string) => {
+    const key: Record<string, string> = { sante: 'categoryHealth', automobile: 'categoryAuto', habitation: 'categoryHome', vie: 'categoryLife', autres: 'categoryOther' };
+    return key[displayCat] ? t(key[displayCat] as 'categoryHealth' | 'categoryAuto' | 'categoryHome' | 'categoryLife' | 'categoryOther') : displayCat;
+  };
   const { accessToken, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -405,7 +401,7 @@ export default function TakafulPage() {
 
   const statsData = [
     { 
-      label: 'Produits disponibles', 
+      label: t('productsAvailable'), 
       value: plans.length, 
       icon: Target,
       iconBgColor: 'bg-green-100',
@@ -414,7 +410,7 @@ export default function TakafulPage() {
       hoverRotate: 5
     },
     { 
-      label: 'Clients protégés', 
+      label: t('clientsProtected'), 
       value: '50K+', 
       icon: Users,
       iconBgColor: 'bg-green-100',
@@ -423,7 +419,7 @@ export default function TakafulPage() {
       hoverRotate: -5
     },
     { 
-      label: 'Satisfaction', 
+      label: t('satisfaction'), 
       value: '98%', 
       icon: Star,
       iconBgColor: 'bg-green-100',
@@ -432,7 +428,7 @@ export default function TakafulPage() {
       hoverRotate: 5
     },
     { 
-      label: 'Pays couverts', 
+      label: t('countriesCovered'), 
       value: '15+', 
       icon: Globe,
       iconBgColor: 'bg-orange-100',
@@ -537,10 +533,10 @@ export default function TakafulPage() {
                   </div>
                 </motion.div>
                 <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
-                  Produits <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-green-600">Takaful</span>
+                  {t('heroTitle')}
                 </h1>
                 <p className="text-xl text-white mb-12 max-w-3xl mx-auto leading-relaxed">
-                  Découvrez nos solutions d&apos;assurance islamique éthique. Protégez-vous et votre famille selon les principes de la mutualité islamique.
+                  {t('heroSubtitle')}
                 </p>
               </motion.div>
 
@@ -566,9 +562,9 @@ export default function TakafulPage() {
                   <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center mb-4">
                     <p>🤝</p>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-3">Solidarité (Tabarru&apos;)</h3>
+                  <h3 className="text-xl font-bold text-white mb-3">{t('solidarityTitle')}</h3>
                   <p className="text-white/80 leading-relaxed">
-                    Ici, on ne vend pas de risque. Les membres cotisent dans un fonds commun pour s&apos;entraider en cas de coup dur.
+                    {t('solidarityDescLong')}
                   </p>
                 </motion.div>
                 <motion.div
@@ -580,9 +576,9 @@ export default function TakafulPage() {
                   <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mb-4">
                     <p>🚫</p>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-3">Zéro Incertitude (Gharar)</h3>
+                  <h3 className="text-xl font-bold text-white mb-3">{t('zeroUncertaintyTitle')}</h3>
                   <p className="text-white/80 leading-relaxed">
-                    Transparence totale sur l&apos;utilisation des fonds. Vous savez exactement comment votre contribution est gérée.
+                    {t('zeroUncertaintyDescLong')}
                   </p>
                 </motion.div>
                 <motion.div
@@ -594,15 +590,15 @@ export default function TakafulPage() {
                   <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4">
                     <p>💰</p>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-3">Partage des Excédents</h3>
+                  <h3 className="text-xl font-bold text-white mb-3">{t('surplusSharingTitle')}</h3>
                   <p className="text-white/80 leading-relaxed">
-                    La différence majeure : Si le fonds fait des bénéfices en fin d&apos;année, une partie peut vous être redistribuée (Cashback).
+                    {t('surplusSharingDescLong')}
                   </p>
                 </motion.div>
               </div>
 
               <h2 className="text-3xl lg:text-4xl font-bold text-white text-center mb-10">
-                Nos opportunités à venir
+                {t('opportunitiesTitle')}
               </h2>
 
               {/* Cartes produits takaful (mockData lorsque NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE=true) */}
@@ -633,7 +629,7 @@ export default function TakafulPage() {
                         <h3 className="text-xl font-bold mb-2">{plan.title}</h3>
                         <p className="text-white/90 text-sm line-clamp-2">{plan.description}</p>
                         <p className="text-white/80 text-sm mt-2">
-                          {plan.monthlyContribution != null && `${Number(plan.monthlyContribution).toLocaleString('fr-FR')} F / mois`}
+                          {plan.monthlyContribution != null && t('contributionPerMonthFormat', { amount: Number(plan.monthlyContribution).toLocaleString('fr-FR') })}
                         </p>
                       </div>
                     </div>
@@ -659,10 +655,10 @@ export default function TakafulPage() {
                 </motion.div>
                 
                 <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
-                  Produits de <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-green-600">Protection</span>
+                  {t('heroProtectionTitle')}
                 </h1>
                 <p className="text-xl text-white mb-12 max-w-3xl mx-auto leading-relaxed">
-                  Découvrez nos solutions d'assurance islamique éthique. Protégez-vous et votre famille selon les principes de la mutualité islamique.
+                  {t('heroSubtitle')}
                 </p>
 
                 {/* Onglets Solutions takaful / Mes souscriptions */}
@@ -749,7 +745,7 @@ export default function TakafulPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 border-2 border-green-400 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-white placeholder-white/80 bg-transparent"
-                  title={activeTab === 'solutions' ? "Rechercher un produit de protection" : "Rechercher une souscription"}
+                  title={activeTab === 'solutions' ? t('searchPlaceholder') : t('searchMyPlaceholder')}
                 />
               </div>
             </div>
@@ -890,7 +886,7 @@ export default function TakafulPage() {
                         </div>
                         <div className="absolute top-4 left-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${categoryColors[displayCat] ?? categoryColors.autres}`}>
-                            {CATEGORY_LABELS[displayCat] ?? displayCat}
+                            {getCategoryLabel(displayCat)}
                           </span>
                         </div>
                       </div>
@@ -993,7 +989,7 @@ export default function TakafulPage() {
                           </div>
                           <div className="absolute top-2 left-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${categoryColors[displayCat] ?? categoryColors.autres}`}>
-                              {CATEGORY_LABELS[displayCat] ?? displayCat}
+                              {getCategoryLabel(displayCat)}
                             </span>
                           </div>
                         </div>
@@ -1009,12 +1005,11 @@ export default function TakafulPage() {
                           <div className="flex items-center space-x-6 text-sm text-gray-600 mb-4">
                             <div className="flex items-center space-x-1">
                               <Calendar size={16} />
-                              <span>Cotisation: {formatCompactAmount(plan.monthlyContribution ?? 0)}/mois</span>
+                              <span>{t('contributionPerMonthFormat', { amount: formatCompactAmount(plan.monthlyContribution ?? 0) })}</span>
                             </div>
                           </div>
 
-                          <div className="space-y-3">
-                            <div className="mb-4">
+                          <div className="mb-4">
                               <h4 className="font-medium text-gray-900 mb-3">{t('benefitsIncluded')}</h4>
                               <ul className="space-y-2">
                                 {(plan.benefits ?? []).map((benefit, i) => (
@@ -1035,7 +1030,7 @@ export default function TakafulPage() {
                                   {formatCompactAmount(plan.monthlyContribution ?? 0)}
                                 </p>
                                 <p className="text-sm text-gray-500 truncate">
-                                  cotisation mensuelle
+                                  {t('monthlyContributionLabel')}
                                 </p>
                               </div>
                               <motion.button
@@ -1051,7 +1046,6 @@ export default function TakafulPage() {
                           </div>
                         </div>
                       </div>
-                    </div>
                   </motion.div>
                 );
               })}
@@ -1074,7 +1068,7 @@ export default function TakafulPage() {
               {t('noProductFound')}
             </h3>
             <p className="text-white/80">
-              Essayez de modifier vos critères de recherche
+              {t('tryCriteria')}
             </p>
           </motion.div>
         )}
@@ -1184,10 +1178,10 @@ export default function TakafulPage() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-              Pourquoi choisir le Takaful ?
+              {t('whyTakafulTitle')}
             </h2>
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
-              Découvrez les avantages de l'assurance islamique éthique
+              {t('whyTakafulSubtitle')}
             </p>
           </motion.div>
 
@@ -1203,11 +1197,10 @@ export default function TakafulPage() {
                 <Heart size={32} className="text-green-600" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">
-                Principe de Mutualité
+                {t('whyMutualityTitle')}
               </h3>
               <p className="text-white/80 leading-relaxed">
-                Les participants contribuent ensemble pour aider ceux qui en ont besoin, 
-                selon les principes de solidarité islamique.
+                {t('whyMutualityDesc')}
               </p>
             </motion.div>
 
@@ -1222,11 +1215,10 @@ export default function TakafulPage() {
                 <Shield size={32} className="text-blue-600" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">
-                Transparence Totale
+                {t('whyTransparencyTitle')}
               </h3>
               <p className="text-white/80 leading-relaxed">
-                Aucun intérêt, aucune spéculation. Tous les fonds sont utilisés 
-                exclusivement pour la protection des participants.
+                {t('whyTransparencyDesc')}
               </p>
             </motion.div>
 
@@ -1241,11 +1233,10 @@ export default function TakafulPage() {
                 <Star size={32} className="text-purple-600" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">
-                Excellence Éthique
+                {t('whyExcellenceTitle')}
               </h3>
               <p className="text-white/80 leading-relaxed">
-                Nos produits respectent strictement les principes islamiques 
-                et offrent une protection complète et éthique.
+                {t('whyExcellenceDesc')}
               </p>
             </motion.div>
           </div>
@@ -1264,7 +1255,7 @@ export default function TakafulPage() {
             className="text-center"
           >
             <h2 className="text-2xl lg:text-3xl font-bold text-white mb-10 leading-tight">
-              Soyez averti en priorité dès le lancement des premières opportunités.
+              {t('waitlistCta')}
             </h2>
 
             <WaitlistForm
