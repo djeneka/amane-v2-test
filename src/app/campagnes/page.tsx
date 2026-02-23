@@ -12,6 +12,8 @@ import CampaignCard from '@/components/CampaignCard';
 import type { Campaign } from '@/data/mockData';
 import Image from 'next/image';
 import MakeDonationModal from '@/components/MakeDonationModal';
+import type { PendingDonationState } from '@/components/MakeDonationModal';
+import MakeDepositModal from '@/components/MakeDepositModal';
 import { getActiveCampaigns } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,6 +45,8 @@ export default function CampagnesPage() {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [pendingDonationState, setPendingDonationState] = useState<PendingDonationState | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   /** Nombre de donateurs par campaignId (API statistics) */
   const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
@@ -1173,12 +1177,29 @@ export default function CampagnesPage() {
       {/* Modal de don général (Offrir Sans Choisir) : pas de campaignId → POST /api/donations/general */}
       <MakeDonationModal
         isOpen={showDonationModal}
-        onClose={() => setShowDonationModal(false)}
+        onClose={() => {
+          setShowDonationModal(false);
+          setPendingDonationState(null);
+        }}
         balance={walletBalance}
         campaignId={null}
         accessToken={accessToken ?? null}
         donorName={user?.name ?? null}
         onSuccess={() => setShowDonationModal(false)}
+        onRequestRecharge={(state) => {
+          setPendingDonationState(state);
+          setShowDonationModal(false);
+          setShowDepositModal(true);
+        }}
+        initialDonationState={pendingDonationState}
+      />
+      <MakeDepositModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
+        onSuccess={() => {
+          setShowDepositModal(false);
+          setShowDonationModal(true);
+        }}
       />
     </div>
   );

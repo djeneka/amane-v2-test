@@ -18,6 +18,15 @@ import { uploadCertificatePdf } from '@/lib/upload';
 
 export type DonationTypeChoice = 'SELF' | 'THIRD_PARTY';
 
+/** État du don à restaurer après un rechargement (pour rouvrir le modal avec les mêmes infos) */
+export interface PendingDonationState {
+  currentStep: number;
+  donationType: DonationTypeChoice;
+  amount: string;
+  thirdParty: CreateDonationThirdPartyInput;
+  campaignId: string | null;
+}
+
 interface MakeDonationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -31,6 +40,10 @@ interface MakeDonationModalProps {
   onSuccess?: () => void;
   /** Nom du donateur (pour le certificat PDF). Si non fourni, le certificat utilisera une valeur par défaut. */
   donorName?: string | null;
+  /** Appelé quand l'utilisateur clique sur "Se recharger" (montant > solde) : ferme le modal et ouvre le dépôt, puis rouvre le don avec initialDonationState au succès */
+  onRequestRecharge?: (state: PendingDonationState) => void;
+  /** État à restaurer à l'ouverture (après rechargement réussi) */
+  initialDonationState?: PendingDonationState | null;
   // Textes personnalisables
   title?: string;
   subtitle?: string;
@@ -96,6 +109,8 @@ export default function MakeDonationModal({
   accessToken = null,
   onSuccess,
   donorName = null,
+  onRequestRecharge,
+  initialDonationState = null,
   title = "Faire un don",
   subtitle = "Montant du don",
   description = "Veuillez saisir le montant du don.",
@@ -153,7 +168,14 @@ export default function MakeDonationModal({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen) return;
+    if (initialDonationState) {
+      setCurrentStep(initialDonationState.currentStep);
+      setDonationType(initialDonationState.donationType);
+      setAmount(initialDonationState.amount);
+      setThirdParty(initialDonationState.thirdParty);
+      setSubmitError(null);
+    } else {
       setCurrentStep(1);
       setDonationType(null);
       setAmount('');
@@ -172,10 +194,11 @@ export default function MakeDonationModal({
         showMyNameOnCertificate: false,
         certificateRecipient: 'SELF',
       });
-    } else if (initialAmount) {
-      setAmount(initialAmount.toString());
+      if (initialAmount) {
+        setAmount(initialAmount.toString());
+      }
     }
-  }, [isOpen, initialAmount]);
+  }, [isOpen, initialDonationState, initialAmount]);
 
   // Récupérer le solde du wallet du user connecté à l'ouverture du modal
   useEffect(() => {
@@ -543,6 +566,26 @@ export default function MakeDonationModal({
                 Le montant ne peut pas dépasser votre solde ({effectiveBalance.toLocaleString('fr-FR')} F).
               </p>
             )}
+            {amount && parseFloat(amount) > effectiveBalance && onRequestRecharge && donationType && (
+              <p className="text-center mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onRequestRecharge({
+                      currentStep,
+                      donationType,
+                      amount,
+                      thirdParty,
+                      campaignId: campaignId ?? null,
+                    });
+                  }}
+                  className="text-[#5AB678] hover:text-[#66ff99] underline text-sm font-medium"
+                >
+                  Se recharger
+                </button>
+              </p>
+            )}
           </div>
           <div className="flex space-x-3 pt-4 mx-0 sm:mx-12">
             <motion.button
@@ -832,6 +875,26 @@ export default function MakeDonationModal({
           {submitError && (
             <div className="mx-0 sm:mx-12 rounded-xl bg-red-500/20 border border-red-400/40 p-3">
               <p className="text-red-300 text-sm text-center">{submitError}</p>
+              {onRequestRecharge && donationType && (
+                <p className="text-center mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onRequestRecharge({
+                        currentStep,
+                        donationType,
+                        amount,
+                        thirdParty,
+                        campaignId: campaignId ?? null,
+                      });
+                    }}
+                    className="text-[#5AB678] hover:text-[#66ff99] underline text-sm font-medium"
+                  >
+                    Se recharger
+                  </button>
+                </p>
+              )}
             </div>
           )}
           <div className="flex space-x-3 pt-4 mx-0 sm:mx-12">

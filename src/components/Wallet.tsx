@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Eye, EyeOff, Heart, Wallet as WalletIcon, Megaphone } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useLocale } from '@/components/LocaleProvider';
 import MakeDepositModal from './MakeDepositModal';
 
 interface WalletProps {
@@ -23,7 +25,7 @@ interface WalletProps {
 
 export default function Wallet({ 
   balance, 
-  title = 'Compte principal', 
+  title, 
   depositLink = '/portefeuille',
   sadaqahScore = 320,
   rank = 'Argent',
@@ -33,8 +35,15 @@ export default function Wallet({
   campaignsCount = 15,
   seeAllLink = '/profil/scores'
 }: WalletProps) {
+  const t = useTranslations('home.wallet');
+  const { locale } = useLocale();
+  const localeCode = locale === 'en' ? 'en-GB' : 'fr-FR';
+  const displayTitle = title ?? t('mainAccount');
   const [showBalance, setShowBalance] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
+
+  const publicPrefix = '';
+  const defaultBadge = '/icons/Group 1000003179.png';
 
   return (
     <motion.div
@@ -52,11 +61,11 @@ export default function Wallet({
             className="w-10 h-10 object-contain rounded-3xl p-2"
             style={{ backgroundColor: 'rgba(16, 25, 25, 0.2)' }}
           />
-          <h3 className="text-white font-semibold">{title}</h3>
+          <h3 className="text-white font-semibold">{displayTitle}</h3>
         </div>
         <div className="flex items-center space-x-2 mb-4 ml-5">
           <span className="text-4xl font-bold text-white">
-            {showBalance ? `${balance.toLocaleString('fr-FR')} F CFA` : '* * * * * *'}
+            {showBalance ? `${balance.toLocaleString(localeCode)} F CFA` : '* * * * * *'}
           </span>
           <button
             onClick={() => setShowBalance(!showBalance)}
@@ -75,15 +84,15 @@ export default function Wallet({
         >
           <img 
             src="/icons/wallet-send-vertical(1).png" 
-            alt="Déposer" 
+            alt={t('depositAlt')} 
             className="w-5 h-5 object-contain"
           />
-          <span>Déposer de l'argent</span>
+          <span>{t('deposit')}</span>
         </motion.button>
       </div>
 
       {/* Mes sadaka scores */}
-      <h4 className="text-[#101919] font-bold mb-3">Mes sadaka scores</h4>
+      <h4 className="text-[#101919] font-bold mb-3">{t('mySadaqahScores')}</h4>
       <div className="border-t border-white/20 pt-6 flex justify-between">
         <div className="flex items-center space-x-2 mb-3">
           <img 
@@ -93,18 +102,19 @@ export default function Wallet({
             style={{ backgroundColor: 'rgba(16, 25, 25, 0.2)' }}
           />
           <div>
-            <p className="text-white/80 text-sm">Score actuel</p>
-            <p className="text-2xl font-bold text-white">{sadaqahScore} points</p>
+            <p className="text-white/80 text-sm">{t('currentScore')}</p>
+            <p className="text-2xl font-bold text-white">{sadaqahScore} {t('points')}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2 bg-white/20 rounded-2xl px-3 py-2">
           <img 
-            src={rankBadge ?? '/icons/Group 1000003179.png'} 
+            src={rankBadge ? `${publicPrefix}${rankBadge}` : defaultBadge} 
             alt={rank} 
             className="w-12 h-12 object-contain"
+            onError={(e) => { (e.target as HTMLImageElement).src = defaultBadge; }}
           />
           <div className="rounded-lg px-3 py-2">
-            <p className="text-[#101919] text-xs">Rang</p>
+            <p className="text-[#101919] text-xs">{t('rank')}</p>
             <p className="text-[#101919] font-semibold">{rank}</p>
           </div>
         </div>
@@ -112,26 +122,26 @@ export default function Wallet({
 
       {/* Impact de vos dons */}
       <div className="border-t border-white/20 pt-6">
-        <h4 className="text-[#101919] font-bold mb-4">Impact de vos dons</h4>
+        <h4 className="text-[#101919] font-bold mb-4">{t('impactTitle')}</h4>
         <div className="space-y-3">
           <div className="flex items-center justify-between bg-[#00644D]/20 rounded-2xl px-3 py-2">
             <div className="flex items-center space-x-2">
               <Heart size={18} className="text-white" />
-              <span className="text-[#101919]">Dons</span>
+              <span className="text-[#101919]">{t('donations')}</span>
             </div>
             <span className="text-white font-semibold">{donationsCount}</span>
           </div>
           <div className="flex items-center justify-between bg-[#00644D]/20 rounded-2xl px-3 py-2">
             <div className="flex items-center space-x-2">
               <WalletIcon size={18} className="text-white" />
-              <span className="text-[#101919]">Dépensé (F CFA)</span>
+              <span className="text-[#101919]">{t('spent')}</span>
             </div>
-            <span className="text-white font-semibold">{spentAmount.toLocaleString('fr-FR')}</span>
+            <span className="text-white font-semibold">{spentAmount.toLocaleString(localeCode)}</span>
           </div>
           <div className="flex items-center justify-between bg-[#00644D]/20 rounded-2xl px-3 py-2">
             <div className="flex items-center space-x-2">
               <Megaphone size={18} className="text-white" />
-              <span className="text-[#101919]">Campagnes</span>
+              <span className="text-[#101919]">{t('campaigns')}</span>
             </div>
             <span className="text-white font-semibold">{campaignsCount}</span>
           </div>
@@ -146,7 +156,7 @@ export default function Wallet({
             whileTap={{ scale: 0.98 }}
             className="bg-white text-[#101919] px-4 py-2 rounded-2xl font-medium text-sm w-fit"
           >
-            Voir tout
+            {t('seeAll')}
           </motion.button>
         </Link>
       </div>

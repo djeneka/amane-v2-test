@@ -3,26 +3,28 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Heart, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export default function Footer() {
+  const t = useTranslations('footer');
   const footerLinks = {
     services: [
-      { name: 'Zakat', href: '/zakat' },
-      { name: 'Dons', href: '/campagnes' },
-      { name: 'Takaful', href: '/takaful' },
-      { name: 'Investissement', href: '/investir' },
+      { nameKey: 'zakat' as const, href: '/zakat' },
+      { nameKey: 'donations' as const, href: '/campagnes' },
+      { nameKey: 'takaful' as const, href: '/takaful' },
+      { nameKey: 'investment' as const, href: '/investir' },
     ],
     produits: [
-      { name: 'Takaful', href: '/takaful' },
-      { name: 'Investissements', href: '/investir' },
+      { nameKey: 'takaful' as const, href: '/takaful' },
+      { nameKey: 'investments' as const, href: '/investir' },
     ],
     aides: [
-      { name: 'Centre d\'aide', href: '/aide' },
-      { name: 'FAQ', href: '/faq' },
-      { name: 'Support', href: '/contact' },
-      { name: 'Confidentialité', href: '/confidentialite' },
-      { name: 'Termes et conditions', href: '/termes-conditions' },
-      { name: 'Protection des enfants', href: '/protection-enfants' },
+      { nameKey: 'helpCenter' as const, href: '/aide' },
+      { nameKey: 'faq' as const, href: '/faq' },
+      { nameKey: 'support' as const, href: '/contact' },
+      { nameKey: 'privacy' as const, href: '/confidentialite' },
+      { nameKey: 'termsAndConditions' as const, href: '/termes-conditions' },
+      { nameKey: 'childProtection' as const, href: '/protection-enfants' },
     ]
   };
 
@@ -60,9 +62,7 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-gray-300 mb-6 leading-relaxed">
-              Votre plateforme de confiance pour la finance islamique éthique. 
-              Ensemble, construisons un avenir meilleur à travers des dons, 
-              des investissements halal et une protection takaful.
+              {t('tagline')}
             </p>
             
             {/* Contact Info */}
@@ -97,15 +97,15 @@ export default function Footer() {
             transition={{ duration: 0.6, delay: 0.1 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-lg font-semibold mb-4">Services</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('services')}</h3>
             <ul className="space-y-2">
               {footerLinks.services.map((link) => (
-                <li key={link.name}>
+                <li key={link.nameKey}>
                   <Link
                     href={link.href}
                     className="text-gray-300 hover:text-green-400 transition-colors duration-200"
                   >
-                    {link.name}
+                    {t(link.nameKey)}
                   </Link>
                 </li>
               ))}
@@ -119,15 +119,15 @@ export default function Footer() {
             transition={{ duration: 0.6, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-lg font-semibold mb-4">Produits</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('products')}</h3>
             <ul className="space-y-2">
               {footerLinks.produits.map((link) => (
-                <li key={link.name}>
+                <li key={link.nameKey}>
                   <Link
                     href={link.href}
                     className="text-gray-300 hover:text-green-400 transition-colors duration-200"
                   >
-                    {link.name}
+                    {t(link.nameKey)}
                   </Link>
                 </li>
               ))}
@@ -141,15 +141,15 @@ export default function Footer() {
             transition={{ duration: 0.6, delay: 0.3 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-lg font-semibold mb-4">Aide</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('help')}</h3>
             <ul className="space-y-2">
               {footerLinks.aides.map((link) => (
-                <li key={link.name}>
+                <li key={link.nameKey}>
                   <Link
                     href={link.href}
                     className="text-gray-300 hover:text-green-400 transition-colors duration-200"
                   >
-                    {link.name}
+                    {t(link.nameKey)}
                   </Link>
                 </li>
               ))}
@@ -168,7 +168,7 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-2 text-gray-400">
               <Heart size={16} className="text-red-500" />
-              <span>Fait avec amour pour la communauté</span>
+              <span>{t('madeWithLove')}</span>
             </div>
             
             <div className="flex items-center space-x-6">
@@ -187,7 +187,7 @@ export default function Footer() {
           </div>
           
           <div className="mt-6 text-center text-gray-400 text-sm">
-            <p>&copy; 2026 Amane+. Tous droits réservés.</p>
+            <p>&copy; 2026 Amane+. {t('allRightsReserved')}</p>
           </div>
         </motion.div>
       </div>

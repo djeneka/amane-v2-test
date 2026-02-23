@@ -138,6 +138,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_USER);
     localStorage.removeItem(STORAGE_ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_REFRESH_TOKEN);
+    if (typeof window !== 'undefined') {
+      sessionStorage.clear();
+    }
   }, []);
 
   // Déconnexion automatique quand une requête API retourne 401 (storage déjà nettoyé par api.ts)

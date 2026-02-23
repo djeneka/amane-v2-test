@@ -26,6 +26,9 @@ export default function ScoreWallet({
 }: ScoreWalletProps) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const publicPrefix = '';
+  const defaultBadge = '/icons/Group 1000003179.png';
+
   const maxPointsForNextLevel = progressToNextLevel + pointsNeeded;
   const progressPercentage = maxPointsForNextLevel > 0
     ? (progressToNextLevel / maxPointsForNextLevel) * 100
@@ -68,9 +71,10 @@ export default function ScoreWallet({
             <p className="text-[#00644D] text-lg font-bold">{rank}</p>
           </div>
           <img 
-            src={rankBadge ?? '/icons/Group 1000003179.png'} 
+            src={rankBadge ? `${publicPrefix}${rankBadge}` : defaultBadge} 
             alt={rank} 
             className="w-10 h-10 object-contain"
+            onError={(e) => { (e.target as HTMLImageElement).src = defaultBadge; }}
           />
         </div>
       </div>

@@ -2,14 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Search, Filter, TrendingUp, Users, Target, Calendar, MapPin, 
+import {
+  Search, Filter, TrendingUp, Users, Target, Calendar, MapPin,
   Star, Eye, Share2, Bookmark, Globe, Zap,
   ChevronDown, ChevronUp, ArrowRight, Play, Pause, Shield, Calculator,
   Building, Leaf, CheckCircle, BarChart3, X, Apple, Mail, Phone, User
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { getInvestmentProducts, getMyInvestments, mapInvestmentToDisplay, API_CATEGORY_LABELS, API_CATEGORY_TO_SLUG, type InvestmentProductDisplay, type InvestmentCategorySlug, type MyInvestment } from '@/services/investments';
 import MakeInvestmentModal from '@/components/MakeInvestmentModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +18,7 @@ import { subscribeNewsletter } from '@/services/newsletter';
 
 /** Formulaire liste d'attente (affiché quand displayPromoteContent) */
 function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success' | 'error') => void }) {
+  const t = useTranslations('investir');
   const [email, setEmail] = useState('');
   const [phonePrefix, setPhonePrefix] = useState('+225');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -29,12 +31,12 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
     try {
       const fullPhone = `${phonePrefix}${phoneNumber.replace(/\s/g, '')}`;
       await subscribeNewsletter({ email, phoneNumber: fullPhone, name: fullName });
-      onToast?.('Inscription réussie ! Vous serez notifié en priorité.', 'success');
+      onToast?.(t('waitlistSuccess'), 'success');
       setEmail('');
       setPhoneNumber('');
       setFullName('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Une erreur est survenue. Veuillez réessayer.';
+      const message = err instanceof Error ? err.message : t('waitlistError');
       onToast?.(message, 'error');
     } finally {
       setSubmitting(false);
@@ -47,7 +49,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
         <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           type="email"
-          placeholder="Votre Email"
+          placeholder={t('emailPlaceholder')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#5AB678] focus:border-[#5AB678] outline-none transition-all"
@@ -60,7 +62,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
             value={phonePrefix}
             onChange={(e) => setPhonePrefix(e.target.value)}
             className="bg-transparent text-gray-600 font-medium py-4 pr-2 focus:ring-0 focus:outline-none cursor-pointer appearance-none"
-            aria-label="Indicatif pays"
+            aria-label={t('countryCodeLabel')}
           >
             <optgroup label="Afrique de l'Ouest">
               <option value="+225">🇨🇮 +225</option>
@@ -98,7 +100,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
           <Phone size={20} className="ml-4 text-gray-400 flex-shrink-0" />
           <input
             type="tel"
-            placeholder="Exemple : 0123456789"
+            placeholder={t('phonePlaceholder')}
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
             className="w-full pl-3 pr-4 py-4 bg-white text-gray-900 placeholder-gray-400 focus:ring-0 focus:outline-none border-0"
@@ -109,7 +111,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
         <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
-          placeholder="Nom et prénom"
+          placeholder={t('fullNamePlaceholder')}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#5AB678] focus:border-[#5AB678] outline-none transition-all"
@@ -123,13 +125,14 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
         whileTap={{ scale: 0.98 }}
         className="w-full py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-[#5AB678] to-[#20B6B3] hover:from-[#20B6B3] hover:to-[#00644d] transition-all duration-200 disabled:opacity-70"
       >
-        {submitting ? 'Inscription...' : "M'inscrire sur la liste d'attente"}
+        {submitting ? t('submitting') : t('waitlistSubmit')}
       </motion.button>
     </form>
   );
 }
 
 export default function InvestirPage() {
+  const t = useTranslations('investir');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('popular');
@@ -161,7 +164,7 @@ export default function InvestirPage() {
         if (!cancelled) setProducts(list.map(mapInvestmentToDisplay));
       })
       .catch((e) => {
-        if (!cancelled) setError(e?.message ?? 'Erreur lors du chargement des produits');
+        if (!cancelled) setError(e?.message ?? t('errorLoadProducts'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -181,7 +184,7 @@ export default function InvestirPage() {
       .then((list) => { if (!cancelled) setInvestments(list); })
       .catch((err) => {
         if (!cancelled) {
-          setInvestmentsError(err?.message ?? 'Erreur chargement des investissements');
+          setInvestmentsError(err?.message ?? t('errorLoadInvestments'));
           setInvestments([]);
         }
       })
@@ -265,7 +268,7 @@ export default function InvestirPage() {
     const rest = uniqueApiCategories.filter((apiCat) => !API_CATEGORY_ORDER.includes(apiCat)).sort();
     const allOrdered = [...ordered, ...rest];
     return [
-      { id: 'all', name: 'Toutes', icon: Globe, color: 'bg-gray-500' },
+      { id: 'all', name: t('filterAll'), icon: Globe, color: 'bg-gray-500' },
       ...allOrdered.map((apiCat) => {
         const slug = API_CATEGORY_TO_SLUG[apiCat] ?? 'immobilier';
         return {
@@ -279,10 +282,10 @@ export default function InvestirPage() {
   }, [products]);
 
   const sortOptions = [
-    { id: 'popular', name: 'Plus populaires' },
-    { id: 'recent', name: 'Plus récents' },
-    { id: 'return', name: 'Rendement élevé' },
-    { id: 'risk', name: 'Risque faible' },
+    { id: 'popular', name: t('sortPopular') },
+    { id: 'recent', name: t('sortRecent') },
+    { id: 'return', name: t('sortReturn') },
+    { id: 'risk', name: t('sortRisk') },
   ];
 
   const filteredProducts = products
@@ -350,7 +353,7 @@ export default function InvestirPage() {
 
   const handleInvest = (product: InvestmentProductDisplay) => {
     if (!accessToken) {
-      setToastMessage('Veuillez vous connecter pour investir.');
+      setToastMessage(t('connectToInvest'));
       setTimeout(() => setToastMessage(null), 4000);
       return;
     }
@@ -359,10 +362,10 @@ export default function InvestirPage() {
   };
 
   const stats = [
-    { label: 'Investisseurs actifs', value: '10K+', icon: Users },
-    { label: 'Rendement moyen', value: '8.5%', icon: TrendingUp },
-    { label: 'Produits disponibles', value: '12+', icon: Target },
-    { label: 'Années d\'expérience', value: '15+', icon: Star },
+    { label: t('activeInvestors'), value: '10K+', icon: Users },
+    { label: t('avgReturn'), value: '8.5%', icon: TrendingUp },
+    { label: t('productsAvailable'), value: '12+', icon: Target },
+    { label: t('yearsExperience'), value: '15+', icon: Star },
   ];
 
   /** Icône par mot-clé dans le titre du produit */
@@ -486,10 +489,10 @@ export default function InvestirPage() {
             <h3 className="text-white text-xl font-bold mb-2">Investir</h3>
             <nav className="text-sm mb-2">
               <Link href="/">
-                <span className="text-gray-300 font-bold">Accueil</span>
+                <span className="text-gray-300 font-bold">{t('home')}</span>
               </Link>
               <span className="text-gray-300 mx-2">/</span>
-              <span className="text-green-400">Investir</span>
+              <span className="text-green-400">{t('investir')}</span>
             </nav>
           </motion.div>
 
@@ -510,10 +513,10 @@ export default function InvestirPage() {
                   </div>
                 </motion.div>
                 <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
-                  Produits d&apos;<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-green-600">Investissement</span>
+                  {t('heroProductsTitle')}
                 </h1>
                 <p className="text-xl text-white mb-12 max-w-3xl mx-auto leading-relaxed">
-                  Découvrez nos solutions d&apos;investissement conformes aux principes islamiques. Placez votre argent de manière éthique et rentable.
+                  {t('discoverSubtitle')}
                 </p>
               </motion.div>
 
@@ -626,10 +629,10 @@ export default function InvestirPage() {
                 </motion.div>
                 
                 <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
-                  Produits d'<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00644d] to-green-600">Investissement</span>
+                  {t('heroProductsTitle')}
                 </h1>
                 <p className="text-xl text-white mb-12 max-w-3xl mx-auto leading-relaxed">
-                  Découvrez nos solutions d'investissement conformes aux principes islamiques. Placez votre argent de manière éthique et rentable.
+                  {t('discoverSubtitle')}
                 </p>
 
                 <div className="flex justify-center gap-4 mb-8">
@@ -643,7 +646,7 @@ export default function InvestirPage() {
                         : 'text-[#D9D9D9]'
                     }`}
                   >
-                    Produits d'investissement
+                    {t('tabProducts')}
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -655,7 +658,7 @@ export default function InvestirPage() {
                         : 'text-[#D9D9D9]'
                     }`}
                   >
-                    Mes investissements
+                    {t('tabMyInvestments')}
                   </motion.button>
                 </div>
 
@@ -671,7 +674,7 @@ export default function InvestirPage() {
                         <Target size={24} className="text-green-600" />
                       </motion.div>
                       <p className="text-2xl font-bold text-white">{products.length}</p>
-                      <p className="text-sm text-white">Produits disponibles</p>
+                      <p className="text-sm text-white">{t('productsAvailable')}</p>
                     </div>
                   </motion.div>
                   <motion.div
@@ -685,7 +688,7 @@ export default function InvestirPage() {
                         <Users size={24} className="text-green-600" />
                       </motion.div>
                       <p className="text-2xl font-bold text-white">10K+</p>
-                      <p className="text-sm text-white">Investisseurs</p>
+                      <p className="text-sm text-white">{t('activeInvestors')}</p>
                     </div>
                   </motion.div>
                   <motion.div
@@ -699,7 +702,7 @@ export default function InvestirPage() {
                         <TrendingUp size={24} className="text-green-600" />
                       </motion.div>
                       <p className="text-2xl font-bold text-white">8.5%</p>
-                      <p className="text-sm text-white">Rendement moyen</p>
+                      <p className="text-sm text-white">{t('avgReturn')}</p>
                     </div>
                   </motion.div>
                   <motion.div
@@ -713,7 +716,7 @@ export default function InvestirPage() {
                         <Star size={24} className="text-orange-600" />
                       </motion.div>
                       <p className="text-2xl font-bold text-white">15+</p>
-                      <p className="text-sm text-white">Années d'expérience</p>
+                      <p className="text-sm text-white">{t('yearsExperience')}</p>
                     </div>
                   </motion.div>
                 </div>
@@ -739,7 +742,7 @@ export default function InvestirPage() {
                 <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/20" />
                 <input
                   type="text"
-                  placeholder={activeTab === 'products' ? "Rechercher un produit d'investissement..." : "Rechercher un investissement..."}
+                  placeholder={activeTab === 'products' ? t('searchPlaceholder') : t('searchMyPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 border-2 border-green-400 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-white placeholder-white/80 bg-transparent"
@@ -776,8 +779,8 @@ export default function InvestirPage() {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="px-4 py-3 border-2 border-gray-400 rounded-xl focus:ring-4 focus:ring-[#00644d]/20 focus:border-[#00644d] transition-all duration-200 text-white"
-                  title={activeTab === 'products' ? "Trier les produits" : "Trier les investissements"}
-                  aria-label={activeTab === 'products' ? "Trier les produits" : "Trier les investissements"}
+                  title={activeTab === 'products' ? t('sortBy') : t('sortMyBy')}
+                  aria-label={activeTab === 'products' ? t('sortBy') : t('sortMyBy')}
                 >
                   {sortOptions.map((option) => (
                     <option key={option.id} value={option.id}>
@@ -964,7 +967,7 @@ export default function InvestirPage() {
                           <div className="mb-4">
                             <h4 className="font-bold text-white mb-3">Avantages inclus :</h4>
                             <ul className="space-y-2">
-                              {(product.benefits?.length ? product.benefits : ['Conforme aux principes islamiques', 'Transparence totale', 'Gestion professionnelle']).map((benefit, i) => (
+                              {(product.benefits?.length ? product.benefits : [t('benefit1'), t('benefit2'), t('benefit3')]).map((benefit, i) => (
                                 <li key={i} className="flex items-center space-x-2 text-sm text-white/80">
                                   <CheckCircle size={16} className="text-green-500" />
                                   <span>{benefit}</span>
@@ -1099,7 +1102,7 @@ export default function InvestirPage() {
                             <div className="mb-4">
                               <h4 className="font-medium text-gray-900 mb-3">Avantages :</h4>
                               <ul className="space-y-2">
-                                {(product.benefits?.length ? product.benefits : ['Conforme aux principes islamiques', 'Transparence totale', 'Gestion professionnelle']).map((benefit, i) => (
+                                {(product.benefits?.length ? product.benefits : [t('benefit1'), t('benefit2'), t('benefit3')]).map((benefit, i) => (
                                   <li key={i} className="flex items-center space-x-2 text-sm text-gray-600">
                                     <CheckCircle size={16} className="text-green-500" />
                                     <span>{benefit}</span>
@@ -1123,7 +1126,7 @@ export default function InvestirPage() {
                                 onClick={() => handleInvest(product)}
                                 className="px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center space-x-2 flex-shrink-0 ml-3"
                               >
-                                <span>Investir</span>
+                                <span>{t('invest')}</span>
                                 <ArrowRight size={16} />
                               </motion.button>
                             </div>
@@ -1238,12 +1241,12 @@ export default function InvestirPage() {
                   <Search size={32} className="text-gray-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">
-                  {searchTerm ? 'Aucun investissement trouvé' : 'Aucun investissement'}
+                  {searchTerm ? t('noInvestmentFound') : t('noInvestment')}
                 </h3>
                 <p className="text-white/80">
                   {searchTerm 
-                    ? 'Essayez de modifier vos critères de recherche'
-                    : 'Vous n\'avez pas encore d\'investissement actif'}
+                    ? t('tryCriteria')
+                    : t('noInvestmentYet')}
                 </p>
               </motion.div>
             )}
@@ -1378,10 +1381,10 @@ export default function InvestirPage() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-6xl font-extrabold mb-6 text-[#00644d]">
-                  Emportez Amane+ partout avec vous
+                  {t('takeWithYouTitle')}
                 </h2>
                 <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                Retrouvez toutes les fonctionnalités d'Amane+ dans une seule application. Faites vos dons, suivez vos rendements, automatisez votre Zakat et participez à des actions solidaires, où que vous soyez.
+                {t('takeWithYouDesc')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <motion.button
@@ -1390,7 +1393,7 @@ export default function InvestirPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Apple size={24} />
-                    <span>Disponible sur l'App Store</span>
+                    <span>{t('appStore')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -1398,7 +1401,7 @@ export default function InvestirPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Play size={24} />
-                    <span>Télécharger sur Google Play</span>
+                    <span>{t('googlePlay')}</span>
                   </motion.button>
                 </div>
               </motion.div>

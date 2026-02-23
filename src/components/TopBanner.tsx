@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface TopBannerProps {
   text?: string;
@@ -15,13 +16,16 @@ interface TopBannerProps {
 }
 
 export default function TopBanner({
-  text = "Participez à un projet qui change des vies.",
-  buttonText = "Participer",
-  buttonHref = "/campagnes",
+  text,
+  buttonText,
+  buttonHref = '/campagnes',
   dismissible = true,
   onDismiss
 }: TopBannerProps) {
+  const t = useTranslations('topBanner');
   const [isVisible, setIsVisible] = useState(true);
+  const displayText = text ?? t('text');
+  const displayButtonText = buttonText ?? t('button');
 
   const handleDismiss = () => {
     setIsVisible(false);
@@ -48,7 +52,7 @@ export default function TopBanner({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex items-center justify-center gap-4 relative">
           <p className="text-sm md:text-base font-medium text-white text-center">
-            {text}
+            {displayText}
           </p>
           <Link href={buttonHref}>
             <motion.button
@@ -59,14 +63,14 @@ export default function TopBanner({
                 color: '#20B6B3'
               }}
             >
-              {buttonText}
+              {displayButtonText}
             </motion.button>
           </Link>
           {dismissible && (
             <button
               onClick={handleDismiss}
               className="absolute right-0 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors p-1"
-              aria-label="Fermer la bannière"
+              aria-label={t('closeAria')}
             >
               <X size={18} />
             </button>

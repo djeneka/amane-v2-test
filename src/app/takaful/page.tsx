@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Search, Filter, Shield, Users, Target, Calendar, MapPin, 
+import {
+  Search, Filter, Shield, Users, Target, Calendar, MapPin,
   Star, Eye, Share2, Globe, Zap,
   ChevronDown, ChevronUp, ArrowRight, Play, Pause, Calculator,
   Heart, Car, Home, User, CheckCircle, X, Apple, Mail, Phone
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import MakeTakafulModal from '@/components/MakeTakafulModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTakafulPlans, getMyTakafulSubscriptions, type TakafulPlan, type MyTakafulSubscription } from '@/services/takaful-plans';
@@ -101,6 +102,7 @@ function formatSubscriptionDate(iso: string | null): string {
 
 /** Formulaire liste d'attente (design Figma - affiché quand displayPromoteContent) */
 function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success' | 'error') => void }) {
+  const t = useTranslations('takaful');
   const [email, setEmail] = useState('');
   const [phonePrefix, setPhonePrefix] = useState('+225');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -113,12 +115,12 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
     try {
       const fullPhone = `${phonePrefix}${phoneNumber.replace(/\s/g, '')}`;
       await subscribeNewsletter({ email, phoneNumber: fullPhone, name: fullName });
-      onToast?.('Inscription réussie ! Vous serez notifié en priorité.', 'success');
+      onToast?.(t('waitlistSuccess'), 'success');
       setEmail('');
       setPhoneNumber('');
       setFullName('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Une erreur est survenue. Veuillez réessayer.';
+      const message = err instanceof Error ? err.message : t('waitlistError');
       onToast?.(message, 'error');
     } finally {
       setSubmitting(false);
@@ -131,7 +133,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
         <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           type="email"
-          placeholder="Votre Email"
+          placeholder={t('emailPlaceholder')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#5AB678] focus:border-[#5AB678] outline-none transition-all"
@@ -145,7 +147,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
             value={phonePrefix}
             onChange={(e) => setPhonePrefix(e.target.value)}
             className="bg-transparent text-gray-600 font-medium py-4 pr-2 focus:ring-0 focus:outline-none cursor-pointer appearance-none"
-            aria-label="Indicatif pays"
+            aria-label={t('countryCodeLabel')}
           >
             <optgroup label="Afrique de l'Ouest">
               <option value="+225">🇨🇮 +225</option>
@@ -183,7 +185,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
           <Phone size={20} className="ml-4 text-gray-400 flex-shrink-0" />
           <input
             type="tel"
-            placeholder="Exemple : 0123456789"
+            placeholder={t('phonePlaceholder')}
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
             className="w-full pl-3 pr-4 py-4 bg-white text-gray-900 placeholder-gray-400 focus:ring-0 focus:outline-none border-0"
@@ -195,7 +197,7 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
         <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
-          placeholder="Nom et prénom"
+          placeholder={t('fullNamePlaceholder')}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[#5AB678] focus:border-[#5AB678] outline-none transition-all"
@@ -210,13 +212,14 @@ function WaitlistForm({ onToast }: { onToast?: (message: string, type?: 'success
         whileTap={{ scale: 0.98 }}
         className="w-full py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-[#5AB678] to-[#20B6B3] hover:from-[#20B6B3] hover:to-[#00644d] transition-all duration-200 disabled:opacity-70"
       >
-        {submitting ? 'Inscription...' : "M'inscrire sur la liste d'attente"}
+        {submitting ? t('submitting') : t('waitlistSubmit')}
       </motion.button>
     </form>
   );
 }
 
 export default function TakafulPage() {
+  const t = useTranslations('takaful');
   const { accessToken, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -259,7 +262,7 @@ export default function TakafulPage() {
       .then((list) => { if (!cancelled) setPlans(list); })
       .catch((err) => {
         if (!cancelled) {
-          setPlansError(err?.message ?? 'Erreur chargement des produits Takaful');
+          setPlansError(err?.message ?? t('errorLoadPlans'));
           setPlans([]);
         }
       })
@@ -279,7 +282,7 @@ export default function TakafulPage() {
       .then((list) => { if (!cancelled) setSubscriptions(list); })
       .catch((err) => {
         if (!cancelled) {
-          setSubscriptionsError(err?.message ?? 'Erreur chargement des souscriptions');
+          setSubscriptionsError(err?.message ?? t('errorLoadSubscriptions'));
           setSubscriptions([]);
         }
       })
@@ -304,19 +307,19 @@ export default function TakafulPage() {
   };
 
   const categories = [
-    { id: 'all', name: 'Toutes', icon: Globe, color: 'bg-gray-500' },
-    { id: 'sante', name: 'Santé', icon: Heart, color: 'bg-green-500' },
-    { id: 'automobile', name: 'Automobile', icon: Car, color: 'bg-blue-500' },
-    { id: 'habitation', name: 'Habitation', icon: Home, color: 'bg-purple-500' },
-    { id: 'vie', name: 'Vie', icon: User, color: 'bg-orange-500' },
-    { id: 'autres', name: 'Autre', icon: Shield, color: 'bg-gray-500' },
+    { id: 'all', name: t('categoryAll'), icon: Globe, color: 'bg-gray-500' },
+    { id: 'sante', name: t('categoryHealth'), icon: Heart, color: 'bg-green-500' },
+    { id: 'automobile', name: t('categoryAuto'), icon: Car, color: 'bg-blue-500' },
+    { id: 'habitation', name: t('categoryHome'), icon: Home, color: 'bg-purple-500' },
+    { id: 'vie', name: t('categoryLife'), icon: User, color: 'bg-orange-500' },
+    { id: 'autres', name: t('categoryOther'), icon: Shield, color: 'bg-gray-500' },
   ];
 
   const sortOptions = [
-    { id: 'popular', name: 'Plus populaires' },
-    { id: 'recent', name: 'Plus récents' },
-    { id: 'price', name: 'Prix bas' },
-    { id: 'coverage', name: 'Couverture élevée' },
+    { id: 'popular', name: t('sortPopular') },
+    { id: 'recent', name: t('sortRecent') },
+    { id: 'price', name: t('sortPrice') },
+    { id: 'coverage', name: t('sortCoverage') },
   ];
 
   const filteredPlans = plans
@@ -367,7 +370,7 @@ export default function TakafulPage() {
 
   const handleSubscribe = (plan: TakafulPlan) => {
     if (!accessToken) {
-      setToastMessage('Veuillez vous connecter pour souscrire.');
+      setToastMessage(t('connectToSubscribe'));
       setTimeout(() => setToastMessage(null), 4000);
       return;
     }
@@ -377,7 +380,7 @@ export default function TakafulPage() {
 
   const handlePay = (subscription: MyTakafulSubscription) => {
     if (!accessToken) {
-      setToastMessage('Veuillez vous connecter pour effectuer un paiement.');
+      setToastMessage(t('connectToPay'));
       setTimeout(() => setToastMessage(null), 4000);
       return;
     }
@@ -510,7 +513,7 @@ export default function TakafulPage() {
             <h3 className="text-white text-xl font-bold mb-2">Takaful</h3>
             <nav className="text-sm mb-2">
               <Link href="/">
-                <span className="text-gray-300 font-bold">Accueil</span>
+                <span className="text-gray-300 font-bold">{t('home')}</span>
               </Link>
               <span className="text-gray-300 mx-2">/</span>
               <span className="text-green-400">Takaful</span>
@@ -674,7 +677,7 @@ export default function TakafulPage() {
                         : 'text-[#D9D9D9]'
                     }`}
                   >
-                    Solutions takaful
+                    {t('tabSolutions')}
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -686,7 +689,7 @@ export default function TakafulPage() {
                         : 'text-[#D9D9D9]'
                     }`}
                   >
-                    Mes souscriptions
+                    {t('tabMySubscriptions')}
                   </motion.button>
                 </div>
 
@@ -742,7 +745,7 @@ export default function TakafulPage() {
                 <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/20" />
                 <input
                   type="text"
-                  placeholder={activeTab === 'solutions' ? "Rechercher un produit de protection..." : "Rechercher une souscription..."}
+                  placeholder={activeTab === 'solutions' ? t('searchPlaceholder') : t('searchMyPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 border-2 border-green-400 rounded-xl focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all duration-200 text-white placeholder-white/80 bg-transparent"
@@ -779,8 +782,8 @@ export default function TakafulPage() {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="px-4 py-3 border-2 border-gray-400 rounded-xl focus:ring-4 focus:ring-[#00644d]/20 focus:border-[#00644d] transition-all duration-200 text-white"
-                  title={activeTab === 'solutions' ? "Trier les produits" : "Trier les souscriptions"}
-                  aria-label={activeTab === 'solutions' ? "Trier les produits" : "Trier les souscriptions"}
+                  title={activeTab === 'solutions' ? t('sortBy') : t('sortMyBy')}
+                  aria-label={activeTab === 'solutions' ? t('sortBy') : t('sortMyBy')}
                 >
                   {sortOptions.map((option) => (
                     <option key={option.id} value={option.id}>
@@ -831,7 +834,7 @@ export default function TakafulPage() {
 
         {/* Loading / Error */}
         {plansLoading && (
-          <div className="text-center text-white/80 py-12">Chargement des produits Takaful...</div>
+          <div className="text-center text-white/80 py-12">{t('loadingPlans')}</div>
         )}
         {!plansLoading && plansError && (
           <div className="text-center text-white/90 py-4">{plansError}</div>
@@ -879,7 +882,7 @@ export default function TakafulPage() {
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
                               className="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
-                              title="Voir les détails du produit"
+                              title={t('viewProductDetails')}
                             >
                               <Eye size={16} />
                             </motion.button>
@@ -903,7 +906,7 @@ export default function TakafulPage() {
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
-                              <span className="text-white/80">Cotisation mensuelle</span>
+                              <span className="text-white/80">{t('monthlyContribution')}</span>
                               <span className="font-semibold text-white truncate">
                                 {formatCompactAmount(plan.monthlyContribution ?? 0)}
                               </span>
@@ -911,7 +914,7 @@ export default function TakafulPage() {
                           </div>
 
                           <div className="mb-4">
-                            <h4 className="font-bold text-white mb-3">Avantages inclus :</h4>
+                            <h4 className="font-bold text-white mb-3">{t('benefitsIncluded')}</h4>
                             <ul className="space-y-2">
                               {(plan.benefits ?? []).slice(0, 3).map((benefit, i) => (
                                 <li key={i} className="flex items-center space-x-2 text-sm text-white/80">
@@ -932,7 +935,7 @@ export default function TakafulPage() {
                               onClick={() => handleSubscribe(plan)}
                               className="w-full px-3 py-2 bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white rounded-2xl font-semibold hover:from-[#20b6b3] hover:to-[#00644d] transition-all duration-200 text-sm flex-shrink-0 ml-2"
                             >
-                              Souscrire
+                              {t('subscribe')}
                             </motion.button>
                           </div>
                         </div>
@@ -982,7 +985,7 @@ export default function TakafulPage() {
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                                 className="absolute top-1 right-1 w-6 h-6 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:text-green-500 transition-colors z-10"
-                                title="Voir les détails du produit"
+                                title={t('viewProductDetails')}
                               >
                                 <Eye size={12} />
                               </motion.button>
@@ -1012,7 +1015,7 @@ export default function TakafulPage() {
 
                           <div className="space-y-3">
                             <div className="mb-4">
-                              <h4 className="font-medium text-gray-900 mb-3">Avantages inclus :</h4>
+                              <h4 className="font-medium text-gray-900 mb-3">{t('benefitsIncluded')}</h4>
                               <ul className="space-y-2">
                                 {(plan.benefits ?? []).map((benefit, i) => (
                                   <li key={i} className="flex items-center space-x-2 text-sm text-gray-600">
@@ -1041,7 +1044,7 @@ export default function TakafulPage() {
                                 onClick={() => handleSubscribe(plan)}
                                 className="px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center space-x-2 flex-shrink-0 ml-3"
                               >
-                                <span>Souscrire</span>
+                                <span>{t('subscribe')}</span>
                                 <ArrowRight size={16} />
                               </motion.button>
                             </div>
@@ -1068,7 +1071,7 @@ export default function TakafulPage() {
               <Search size={32} className="text-gray-400" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">
-              Aucun produit trouvé
+              {t('noProductFound')}
             </h3>
             <p className="text-white/80">
               Essayez de modifier vos critères de recherche
@@ -1097,8 +1100,8 @@ export default function TakafulPage() {
                 <div className="w-24 h-24 bg-[#2C3E3E] rounded-full flex items-center justify-center mx-auto mb-6">
                   <User size={32} className="text-[#5FB678]" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">Connectez-vous</h3>
-                <p className="text-white/80">Connectez-vous pour voir vos souscriptions Takaful.</p>
+                <h3 className="text-xl font-semibold text-white mb-2">{t('signIn')}</h3>
+                <p className="text-white/80">{t('signInToSubscriptions')}</p>
               </motion.div>
             ) : filteredSubscriptions.length > 0 ? (
               filteredSubscriptions.map((subscription, index) => {
@@ -1156,7 +1159,7 @@ export default function TakafulPage() {
                   <Search size={32} className="text-[#5FB678]" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">
-                  {searchTerm ? 'Aucune souscription trouvée' : 'Aucune souscription'}
+                  {searchTerm ? t('noSubscriptionFound') : t('noSubscription')}
                 </h3>
                 <p className="text-white/80">
                   {searchTerm
@@ -1298,10 +1301,10 @@ export default function TakafulPage() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-6xl font-extrabold mb-6 text-[#00644d]">
-                  Emportez Amane+ partout avec vous
+                  {t('takeWithYouTitle')}
                 </h2>
                 <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                Retrouvez toutes les fonctionnalités d’Amane+ dans une seule application. Faites vos dons, suivez vos rendements, automatisez votre Zakat et participez à des actions solidaires, où que vous soyez.
+                {t('takeWithYouDesc')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <motion.button
@@ -1310,7 +1313,7 @@ export default function TakafulPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Apple size={24} />
-                    <span>Disponible sur l'App Store</span>
+                    <span>{t('appStore')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -1318,7 +1321,7 @@ export default function TakafulPage() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Play size={24} />
-                    <span>Télécharger sur Google Play</span>
+                    <span>{t('googlePlay')}</span>
                   </motion.button>
                 </div>
               </motion.div>
@@ -1435,7 +1438,7 @@ export default function TakafulPage() {
                     <span className="text-white">{formatSubscriptionDate(selectedSubscription.endDate)}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-[#1A2A2A]">
-                    <span className="text-white/80">Cotisation mensuelle</span>
+                    <span className="text-white/80">{t('monthlyContribution')}</span>
                     <span className="text-white font-semibold">
                       {formatAmount(selectedSubscription.takafulPlan.monthlyContribution)}
                     </span>

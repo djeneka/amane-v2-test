@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Megaphone, Search, Lock, CheckCircle, ArrowRight } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { X, Search, Lock, CheckCircle, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import AskForHelpFormModal from './AskForHelpFormModal';
 
 interface AskForHelpModalProps {
@@ -12,16 +12,16 @@ interface AskForHelpModalProps {
   onClose: () => void;
 }
 
-const STEPS = [
-  { id: 1, text: 'Remplissez le formulaire (5 min)' },
-  { id: 2, text: 'Votre dossier est étudié' },
-  { id: 3, text: 'Vous recevez une réponse claire' },
-  { id: 4, text: 'Une aide est mise en place si validée' },
-];
-
 export default function AskForHelpModal({ isOpen, onClose }: AskForHelpModalProps) {
-  const router = useRouter();
+  const t = useTranslations('helpRequest');
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+
+  const STEPS = [
+    { id: 1, text: t('intro.step1') },
+    { id: 2, text: t('intro.step2') },
+    { id: 3, text: t('intro.step3') },
+    { id: 4, text: t('intro.step4') },
+  ];
 
   // Empêcher le scroll du body quand le modal est ouvert
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function AskForHelpModal({ isOpen, onClose }: AskForHelpModalProp
                 {/* Bouton de fermeture */}
                 <button
                   onClick={onClose}
-                  aria-label="Fermer la modale"
+                  aria-label={t('intro.closeAria')}
                   className="absolute top-4 right-4 w-10 h-10 bg-[#2F855A] rounded-full flex items-center justify-center hover:bg-[#276749] transition-colors z-10"
                 >
                   <X className="w-5 h-5 text-white" />
@@ -82,26 +82,21 @@ export default function AskForHelpModal({ isOpen, onClose }: AskForHelpModalProp
                 <div className="p-6 md:p-8 space-y-6">
                   {/* En-tête avec icône */}
                   <div className="flex items-start gap-4 pt-4">
-                    {/* Icône mégaphone */}
                     <div className="relative flex-shrink-0">
-                      {/* Cercle extérieur vert */}
                       <div className="bg-[#101919] rounded-full flex items-center justify-center">
-                        {/* Cercle intérieur vert clair */}
                         <div className="w-12 h-12 rounded-full flex items-center justify-center">
                           <Image src="/images/Image(11).png" alt="Megaphone" width={100} height={100} />
                         </div>
                       </div>
                     </div>
 
-                    {/* Titre */}
                     <h2 className="text-2xl md:text-3xl font-bold text-white flex-1 pt-2">
-                      Besoin d'aide ? Nous sommes là !
+                      {t('intro.title')}
                     </h2>
                   </div>
 
-                {/* Texte descriptif */}
                 <p className="text-base md:text-lg text-[#A0AEC0] leading-relaxed">
-                  Si vous traversez une situation difficile, Amane+ vous permet de faire une demande d'aide en toute confidentialité. Chaque demande est étudiée avec sérieux, respect et transparence.
+                  {t('intro.description')}
                 </p>
 
                 {/* Section "Comment ça se passe ?" */}
@@ -109,7 +104,7 @@ export default function AskForHelpModal({ isOpen, onClose }: AskForHelpModalProp
                   <div className="flex items-center gap-2">
                     <Search className="w-5 h-5 text-white" />
                     <h3 className="text-lg md:text-xl font-semibold text-white">
-                      Comment ça se passe ?
+                      {t('intro.howItWorks')}
                     </h3>
                   </div>
 
@@ -140,11 +135,11 @@ export default function AskForHelpModal({ isOpen, onClose }: AskForHelpModalProp
                   <div className="flex items-center gap-2">
                     <Lock className="w-5 h-5 text-white" />
                     <h3 className="text-lg md:text-xl font-semibold text-white">
-                      En toute confiance
+                      {t('intro.trustTitle')}
                     </h3>
                   </div>
                   <p className="text-base text-[#A0AEC0] leading-relaxed">
-                    Vos informations sont protégées et utilisées uniquement pour le traitement de votre demande.
+                    {t('intro.trustDesc')}
                   </p>
                 </div>
 
@@ -155,7 +150,7 @@ export default function AskForHelpModal({ isOpen, onClose }: AskForHelpModalProp
                   onClick={handleStart}
                   className="w-full bg-gradient-to-r from-[#48BB78] to-[#38B2AC] text-white font-bold py-4 px-6 rounded-3xl flex items-center justify-center gap-2 hover:from-[#38A169] hover:to-[#319795] transition-all"
                 >
-                  <span className="text-lg">Commencer</span>
+                  <span className="text-lg">{t('intro.start')}</span>
                   <ArrowRight className="w-5 h-5" />
                 </motion.button>
               </div>

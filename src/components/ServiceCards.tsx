@@ -3,68 +3,33 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import AskForHelpModal from './AskForHelpModal';
 
 interface ServiceCard {
   href: string;
   image: string;
-  alt: string;
-  label: string;
+  altKey: 'donations' | 'takaful' | 'investment' | 'zakat';
   height: string;
   delay: number;
   paddingClass?: string;
   textPaddingClass?: string;
 }
 
-const services: ServiceCard[] = [
-  {
-    href: '/campagnes',
-    image: '/images/Image(5).png',
-    alt: 'Dons',
-    label: 'Dons',
-    height: '217px',
-    delay: 0.1,
-    paddingClass: 'p-4 pt-0 pl-0',
-    textPaddingClass: 'pl-4 pb-4'
-  },
-  {
-    href: '/takaful',
-    image: '/images/Image(4).png',
-    alt: 'Takaful',
-    label: 'Takaful',
-    height: '217px',
-    delay: 0.2,
-    paddingClass: 'p-0',
-    textPaddingClass: 'pl-4 pb-4'
-  },
-  {
-    href: '/investir',
-    image: '/images/Image(6).png',
-    alt: 'Investissement',
-    label: 'Investissement',
-    height: '217px',
-    delay: 0.3,
-    paddingClass: 'p-4 pt-0 pl-0',
-    textPaddingClass: 'pl-4'
-  },
-  {
-    href: '/zakat',
-    image: '/images/Image(7).png',
-    alt: 'Zakat',
-    label: 'Zakat',
-    height: '217px',
-    delay: 0.4,
-    paddingClass: 'p-4 pt-0 pl-0',
-    textPaddingClass: 'pl-4'
-  }
-];
-
 interface ServiceCardsProps {
   showHelpButton?: boolean;
 }
 
 export default function ServiceCards({ showHelpButton = true }: ServiceCardsProps) {
+  const t = useTranslations('home.serviceCards');
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+  const services: ServiceCard[] = [
+    { href: '/campagnes', image: '/images/Image(5).png', altKey: 'donations', height: '217px', delay: 0.1, paddingClass: 'p-4 pt-0 pl-0', textPaddingClass: 'pl-4 pb-4' },
+    { href: '/takaful', image: '/images/Image(4).png', altKey: 'takaful', height: '217px', delay: 0.2, paddingClass: 'p-0', textPaddingClass: 'pl-4 pb-4' },
+    { href: '/investir', image: '/images/Image(6).png', altKey: 'investment', height: '217px', delay: 0.3, paddingClass: 'p-4 pt-0 pl-0', textPaddingClass: 'pl-4' },
+    { href: '/zakat', image: '/images/Image(7).png', altKey: 'zakat', height: '217px', delay: 0.4, paddingClass: 'p-4 pt-0 pl-0', textPaddingClass: 'pl-4' }
+  ];
 
   return (
     <div className="lg:col-span-1">
@@ -80,8 +45,8 @@ export default function ServiceCards({ showHelpButton = true }: ServiceCardsProp
               className={`bg-[#83CBB4] rounded-4xl ${service.paddingClass} flex flex-col justify-between cursor-pointer hover:bg-[#7FB88E] transition-colors w-full`}
               style={{ height: service.height }}
             >
-              <img src={service.image} alt={service.alt} className="object-contain self-start" />
-              <span className={`text-white font-semibold ${service.textPaddingClass || ''}`}>{service.label}</span>
+              <img src={service.image} alt={t(service.altKey)} className="object-contain self-start" />
+              <span className={`text-white font-semibold ${service.textPaddingClass || ''}`}>{t(service.altKey)}</span>
             </motion.div>
           </Link>
         ))}
@@ -99,7 +64,7 @@ export default function ServiceCards({ showHelpButton = true }: ServiceCardsProp
           className="mt-4 w-full bg-[#83CBB4] hover:bg-[#7FB88E] text-white font-semibold py-4 px-6 rounded-2xl transition-colors flex items-center justify-center gap-3"
         >
           <img src="/icons/volume-high.png" alt="" className="w-5 h-5 object-contain" />
-          Demande de l'aide
+          {t('helpRequest')}
         </motion.button>
       )}
 

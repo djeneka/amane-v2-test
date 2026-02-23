@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Menu, X, LogOut, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 import ShareModal from '@/components/ShareModal';
 import LogoutModal from '@/components/LogoutModal';
@@ -13,7 +14,10 @@ interface ProfilLayoutProps {
   children: React.ReactNode;
 }
 
+type SidebarLabelKey = 'personalInfo' | 'myDonations' | 'myRequests' | 'sadaqahScores' | 'rankings' | 'wallet' | 'settings' | 'aboutAmane' | 'helpSupport' | 'termsConditions' | 'invitePeople';
+
 export default function ProfilLayout({ children }: ProfilLayoutProps) {
+  const t = useTranslations('profil');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -30,87 +34,20 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
     }
   }, [authReady, isAuthenticated, pathname, router]);
 
-  const sidebarItems = [
-    { 
-      id: 'profile', 
-      label: 'Informations personnelles', 
-      icon: '/icons/profile.png',
-      href: '/profil',
-      title: 'Informations personnelles'
-    },
-    { 
-      id: 'dons', 
-      label: 'Mes dons', 
-      icon: '/icons/don.png',
-      href: '/profil/dons',
-      title: 'Mes dons'
-    },
-    { 
-      id: 'demandes', 
-      label: 'Mes demandes', 
-      icon: '/icons/message-question.png',
-      href: '/profil/demandes',
-      title: 'Mes demandes'
-    },
-    { 
-      id: 'scores', 
-      label: 'Mes Sadaka Scores', 
-      icon: '/icons/medal-star-g.png',
-      href: '/profil/scores',
-      title: 'Mes Sadaka Scores'
-    },
-    { 
-      id: 'classement', 
-      label: 'Classements', 
-      icon: '/icons/ranking.png',
-      href: '/profil/classement',
-      title: 'Classements'
-    },
-    { 
-      id: 'portefeuille', 
-      label: 'Portefeuille', 
-      icon: '/icons/wallet-card(1).png',
-      href: '/profil/portefeuille',
-      title: 'Portefeuille'
-    },
-    { 
-      id: 'settings', 
-      label: 'Paramètres', 
-      icon: '/icons/setting-2.png',
-      href: '/profil/parametres',
-      title: 'Paramètres'
-    },
-    { 
-      id: 'about', 
-      label: 'À propos d\'Amane+', 
-      icon: '/icons/information.png',
-      href: '/profil/a-propos',
-      title: 'À propos d\'Amane+'
-    },
-    { 
-      id: 'help', 
-      label: 'Aide & Support', 
-      icon: '/icons/message-question.png',
-      href: '/profil/aide-support',
-      title: 'Aide & Support'
-    },
-    { 
-      id: 'terms', 
-      label: 'Termes et Conditions', 
-      icon: '/icons/security-safe.png',
-      href: '/profil/termes',
-      title: 'Termes et Conditions'
-    },
-    { 
-      id: 'invite', 
-      label: 'Inviter des personnes', 
-      icon: '/icons/share.png',
-      href: '/profil/inviter',
-      title: 'Inviter des personnes'
-    },
+  const sidebarItems: { id: string; labelKey: SidebarLabelKey; icon: string; href: string }[] = [
+    { id: 'profile', labelKey: 'personalInfo', icon: '/icons/profile.png', href: '/profil' },
+    { id: 'dons', labelKey: 'myDonations', icon: '/icons/don.png', href: '/profil/dons' },
+    { id: 'demandes', labelKey: 'myRequests', icon: '/icons/message-question.png', href: '/profil/demandes' },
+    { id: 'scores', labelKey: 'sadaqahScores', icon: '/icons/medal-star-g.png', href: '/profil/scores' },
+    { id: 'classement', labelKey: 'rankings', icon: '/icons/ranking.png', href: '/profil/classement' },
+    { id: 'portefeuille', labelKey: 'wallet', icon: '/icons/wallet-card(1).png', href: '/profil/portefeuille' },
+    { id: 'settings', labelKey: 'settings', icon: '/icons/setting-2.png', href: '/profil/parametres' },
+    { id: 'about', labelKey: 'aboutAmane', icon: '/icons/information.png', href: '/profil/a-propos' },
+    { id: 'help', labelKey: 'helpSupport', icon: '/icons/message-question.png', href: '/profil/aide-support' },
+    { id: 'terms', labelKey: 'termsConditions', icon: '/icons/security-safe.png', href: '/profil/termes' },
+    { id: 'invite', labelKey: 'invitePeople', icon: '/icons/share.png', href: '/profil/inviter' },
   ];
 
-  // Trouver l'élément actif basé sur le pathname (préférer la route la plus spécifique)
   const activeItem = [...sidebarItems]
     .filter((item) => item.id !== 'invite')
     .sort((a, b) => (b.href.length - a.href.length))
@@ -118,6 +55,7 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
       if (item.href === '/profil') return pathname === '/profil';
       return pathname === item.href || pathname.startsWith(item.href + '/');
     }) || sidebarItems[0];
+  const activeTitle = activeItem ? t(activeItem.labelKey) : t('personalInfo');
 
   const handleLogout = () => {
     setShowLogoutModal(true);
@@ -147,7 +85,7 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
       <div className="min-h-screen bg-gradient-to-r from-[#00644D] to-[#101919] flex items-center justify-center py-8 px-4">
         <div className="text-center text-white">
           <div className="inline-block w-10 h-10 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4" />
-          <p className="text-white/80">Chargement...</p>
+          <p className="text-white/80">{t('loading')}</p>
         </div>
       </div>
     );
@@ -160,20 +98,20 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2 text-sm">
-              <span className="text-white">Mon compte</span>
+              <span className="text-white">{t('myAccount')}</span>
               <ChevronRight size={16} className="text-white/50" />
-              <span className="text-[#00D9A5]">{activeItem.title}</span>
+              <span className="text-[#00D9A5]">{activeTitle}</span>
             </div>
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="lg:hidden p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-              aria-label="Toggle menu"
+              aria-label={t('toggleMenu')}
             >
               {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
-          <h3 className="text-2xl sm:text-xl font-bold text-white">{activeItem.title}</h3>
+          <h3 className="text-2xl sm:text-xl font-bold text-white">{activeTitle}</h3>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(50vh-4rem)] relative">
@@ -198,11 +136,11 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
           >
             {/* Close button for mobile */}
             <div className="flex items-center justify-between mb-4 lg:hidden">
-              <h4 className="text-white font-semibold text-lg">Menu</h4>
+              <h4 className="text-white font-semibold text-lg">{t('menu')}</h4>
               <button
                 onClick={() => setIsSidebarOpen(false)}
                 className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-                aria-label="Close menu"
+                aria-label={t('closeMenu')}
               >
                 <X size={24} />
               </button>
@@ -226,12 +164,12 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
                     >
                       <Image
                         src={item.icon}
-                        alt={item.label}
+                        alt={t(item.labelKey)}
                         width={20}
                         height={20}
                         className="opacity-70 flex-shrink-0"
                       />
-                      <span className="font-medium truncate">{item.label}</span>
+                      <span className="font-medium truncate">{t(item.labelKey)}</span>
                     </button>
                   );
                 }
@@ -249,7 +187,7 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
                   >
                     <Image
                       src={item.icon}
-                      alt={item.label}
+                      alt={t(item.labelKey)}
                       width={20}
                       height={20}
                       className={
@@ -263,7 +201,7 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
                       }
                       style={item.id === 'portefeuille' && !isActive ? { filter: 'brightness(0) saturate(100%) invert(24%) sepia(98%) saturate(1500%) hue-rotate(152deg) brightness(95%) contrast(90%)' } : undefined}
                     />
-                    <span className="font-medium truncate">{item.label}</span>
+                    <span className="font-medium truncate">{t(item.labelKey)}</span>
                   </Link>
                 );
               })}
@@ -275,7 +213,7 @@ export default function ProfilLayout({ children }: ProfilLayoutProps) {
               className="flex items-center space-x-3 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-all mt-auto text-sm sm:text-base"
             >
               <LogOut size={20} className="flex-shrink-0" />
-              <span className="font-medium">Se déconnecter</span>
+              <span className="font-medium">{t('logout')}</span>
             </button>
           </aside>
 

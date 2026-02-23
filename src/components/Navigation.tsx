@@ -11,11 +11,16 @@ import {
   Star, Coins, ChevronRight, Eye, EyeOff, ShoppingBag, Mail, 
   ArrowRight, ArrowUpDown, Grid3x3
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useLocale } from '@/components/LocaleProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationPopup from '@/components/NotificationPopup';
 import { getUnreadNotificationsCount } from '@/services/notifications';
 
 export default function Navigation() {
+  const t = useTranslations('nav');
+  const tCommon = useTranslations('common');
+  const { locale } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
@@ -60,31 +65,31 @@ export default function Navigation() {
   const sadaqahScore = 847; // Points Sadaqah
 
   const navigationItems = [
-    { name: 'Accueil', href: '/', icon: Home },
-    { name: 'Pourquoi Amane+?', href: '/#pourquoi-amane', icon: Star, isAnchor: true },
-    { name: 'Contactez-nous', href: '/contact', icon: Mail },
+    { nameKey: 'home' as const, href: '/', icon: Home },
+    { nameKey: 'whyAmane' as const, href: '/#pourquoi-amane', icon: Star, isAnchor: true },
+    { nameKey: 'contactUs' as const, href: '/contact', icon: Mail },
   ];
 
   const servicesItems = [
-    { name: 'Dons', href: '/campagnes', image: '/icons/don.png' },
-    { name: 'Zakat', href: '/zakat', image: '/icons/profile-2user.png' },
-    { name: 'Takaful', href: '/takaful', image: '/icons/purse(1).png' },
-    { name: 'Investissement', href: '/investir', image: '/icons/status-up.png' },
+    { nameKey: 'donations' as const, href: '/campagnes', image: '/icons/don.png' },
+    { nameKey: 'zakat' as const, href: '/zakat', image: '/icons/profile-2user.png' },
+    { nameKey: 'takaful' as const, href: '/takaful', image: '/icons/purse(1).png' },
+    { nameKey: 'investment' as const, href: '/investir', image: '/icons/status-up.png' },
   ];
 
   const profileDropdownItems = [
-    { name: 'Information Personnelles', href: '/profil', image: '/icons/profile.png' },
-    { name: 'Mes Sadaqah Scores', href: '/profil/scores', image: '/icons/medal-star-g.png' },
-    { name: 'Paramètres', href: '/profil/parametres', image: '/icons/setting-2.png' },
-    { name: 'A propos d\'Amane+', href: '/profil/a-propos', image: '/icons/information.png' },
-    { name: 'Aide & Support', href: '/profil/aide-support', image: '/icons/message-question.png' },
-    { name: 'Termes & Conditions', href: '/profil/termes', image: '/icons/security-safe.png' },
-    // { name: 'Inviter des personnes', href: '/profil/inviter', image: '/icons/share.png' },
-    { name: 'Déconnexion', href: '/logout', icon: LogOut, isLogout: true },
+    { nameKey: 'personalInfo' as const, href: '/profil', image: '/icons/profile.png' },
+    { nameKey: 'sadaqahScores' as const, href: '/profil/scores', image: '/icons/medal-star-g.png' },
+    { nameKey: 'settings' as const, href: '/profil/parametres', image: '/icons/setting-2.png' },
+    { nameKey: 'aboutAmane' as const, href: '/profil/a-propos', image: '/icons/information.png' },
+    { nameKey: 'helpSupport' as const, href: '/profil/aide-support', image: '/icons/message-question.png' },
+    { nameKey: 'termsConditions' as const, href: '/profil/termes', image: '/icons/security-safe.png' },
+    { nameKey: 'logout' as const, href: '/', icon: LogOut, isLogout: true },
   ];
 
   const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
+    const localeCode = locale === 'en' ? 'en-GB' : 'fr-FR';
+    return new Intl.NumberFormat(localeCode, {
       style: 'currency',
       currency: 'XOF',
       minimumFractionDigits: 0,
@@ -105,7 +110,7 @@ export default function Navigation() {
 
   const getUserFirstName = () => {
     if (user?.name) return user.name.split(' ')[0] || user.name;
-    return 'Utilisateur';
+    return tCommon('user');
   };
 
   const getInitials = () => {
@@ -180,7 +185,7 @@ export default function Navigation() {
                         : 'text-[#A8A9AB] hover:text-white'
                     }`}
                   >
-                    Accueil
+                    {t('home')}
                   </Link>
                 </motion.div>
 
@@ -209,7 +214,7 @@ export default function Navigation() {
                         : 'text-[#A8A9AB] hover:text-white'
                     }`}
                   >
-                    Transactions
+                    {t('transactions')}
                   </Link>
                 </motion.div>
 
@@ -236,7 +241,7 @@ export default function Navigation() {
                         : 'text-[#A8A9AB] hover:text-white'
                     }`}
                   >
-                    Communauté
+                    {t('community')}
                   </Link>
                 </motion.div>
 
@@ -263,7 +268,7 @@ export default function Navigation() {
                         : 'text-[#A8A9AB] hover:text-white'
                     }`}
                   >
-                    Services
+                    {t('services')}
                   </button>
                 </motion.div>
               </>
@@ -282,7 +287,7 @@ export default function Navigation() {
                         : 'text-white/80 hover:text-white'
                     }`}
                   >
-                    Accueil
+                    {t('home')}
                   </Link>
                 </motion.div>
 
@@ -298,7 +303,7 @@ export default function Navigation() {
                         : 'text-white/80 hover:text-white'
                     }`}
                   >
-                    <span>Nos services</span>
+                    <span>{t('ourServices')}</span>
                     <ChevronDown 
                       size={14} 
                       className={`transition-transform duration-200 ${isServicesDropdownOpen ? 'rotate-180' : ''}`}
@@ -324,7 +329,7 @@ export default function Navigation() {
                     }}
                     className="font-medium transition-colors duration-200 text-white/80 hover:text-white"
                   >
-                    Pourquoi Amane+?
+                    {t('whyAmane')}
                   </Link>
                 </motion.div>
 
@@ -341,7 +346,7 @@ export default function Navigation() {
                         : 'text-white/80 hover:text-white'
                     }`}
                   >
-                    Contactez-nous
+                    {t('contactUs')}
                   </Link>
                 </motion.div>
               </>
@@ -428,7 +433,7 @@ export default function Navigation() {
                             const active = isActive(item.href);
                             return (
                               <motion.div
-                                key={item.name}
+                                key={item.nameKey}
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.2, delay: index * 0.05 }}
@@ -447,7 +452,7 @@ export default function Navigation() {
                                   {item.image ? (
                                     <img 
                                       src={item.image} 
-                                      alt={item.name}
+                                      alt={t(item.nameKey)}
                                       className={`w-[18px] h-[18px] object-contain ${
                                         active ? 'opacity-100' : 'opacity-70'
                                       }`}
@@ -460,7 +465,7 @@ export default function Navigation() {
                                       />
                                     )
                                   )}
-                                  <span className="text-sm font-medium">{item.name}</span>
+                                  <span className="text-sm font-medium">{t(item.nameKey)}</span>
                                   {active && (
                                     <ChevronRight size={16} className="ml-auto text-[#5CD07D]" />
                                   )}
@@ -480,7 +485,7 @@ export default function Navigation() {
                           transition={{ duration: 0.2, delay: profileDropdownItems.filter(item => !item.isLogout).length * 0.05 }}
                         >
                           <Link
-                            href="/logout"
+                            href="/"
                             onClick={(e) => {
                               e.preventDefault();
                               setIsProfileDropdownOpen(false);
@@ -490,7 +495,7 @@ export default function Navigation() {
                             className="flex items-center space-x-3 px-4 py-3 text-[#FF6B6B] hover:text-[#FF5252] hover:bg-red-500/10 transition-all duration-200"
                           >
                             <LogOut size={18} />
-                            <span className="text-sm font-medium">Déconnexion</span>
+                            <span className="text-sm font-medium">{t('logout')}</span>
                           </Link>
                         </motion.div>
                       </motion.div>
@@ -508,7 +513,7 @@ export default function Navigation() {
                     href="/connexion"
                     className="px-4 py-2 text-white hover:text-white/80 transition-colors duration-200 border-b-2 border-[#00644D]"
                   >
-                    <span className="font-medium">Se connecter</span>
+                    <span className="font-medium">{t('signIn')}</span>
                   </Link>
                 </motion.div>
                 <motion.div
@@ -520,7 +525,7 @@ export default function Navigation() {
                     className="text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
                     style={{ background: 'linear-gradient(to right, #8ECAAB, #38B7B1)' }}
                   >
-                    S'inscrire
+                    {t('signUp')}
                   </Link>
                 </motion.div>
               </div>
@@ -571,7 +576,7 @@ export default function Navigation() {
                           : 'text-white/90 hover:bg-white/10'
                       }`}
                     >
-                      <span className="font-medium">Accueil</span>
+                      <span className="font-medium">{t('home')}</span>
                     </Link>
                   </motion.div>
 
@@ -647,14 +652,14 @@ export default function Navigation() {
                         className="w-[18px] h-[18px] object-contain"
                         style={{ filter: 'brightness(0) saturate(100%) invert(100%)' }}
                       />
-                      <h3 className="text-sm font-semibold text-white">Nos services</h3>
+                      <h3 className="text-sm font-semibold text-white">{t('ourServices')}</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-2 p-3">
                       {servicesItems.map((item, index) => {
                         const active = isActive(item.href);
                         return (
                           <Link
-                            key={item.name}
+                            key={item.nameKey}
                             href={item.href}
                             onClick={() => setIsOpen(false)}
                             className={`flex items-center gap-2.5 p-3 rounded-lg transition-colors duration-200 ${
@@ -665,10 +670,10 @@ export default function Navigation() {
                           >
                             <img 
                               src={item.image} 
-                              alt={item.name}
+                              alt={t(item.nameKey)}
                               className="w-5 h-5 object-contain flex-shrink-0"
                             />
-                            <span className="text-sm font-medium">{item.name}</span>
+                            <span className="text-sm font-medium">{t(item.nameKey)}</span>
                           </Link>
                         );
                       })}
@@ -692,7 +697,7 @@ export default function Navigation() {
                           : 'text-white/90 hover:bg-white/10'
                       }`}
                     >
-                      <span className="font-medium">Accueil</span>
+                      <span className="font-medium">{t('home')}</span>
                     </Link>
                   </motion.div>
 
@@ -710,14 +715,14 @@ export default function Navigation() {
                         className="w-[18px] h-[18px] object-contain"
                         style={{ filter: 'brightness(0) saturate(100%) invert(100%)' }}
                       />
-                      <h3 className="text-sm font-semibold text-white">Nos services</h3>
+                      <h3 className="text-sm font-semibold text-white">{t('ourServices')}</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-2 p-3">
                       {servicesItems.map((item) => {
                         const active = isActive(item.href);
                         return (
                           <Link
-                            key={item.name}
+                            key={item.nameKey}
                             href={item.href}
                             onClick={() => setIsOpen(false)}
                             className={`flex items-center gap-2.5 p-3 rounded-lg transition-colors duration-200 ${
@@ -728,10 +733,10 @@ export default function Navigation() {
                           >
                             <img 
                               src={item.image} 
-                              alt={item.name}
+                              alt={t(item.nameKey)}
                               className="w-5 h-5 object-contain flex-shrink-0"
                             />
-                            <span className="text-sm font-medium">{item.name}</span>
+                            <span className="text-sm font-medium">{t(item.nameKey)}</span>
                           </Link>
                         );
                       })}
@@ -758,7 +763,7 @@ export default function Navigation() {
                       }}
                       className="p-3 rounded-lg transition-colors duration-200 text-white/90 hover:bg-white/10"
                     >
-                      <span className="font-medium">Pourquoi Amane+?</span>
+                      <span className="font-medium">{t('whyAmane')}</span>
                     </Link>
                   </motion.div>
 
@@ -777,7 +782,7 @@ export default function Navigation() {
                           : 'text-white/90 hover:bg-white/10'
                       }`}
                     >
-                      <span className="font-medium">Contactez-nous</span>
+                      <span className="font-medium">{t('contactUs')}</span>
                     </Link>
                   </motion.div>
                 </>
@@ -843,14 +848,15 @@ export default function Navigation() {
                     const active = isActive(item.href);
                     return (
                       <motion.div
-                        key={item.name}
+                        key={item.nameKey}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.3, delay: (index + 1) * 0.05 }}
                       >
                         <Link
                           href={item.href}
-                          onClick={() => {
+                          onClick={(e) => {
+                            if (item.isLogout) e.preventDefault();
                             setIsOpen(false);
                             if (item.isLogout) {
                               logout();
@@ -868,7 +874,7 @@ export default function Navigation() {
                           {item.image ? (
                             <img 
                               src={item.image} 
-                              alt={item.name}
+                              alt={t(item.nameKey)}
                               className="w-5 h-5 object-contain opacity-80"
                             />
                           ) : (
@@ -876,7 +882,7 @@ export default function Navigation() {
                               <item.icon size={20} className={item.isLogout ? 'text-red-400' : 'text-white'} />
                             )
                           )}
-                          <span className="font-medium">{item.name}</span>
+                          <span className="font-medium">{t(item.nameKey)}</span>
                         </Link>
                       </motion.div>
                     );
@@ -894,7 +900,7 @@ export default function Navigation() {
                     onClick={() => setIsOpen(false)}
                     className="p-3 rounded-lg text-white hover:bg-white/10 transition-colors duration-200 border-b-2 border-[#00644D]"
                   >
-                    <span className="font-medium">Se connecter</span>
+                    <span className="font-medium">{t('signIn')}</span>
                   </Link>
                   <Link
                     href="/inscription"
@@ -902,7 +908,7 @@ export default function Navigation() {
                     className="p-3 rounded-lg text-white transition-all duration-200"
                     style={{ background: 'linear-gradient(to right, #8ECAAB, #38B7B1)' }}
                   >
-                    <span className="font-medium">S'inscrire</span>
+                    <span className="font-medium">{t('signUp')}</span>
                   </Link>
                 </motion.div>
               )}
@@ -929,7 +935,7 @@ export default function Navigation() {
                 const active = isActive(service.href);
                 return (
                   <motion.div
-                    key={service.name}
+                    key={service.nameKey}
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
@@ -945,10 +951,10 @@ export default function Navigation() {
                     >
                       <img 
                         src={service.image} 
-                        alt={service.name}
+                        alt={t(service.nameKey)}
                         className="w-5 h-5 object-contain"
                       />
-                      <span className="text-sm font-medium">{service.name}</span>
+                      <span className="text-sm font-medium">{t(service.nameKey)}</span>
                     </Link>
                   </motion.div>
                 );

@@ -11,6 +11,8 @@ import { initiatePayment, checkPaymentStatus, confirmTopUp } from '@/services/pa
 interface MakeDepositModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Si fourni, appelé après succès du dépôt (au lieu de router.push('/')) */
+  onSuccess?: () => void;
 }
 
 type PaymentMethod = 'mobile-money' | 'bank-transfer' | 'card-wallet' | null;
@@ -35,7 +37,7 @@ const STEPS = [
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 180000; // 3 min
 
-export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalProps) {
+export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDepositModalProps) {
   const { user, accessToken, refreshUser } = useAuth();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -173,7 +175,11 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
           setIsSuccess(true);
           setTimeout(() => {
             onClose();
-            router.push('/');
+            if (onSuccess) {
+              onSuccess();
+            } else {
+              router.push('/');
+            }
           }, 1500);
           return;
         }
@@ -202,7 +208,7 @@ export default function MakeDepositModal({ isOpen, onClose }: MakeDepositModalPr
         pollingIntervalRef.current = null;
       }
     };
-  }, [waitingForPayment, pendingTransactionNumber, pendingAmount, accessToken, refreshUser, onClose, router]);
+  }, [waitingForPayment, pendingTransactionNumber, pendingAmount, accessToken, refreshUser, onClose, onSuccess, router]);
 
   const handlePaymentMethodSelect = (method: PaymentMethod) => {
     setSelectedPaymentMethod(method);

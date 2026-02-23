@@ -13,6 +13,8 @@ import {
   Sparkles, Clock
 } from 'lucide-react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import { useLocale } from '@/components/LocaleProvider';
 import CampaignCard from '@/components/CampaignCard';
 import Wallet from '@/components/Wallet';
 import ServiceCards from '@/components/ServiceCards';
@@ -32,6 +34,9 @@ import ZakatCalculatorModal from '@/components/ZakatCalculatorModal';
 
 export default function Home() {
   const { isAuthenticated, user, accessToken } = useAuth();
+  const t = useTranslations('home');
+  const { locale } = useLocale();
+  const localeCode = locale === 'en' ? 'en-GB' : 'fr-FR';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentTakafulSlide, setCurrentTakafulSlide] = useState(0);
   const [featuredCampaigns, setFeaturedCampaigns] = useState<Campaign[]>([]);
@@ -54,25 +59,25 @@ export default function Home() {
   const TAKAFUL_DISPLAY_PROMOTE = process.env.NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE === 'true';
 
   const campaignCategoryLabels: Record<string, string> = {
-    urgence: 'Urgence', education: 'Éducation', sante: 'Santé',
-    developpement: 'Développement', refugies: 'Réfugiés',
-    'special-ramadan': 'Spécial Ramadan', 'special-tabaski': 'Spécial Tabaski',
-    autres: 'Autre',
+    urgence: t('categories.urgence'), education: t('categories.education'), sante: t('categories.sante'),
+    developpement: t('categories.developpement'), refugies: t('categories.refugies'),
+    'special-ramadan': t('categories.specialRamadan'), 'special-tabaski': t('categories.specialTabaski'),
+    autres: t('categories.other'),
   };
   const campaignTypeLabels: Record<string, string> = { ZAKAT: 'Zakat', SADAQAH: 'Sadaqah' };
   const campaignCategoriesForCards = [
-    { id: 'all', name: 'Toutes', icon: Globe },
-    { id: 'urgence', name: 'Urgence', icon: Zap },
-    { id: 'education', name: 'Éducation', icon: Bookmark },
-    { id: 'sante', name: 'Santé', icon: Heart },
-    { id: 'developpement', name: 'Développement', icon: TrendingUp },
-    { id: 'refugies', name: 'Réfugiés', icon: Users },
-    { id: 'special-ramadan', name: 'Spécial Ramadan', iconSrc: '/icons/moon-w.png' },
-    { id: 'special-tabaski', name: 'Spécial Tabaski', iconSrc: '/icons/moon-w.png' },
-    { id: 'autres', name: 'Autre', icon: Star },
+    { id: 'all', name: t('categories.all'), icon: Globe },
+    { id: 'urgence', name: t('categories.urgence'), icon: Zap },
+    { id: 'education', name: t('categories.education'), icon: Bookmark },
+    { id: 'sante', name: t('categories.sante'), icon: Heart },
+    { id: 'developpement', name: t('categories.developpement'), icon: TrendingUp },
+    { id: 'refugies', name: t('categories.refugies'), icon: Users },
+    { id: 'special-ramadan', name: t('categories.specialRamadan'), iconSrc: '/icons/moon-w.png' },
+    { id: 'special-tabaski', name: t('categories.specialTabaski'), iconSrc: '/icons/moon-w.png' },
+    { id: 'autres', name: t('categories.other'), icon: Star },
   ];
   const formatCampaignAmount = (amount: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat(localeCode, { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,7 +88,7 @@ export default function Home() {
         if (!cancelled) setFeaturedCampaigns(list.slice(0, 3));
       })
       .catch((err) => {
-        if (!cancelled) setCampaignsError(err?.message ?? 'Erreur lors du chargement des campagnes');
+        if (!cancelled) setCampaignsError(err?.message ?? t('errors.campaignsLoad'));
       })
       .finally(() => {
         if (!cancelled) setCampaignsLoading(false);
@@ -154,7 +159,7 @@ export default function Home() {
         else setActivitiesError(res.error);
       })
       .catch((err) => {
-        if (!cancelled) setActivitiesError(err?.message ?? 'Erreur lors du chargement des activités');
+        if (!cancelled) setActivitiesError(err?.message ?? t('errors.activitiesLoad'));
       })
       .finally(() => {
         if (!cancelled) setActivitiesLoading(false);
@@ -313,11 +318,11 @@ export default function Home() {
             className="max-w-4xl"
           >
             <h1 className="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
-              <span className="block">Transformez Votre <span className="text-[#5AB678]">Générosité</span></span>
-              <span className="block">En Impact Réel Avec <span className="text-[#5AB678]">Amane+</span></span>
+              <span className="block">{t('hero.title1')} <span className="text-[#5AB678]">{t('hero.title1Highlight')}</span></span>
+              <span className="block">{t('hero.title2')} <span className="text-[#5AB678]">{t('hero.title2Highlight')}</span></span>
             </h1>
             <p className="text-xl lg:text-2xl mb-8 text-white text-center">
-              La plateforme islamique tout-en-un pour vos dons, zakat, takaful et investissements halal.
+              {t('hero.subtitle')}
             </p>
             <div className="flex justify-center">
               <Link href="#emportez-amane">
@@ -326,7 +331,7 @@ export default function Home() {
                   whileTap={{ scale: 0.95 }}
                   className="bg-white/20 text-white px-8 py-4 rounded-4xl font-semibold hover:bg-white/30 transition-all duration-200 flex items-center space-x-2 shadow-lg border-1 border-white/20"
                 >
-                  <span>Découvrir Amane+</span>
+                  <span>{t('hero.cta')}</span>
                   <div className="bg-[#38B7B1] rounded-full p-2">
                     <ArrowRight size={20} />
                   </div>
@@ -375,13 +380,10 @@ export default function Home() {
             className="text-center max-w-4xl mx-auto"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-              Vivez la spiritualité à l'ère du digital
+              {t('spirituality.title')}
             </h2>
             <p className="text-sm text-white/80 leading-relaxed">
-              Amane+ est une solution technologique innovante qui vous permet de vivre pleinement vos valeurs religieuses dans le monde moderne. 
-              Notre plateforme combine la tradition islamique avec les dernières innovations technologiques pour vous offrir une expérience financière 
-              éthique, transparente et accessible. Que vous souhaitiez faire un don, calculer votre zakat, investir de manière halal ou vous protéger 
-              avec le Takaful, Amane+ vous accompagne à chaque étape de votre parcours financier spirituel.
+              {t('spirituality.description')}
             </p>
           </motion.div>
         </div>
@@ -415,15 +417,13 @@ export default function Home() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-4xl font-bold text-[#5AB678] mb-6">
-                  Un portefeuille éthique
+                  {t('ethicalWallet.title')}
                 </h2>
                 <p className="text-lg text-white/80 mb-6 leading-relaxed">
-                  Gérez tous vos services financiers éthiques depuis une seule plateforme. Dons, zakat, investissements halal, 
-                  épargne et protection Takaful - tout est accessible en quelques clics. Notre portefeuille éthique vous permet 
-                  de suivre toutes vos transactions, de visualiser votre impact et de respecter vos obligations religieuses en toute simplicité.
+                  {t('ethicalWallet.description')}
                 </p>
                 <Link href="/transactions" className="inline-flex items-center space-x-2 text-[#5AB678] hover:text-green-200 font-semibold">
-                  <span>En savoir plus</span>
+                  <span>{t('ethicalWallet.learnMore')}</span>
                   <ArrowRight size={20} />
                 </Link>
               </motion.div>
@@ -450,19 +450,19 @@ export default function Home() {
                   <img src="/icons/Vector(2).png" alt="Star" className="h-6 w-6 text-[#5AB678]" />
                 </div>
                 <h2 className="text-3xl lg:text-4xl font-bold text-[#5AB678] mb-6">
-                  Dons & Solidarité
+                  {t('donations.title')}
                 </h2>
                 <p className="text-lg text-white/80 mb-6 leading-relaxed">
-                  Faites un don ponctuel ou récurrent à des campagnes vérifiées : santé, éducation, eau potable, aide alimentaire, orphelins, etc.
+                  {t('donations.description')}
                 </p>
                 <p className="text-lg text-[#5AB678] mb-6 leading-relaxed italic">
-                  Le Prophète ﷺ a dit : « La charité n'a jamais diminué une richesse. » (Mouslim)
+                  {t('donations.quote')}
                 </p>
                 <p className="text-lg text-white/80 mb-6 leading-relaxed">
-                  Chaque geste est tracé jusqu'à l'impact final.
+                  {t('donations.trace')}
                 </p>
                 <Link href="/campagnes" className="inline-flex items-center space-x-2 text-[#5AB678] hover:text-[#5AB678]/80 font-semibold">
-                  <span>En savoir plus</span>
+                  <span>{t('donations.learnMore')}</span>
                   <ArrowRight size={20} />
                 </Link>
               </motion.div>
@@ -543,15 +543,13 @@ export default function Home() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-4xl font-bold text-green-900 mb-6">
-                  Zakat Automatisée
+                  {t('zakat.title')}
                 </h2>
                 <p className="text-lg text-green-800 mb-6 leading-relaxed">
-                  Calculez et distribuez votre zakat en toute simplicité grâce à notre système automatisé. 
-                  Notre calculateur intelligent respecte tous les principes islamiques et vous guide étape par étape. 
-                  Vous pouvez ensuite distribuer votre zakat à des causes vérifiées et suivre l'impact de votre contribution.
+                  {t('zakat.description')}
                 </p>
                 <Link href="/zakat" className="inline-flex items-center space-x-2 text-green-800 hover:text-green-900 font-semibold">
-                  <span>En savoir plus</span>
+                  <span>{t('zakat.learnMore')}</span>
                   <ArrowRight size={20} />
                 </Link>
               </motion.div>
@@ -606,19 +604,19 @@ export default function Home() {
                   <img src="/icons/Vector(2).png" alt="Star" className="h-6 w-6 text-[#5AB678]" />
                 </div>
                 <h2 className="text-3xl lg:text-4xl font-bold text-[#5AB678] mb-6">
-                  Takaful (Assurance Islamique)
+                  {t('takaful.title')}
                 </h2>
                 <p className="text-lg text-white/80 mb-6 leading-relaxed">
-                Contribuez à un fonds d’entraide pour soutenir les membres en cas de coup dur — sans intérêt ni spéculation.
+                {t('takaful.description')}
                 </p>
                 <p className="text-lg text-[#5AB678] mb-6 leading-relaxed italic">
-                Le Prophète ﷺ a dit : « Les croyants, dans leur amour, leur miséricorde et leur compassion mutuels, sont comme un seul corps. » (Boukhari et Mouslim)
+                {t('takaful.quote')}
                 </p>
                 <p className="text-lg text-white/80 mb-6 leading-relaxed">
-                Une communauté qui s’assure mutuellement, dans l’esprit du partage.
+                {t('takaful.community')}
                 </p>
                 <Link href="/takaful" className="inline-flex items-center space-x-2 text-[#5AB678] hover:text-[#5AB678]/80 font-semibold">
-                  <span>En savoir plus</span>
+                  <span>{t('takaful.learnMore')}</span>
                   <ArrowRight size={20} />
                 </Link>
               </motion.div>
@@ -707,19 +705,19 @@ export default function Home() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-                  Investissements Halal
+                  {t('invest.title')}
                 </h2>
                 <p className="text-lg text-white mb-6 leading-relaxed">
-                Placez votre argent dans des projets conformes à la finance islamique, et faites fructifier vos revenus de manière éthique
+                {t('invest.description')}
                 </p>
                 <p className="text-lg text-[#07352A] mb-6 leading-relaxed italic">
-                  Le Prophète ﷺ a dit : « Cherchez ce qui est licite, car Allah n’accepte que ce qui est licite. » (Tabarani)
+                  {t('invest.quote')}
                 </p>
                 <p className="text-lg text-white mb-6 leading-relaxed">
-                Investissez sans compromis, selon vos valeurs.
+                {t('invest.tagline')}
                 </p>
                 <Link href="/investir" className="inline-flex items-center space-x-2 text-white hover:text-white/80 font-semibold">
-                  <span>En savoir plus</span>
+                  <span>{t('invest.learnMore')}</span>
                   <ArrowRight size={20} />
                 </Link>
               </motion.div>
@@ -760,12 +758,12 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              <span className="text-white">L'impact d'</span>
+              <span className="text-white">{t('impact.titlePrefix')}</span>
               <span className="text-[#5AB678]">Amane+</span>
-              <span className="text-white"> en chiffres</span>
+              <span className="text-white">{t('impact.titleSuffix')}</span>
             </h2>
             <p className="text-lg text-white/90 max-w-3xl mx-auto mt-4">
-              Découvrez comment la foi, la solidarité et la transparence se traduisent en actions réelles.
+              {t('impact.subtitle')}
             </p>
           </motion.div>
 
@@ -773,7 +771,7 @@ export default function Home() {
             {[
               { 
                 value: '247', 
-                label: 'Donateurs actifs', 
+                label: t('impact.activeDonors'), 
                 icon: Users, 
                 iconBg: 'bg-[#5AB678]',
                 iconColor: 'text-[#5AB678]',
@@ -781,7 +779,7 @@ export default function Home() {
               },
               { 
                 value: '8.5%', 
-                label: 'Rendement moyen', 
+                label: t('impact.avgReturn'), 
                 icon: TrendingUp, 
                 iconBg: 'bg-[#5AB678]',
                 iconColor: 'text-[#5AB678]',
@@ -789,7 +787,7 @@ export default function Home() {
               },
               { 
                 value: '18+', 
-                label: 'Campagnes actives', 
+                label: t('impact.activeCampaigns'), 
                 icon: Heart, 
                 iconBg: 'bg-pink-500',
                 iconColor: 'text-pink-500',
@@ -797,7 +795,7 @@ export default function Home() {
               },
               { 
                 value: '20+', 
-                label: 'Produits halal', 
+                label: t('impact.halalProducts'), 
                 icon: Bookmark, 
                 iconBg: 'bg-purple-500',
                 iconColor: 'text-purple-500',
@@ -856,8 +854,8 @@ export default function Home() {
                 transition={{ duration: 0.6 }}
                 className="rounded-2xl p-6"
               >
-                <h3 className="text-white font-bold text-xl mb-2">Activités du mois</h3>
-                <p className="text-white/70 text-sm mb-4">Vos œuvres accomplies par activité ce mois-ci</p>
+                <h3 className="text-white font-bold text-xl mb-2">{t('dashboard.activitiesTitle')}</h3>
+                <p className="text-white/70 text-sm mb-4">{t('dashboard.activitiesSubtitle')}</p>
                 
                 {/* Une barre par don (max 10) */}
                 <div className="flex items-center space-x-2 mb-4">
@@ -882,7 +880,7 @@ export default function Home() {
                   whileTap={{ scale: 0.98 }}
                   className="w-fit bg-[#10191975] border border-white/20 text-white px-4 py-2 rounded-xl font-medium text-sm"
                 >
-                  En savoir plus
+                  {t('dashboard.learnMore')}
                 </motion.button>
               </motion.div>
 
@@ -896,15 +894,15 @@ export default function Home() {
                 {currentZakatToPay ? (
                   <>
                     <p className="text-white font-bold text-lg mb-2">
-                      {zakatPaidPercent}% de votre zakat déjà réglée !
+                      {zakatPaidPercent}% {t('dashboard.zakatPercent')}
                     </p>
                     <p className="text-white/80 text-sm mb-4 italic">
-                      "Donner, c'est purifier vos biens et votre cœur."
+                      \"{t('dashboard.zakatQuote')}\"
                     </p>
                     <div className="mb-4">
-                      <p className="text-white/70 text-sm mb-1">Reste à payer</p>
+                      <p className="text-white/70 text-sm mb-1">{t('dashboard.remainingToPay')}</p>
                       <div className="flex items-center justify-between">
-                        <p className="text-[#5AB678] font-bold text-xl">{zakatRemaining.toLocaleString('fr-FR')} F CFA</p>
+                        <p className="text-[#5AB678] font-bold text-xl">{zakatRemaining.toLocaleString(localeCode)} F CFA</p>
                         <motion.button
                           type="button"
                           onClick={() => setShowPayZakatModal(true)}
@@ -913,7 +911,7 @@ export default function Home() {
                           className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
                         >
                           <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
-                          <span>Payer ma zakat</span>
+                          <span>{t('dashboard.payMyZakat')}</span>
                         </motion.button>
                       </div>
                     </div>
@@ -921,7 +919,7 @@ export default function Home() {
                 ) : (
                   <>
                     <p className="text-white/80 text-sm mb-4 italic">
-                      "Donner, c'est purifier vos biens et votre cœur."
+                      \"{t('dashboard.zakatQuote')}\"
                     </p>
                     <motion.button
                       type="button"
@@ -931,7 +929,7 @@ export default function Home() {
                       className="bg-gradient-to-r from-[#5AB678] to-[#20B6B3] text-white px-4 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
                     >
                       <img src="/icons/purse(2).png" alt="Wallet" className="w-5 h-5 object-contain" />
-                      <span>Calculer ma zakat</span>
+                      <span>{t('dashboard.calculateMyZakat')}</span>
                     </motion.button>
                   </>
                 )}
@@ -977,16 +975,16 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-              Campagnes populaires
+              {t('campaigns.popularTitle')}
             </h2>
             <p className="text-lg text-white max-w-3xl mx-auto">
-              Découvrez nos campagnes les plus populaires et soutenez des causes importantes
+              {t('campaigns.popularSubtitle')}
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8 lg:gap-10 mb-12">
             {campaignsLoading && (
-              <div className="col-span-full text-center text-white/80 py-8">Chargement des campagnes...</div>
+              <div className="col-span-full text-center text-white/80 py-8">{t('campaigns.loading')}</div>
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
@@ -994,7 +992,7 @@ export default function Home() {
             {!campaignsLoading && !campaignsError && featuredCampaigns.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-white/90">
                 <Clock size={48} className="mb-4 opacity-90" aria-hidden />
-                <p className="text-lg font-medium">Aucunes campagnes disponibles</p>
+                <p className="text-lg font-medium">{t('campaigns.noCampaigns')}</p>
               </div>
             )}
             {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
@@ -1041,7 +1039,7 @@ export default function Home() {
                         </div>
                         <div className="flex-1 min-h-[2rem]" />
                         <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
-                          {donorCount.toLocaleString('fr-FR')} donateurs
+                          {donorCount.toLocaleString(localeCode)} {t('campaigns.donors')}
                         </p>
                         <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
                           {campaign.title}
@@ -1049,10 +1047,10 @@ export default function Home() {
                         <div className="space-y-2">
                           <div className="flex justify-between items-center gap-2 text-sm">
                             <span className="text-[#5AB678] font-semibold">
-                              {formatCampaignAmount(amountSpent)} déboursés
+                              {formatCampaignAmount(amountSpent)} {t('campaigns.spent')}
                             </span>
                             <span className="text-white font-medium">
-                              {formatCampaignAmount(currentAmount)} collectés
+                              {formatCampaignAmount(currentAmount)} {t('campaigns.collected')}
                             </span>
                           </div>
                           <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
@@ -1073,7 +1071,7 @@ export default function Home() {
                           style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                         >
                           <Heart size={18} className="fill-white" />
-                          <span>Soutenir cette campagne</span>
+                          <span>{t('campaigns.supportCampaign')}</span>
                           <ArrowRight size={18} />
                         </motion.div>
                       </div>
@@ -1092,7 +1090,7 @@ export default function Home() {
                 className=" text-white px-8 py-4 rounded-4xl font-semibold hover:bg-green-500 transition-all duration-200 shadow-lg"
                 style={{ background: 'linear-gradient(to bottom, #00644D, #101919)' }}
               >
-                Voir toutes les campagnes
+                {t('campaigns.viewAll')}
               </motion.button>
             </Link>
           </div>
@@ -1114,13 +1112,11 @@ export default function Home() {
               className="text-center lg:text-start max-w-2xl lg:ml-16"
             >
               <h2 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-                Découvrez nos <br />
-                Produits <span className="text-[#20B6B3]">Takaful</span>
+                {t('takafulProducts.title')} <br />
+                {t('takafulProducts.titleHighlight')}
               </h2>
               <p className="text-lg text-white/90 leading-relaxed mb-8">
-                Protégez-vous et vos proches grâce à des solutions d'assurance conformes aux principes islamiques. 
-                Le <span className="text-[#20B6B3] font-semibold">Takaful d'Amane+</span> repose sur la solidarité et le partage, 
-                pour un avenir plus sûr et équitable.
+                {t('takafulProducts.description')}
               </p>
             </motion.div>
 
@@ -1135,11 +1131,11 @@ export default function Home() {
               <div className="relative overflow-hidden">
                 {takafulPlansLoading ? (
                   <div className="flex items-center justify-center min-h-[400px] text-white/80">
-                    Chargement des produits Takaful…
+                    {t('takafulProducts.loading')}
                   </div>
                 ) : takafulPlans.length === 0 ? (
                   <div className="flex items-center justify-center min-h-[400px] text-white/80">
-                    Aucun produit Takaful à afficher.
+                    {t('takafulProducts.empty')}
                   </div>
                 ) : (
                   <>
@@ -1168,7 +1164,7 @@ export default function Home() {
                               </p>
                               <Link href={TAKAFUL_DISPLAY_PROMOTE ? '/takaful' : `/takaful/${plan.id}`}>
                                 <button className="border-2 border-white text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/10 transition-colors">
-                                  En savoir plus
+                                  {t('takafulProducts.learnMore')}
                                 </button>
                               </Link>
                             </div>
@@ -1181,7 +1177,7 @@ export default function Home() {
                     <button
                       onClick={() => setCurrentTakafulSlide((prev) => Math.max(0, prev - 1))}
                       disabled={currentTakafulSlide === 0}
-                      aria-label="Carte précédente"
+                      aria-label={t('takafulProducts.prevCard')}
                       className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-[#00644D] disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
                     >
                       <ArrowLeft size={28} className="text-white" />
@@ -1189,7 +1185,7 @@ export default function Home() {
                     <button
                       onClick={() => setCurrentTakafulSlide((prev) => Math.min(takafulPlans.length - 1, prev + 1))}
                       disabled={currentTakafulSlide === takafulPlans.length - 1}
-                      aria-label="Carte suivante"
+                      aria-label={t('takafulProducts.nextCard')}
                       className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed rounded-full p-3 z-10 transition-colors"
                     >
                       <ArrowRight size={28} className="text-white" />
@@ -1223,7 +1219,7 @@ export default function Home() {
                 whileTap={{ scale: 0.95 }}
                 className="border-1 border-white text-white px-6 py-3 rounded-3xl font-semibold flex items-center gap-2 w-fit mx-auto hover:bg-white/10 transition-colors"
               >
-                Voir tous les produits
+                {t('takafulProducts.viewAll')}
                 <ArrowRight size={20} />
               </motion.button>
             </Link>
@@ -1242,13 +1238,13 @@ export default function Home() {
             viewport={{ once: true }}
           >
             <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-[#5AB678]">
-              Actualités
+              {t('news.title')}
             </h2>
             <p className="text-lg text-white/80 mb-4 leading-relaxed">
-              Découvrez les dernières initiatives, événements et moments forts d'<span className="text-[#5AB678]">Amane+</span>.
+              {t('news.subtitle1')}
             </p>
             <p className="text-lg text-white/80 mb-8 leading-relaxed">
-              Plongez au cœur de nos actions et suivez l'impact de notre communauté en images.
+              {t('news.subtitle2')}
             </p>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -1267,7 +1263,7 @@ export default function Home() {
       <section className="relative text-white overflow-hidden min-h-[680px] flex items-center m-6">
         {activitiesLoading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-[#101919]">
-            <p className="text-white/80">Chargement des actualités…</p>
+            <p className="text-white/80">{t('activities.loading')}</p>
           </div>
         ) : activitiesError || activities.length === 0 ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#101919] gap-6 px-4">
@@ -1297,7 +1293,7 @@ export default function Home() {
               }}
               className="text-xl font-semibold text-white"
             >
-              Bientôt disponible
+              {t('activities.comingSoon')}
             </motion.p>
             <motion.p
               initial={{ opacity: 0 }}
@@ -1305,7 +1301,7 @@ export default function Home() {
               transition={{ duration: 0.4, delay: 0.3 }}
               className="text-white/60 text-sm max-w-sm text-center"
             >
-              Les actualités et activités seront affichées ici très prochainement.
+              {t('activities.comingSoonDesc')}
             </motion.p>
           </div>
         ) : (
@@ -1368,7 +1364,7 @@ export default function Home() {
                       className="text-white px-8 py-4 rounded-4xl font-semibold transition-all duration-200 shadow-lg"
                       style={{ background: 'linear-gradient(to right, #8FC99E, #20B6B3)' }}
                     >
-                      En savoir plus
+                      {t('activities.learnMore')}
                     </motion.button>
                   </Link>
                 </motion.div>
@@ -1383,7 +1379,7 @@ export default function Home() {
                         ? 'w-2 h-2 bg-white rounded-full'
                         : 'w-2 h-2 border border-white rounded-full hover:bg-white/50'
                     }`}
-                    aria-label={`Aller au slide ${index + 1}`}
+                    aria-label={`${t('activities.slideAria')} ${index + 1}`}
                   />
                 ))}
               </div>
@@ -1414,12 +1410,10 @@ export default function Home() {
             className="mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-center">
-              Pourquoi choisir <span className="text-[#5AB678]">Amane+</span> ?
+              {t('whyAmane.title')}
             </h2>
             <p className="text-lg text-white/90 max-w-3xl text-center">
-            La première super app de finance islamique qui évolue vers une microfinance éthique.
-            Nous combinons innovation technologique, respect des principes religieux et impact
-            communautaire pour tous vos besoins financiers.
+              {t('whyAmane.subtitle')}
             </p>
           </motion.div>
 
@@ -1434,29 +1428,29 @@ export default function Home() {
               className="mb-12"
             >
               <h3 className="text-2xl lg:text-3xl font-bold text-white text-center mb-8">
-                Nos Valeurs Fondamentales
+                {t('whyAmane.valuesTitle')}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
                 {[
                   {
                     icon: Heart,
-                    title: 'Bienveillance',
-                    description: 'Agir avec compassion et empathie'
+                    titleKey: 'benevolence',
+                    descKey: 'benevolenceDesc',
                   },
                   {
                     icon: Shield,
-                    title: 'Intégrité',
-                    description: 'Respecter nos engagements'
+                    titleKey: 'integrity',
+                    descKey: 'integrityDesc',
                   },
                   {
                     icon: Users,
-                    title: 'Communauté',
-                    description: 'Servir l\'intérêt collectif'
+                    titleKey: 'community',
+                    descKey: 'communityDesc',
                   },
                   {
                     icon: Globe,
-                    title: 'Impact',
-                    description: 'Créer un impact positif'
+                    titleKey: 'impact',
+                    descKey: 'impactDesc',
                   }
                 ].map((value, index) => (
                   <motion.div
@@ -1470,8 +1464,8 @@ export default function Home() {
                     <div className="w-16 h-16 rounded-full border-2 border-[#5AB678] flex items-center justify-center mb-4">
                       <value.icon size={32} className="text-[#5AB678]" />
                     </div>
-                    <h4 className="text-lg font-bold text-white mb-2">{value.title}</h4>
-                    <p className="text-sm text-white/70">{value.description}</p>
+                    <h4 className="text-lg font-bold text-white mb-2">{t('whyAmane.' + value.titleKey)}</h4>
+                    <p className="text-sm text-white/70">{t('whyAmane.' + value.descKey)}</p>
                   </motion.div>
                 ))}
               </div>
@@ -1488,19 +1482,19 @@ export default function Home() {
               viewport={{ once: true }}
             >
               <h3 className="text-2xl lg:text-3xl font-bold text-white text-center mb-8">
-                Notre Vision Microfinancière
+                {t('whyAmane.visionTitle')}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                 {[
                   {
                     icon: Building,
-                    title: 'Développement Local',
-                    description: 'Soutenir l\'économie locale et les entrepreneurs'
+                    titleKey: 'localDev',
+                    descKey: 'localDevDesc',
                   },
                   {
                     icon: Leaf,
-                    title: 'Finance Inclusive',
-                    description: 'Rendre la finance accessible à tous'
+                    titleKey: 'inclusiveFinance',
+                    descKey: 'inclusiveFinanceDesc',
                   }
                 ].map((vision, index) => (
                   <motion.div
@@ -1514,8 +1508,8 @@ export default function Home() {
                     <div className="w-16 h-16 rounded-full bg-[#5AB678] flex items-center justify-center mb-4">
                       <vision.icon size={32} className="text-white" />
                     </div>
-                    <h4 className="text-lg font-bold text-white mb-2">{vision.title}</h4>
-                    <p className="text-sm text-white/70">{vision.description}</p>
+                    <h4 className="text-lg font-bold text-white mb-2">{t('whyAmane.' + vision.titleKey)}</h4>
+                    <p className="text-sm text-white/70">{t('whyAmane.' + vision.descKey)}</p>
                   </motion.div>
                 ))}
               </div>
@@ -1537,10 +1531,10 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-              Ce que disent nos utilisateurs
+              {t('testimonials.title')}
             </h2>
             <p className="text-lg text-white/90 max-w-3xl mx-auto">
-              Découvrez pourquoi des milliers d'utilisateurs font confiance à Amane+
+              {t('testimonials.subtitle')}
             </p>
           </motion.div>
 
@@ -1591,16 +1585,16 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-              Campagnes populaires
+              {t('campaigns.popularTitle')}
             </h2>
             <p className="text-lg text-white max-w-3xl mx-auto">
-              Découvrez nos campagnes les plus populaires et soutenez des causes importantes
+              {t('campaigns.popularSubtitle')}
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8 lg:gap-10 mb-12">
             {campaignsLoading && (
-              <div className="col-span-full text-center text-white/80 py-8">Chargement des campagnes...</div>
+              <div className="col-span-full text-center text-white/80 py-8">{t('campaigns.loading')}</div>
             )}
             {!campaignsLoading && campaignsError && (
               <div className="col-span-full text-center text-white/90 py-4">{campaignsError}</div>
@@ -1608,7 +1602,7 @@ export default function Home() {
             {!campaignsLoading && !campaignsError && featuredCampaigns.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-white/90">
                 <Clock size={48} className="mb-4 opacity-90" aria-hidden />
-                <p className="text-lg font-medium">Aucunes campagnes disponibles</p>
+                <p className="text-lg font-medium">{t('campaigns.noCampaigns')}</p>
               </div>
             )}
             {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
@@ -1655,7 +1649,7 @@ export default function Home() {
                         </div>
                         <div className="flex-1 min-h-[2rem]" />
                         <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
-                          {donorCount.toLocaleString('fr-FR')} donateurs
+                          {donorCount.toLocaleString(localeCode)} {t('campaigns.donors')}
                         </p>
                         <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
                           {campaign.title}
@@ -1663,10 +1657,10 @@ export default function Home() {
                         <div className="space-y-2">
                           <div className="flex justify-between items-center gap-2 text-sm">
                             <span className="text-[#5AB678] font-semibold">
-                              {formatCampaignAmount(amountSpent)} déboursés
+                              {formatCampaignAmount(amountSpent)} {t('campaigns.spent')}
                             </span>
                             <span className="text-white font-medium">
-                              {formatCampaignAmount(currentAmount)} collectés
+                              {formatCampaignAmount(currentAmount)} {t('campaigns.collected')}
                             </span>
                           </div>
                           <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
@@ -1687,7 +1681,7 @@ export default function Home() {
                           style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                         >
                           <Heart size={18} className="fill-white" />
-                          <span>Soutenir cette campagne</span>
+                          <span>{t('campaigns.supportCampaign')}</span>
                           <ArrowRight size={18} />
                         </motion.div>
                       </div>
@@ -1706,7 +1700,7 @@ export default function Home() {
                 className=" text-white px-8 py-4 rounded-xl font-semibold hover:bg-green-500 transition-all duration-200 shadow-lg"
                 style={{ background: 'linear-gradient(to bottom, #00644D, #101919)' }}
               >
-                Voir toutes les campagnes
+                {t('campaigns.viewAll')}
               </motion.button>
             </Link>
           </div>
@@ -1714,7 +1708,7 @@ export default function Home() {
       </section>
       )}
 
-      {/* Section "Emportez Amane+ partout avec vous" */}
+      {/* Section "{t('takeWithYou.title')}" */}
       <section id="emportez-amane" className="py-20 scroll-mt-20" style={{ background: 'linear-gradient(to bottom, #D6FCF6, #229693)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -1733,10 +1727,10 @@ export default function Home() {
                 viewport={{ once: true }}
               >
                 <h2 className="text-3xl lg:text-6xl font-extrabold mb-6 text-[#00644d]">
-                  Emportez Amane+ partout avec vous
+                  {t('takeWithYou.title')}
                 </h2>
                 <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                Retrouvez toutes les fonctionnalités d’Amane+ dans une seule application. Faites vos dons, suivez vos rendements, automatisez votre Zakat et participez à des actions solidaires, où que vous soyez.
+                {t('takeWithYou.description')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <motion.button
@@ -1745,7 +1739,7 @@ export default function Home() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Apple size={24} />
-                    <span>Disponible sur l'App Store</span>
+                    <span>{t('takeWithYou.appStore')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -1753,7 +1747,7 @@ export default function Home() {
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Play size={24} />
-                    <span>Télécharger sur Google Play</span>
+                    <span>{t('takeWithYou.googlePlay')}</span>
                   </motion.button>
                 </div>
               </motion.div>
@@ -1773,7 +1767,7 @@ export default function Home() {
             className="text-center"
           >
             <h2 className="text-3xl lg:text-4xl font-bold mb-12">
-              Ils nous font confiance
+              {t('trust.title')}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 items-center justify-items-center">
               {[
@@ -1818,7 +1812,7 @@ export default function Home() {
                   whileTap={{ scale: 0.95 }}
                   className="bg-white text-green-800 px-8 py-4 rounded-xl font-semibold hover:bg-green-50 transition-all duration-200 border-2 border-green-800 shadow-lg"
                 >
-                  Rejoindre la communauté
+                  {t('joinCommunity.join')}
                 </motion.button>
               </Link>
               <Link href="/connexion">
@@ -1827,7 +1821,7 @@ export default function Home() {
                   whileTap={{ scale: 0.95 }}
                   className="bg-[#00A63E] text-white px-8 py-4 rounded-xl font-semibold hover:bg-green-900 transition-all duration-200 shadow-lg border-2 border-white"
                 >
-                  Je me connecte
+                  {t('joinCommunity.signIn')}
                 </motion.button>
               </Link>
             </div>

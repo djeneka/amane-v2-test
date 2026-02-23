@@ -11,6 +11,8 @@ import {
   FileText, BarChart3
 } from 'lucide-react';
 import MakeDonationModal from '@/components/MakeDonationModal';
+import type { PendingDonationState } from '@/components/MakeDonationModal';
+import MakeDepositModal from '@/components/MakeDepositModal';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Campaign, CampaignActivity } from '@/data/mockData';
 
@@ -27,6 +29,8 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   const [selectedImage, setSelectedImage] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [pendingDonationState, setPendingDonationState] = useState<PendingDonationState | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [openAccordionId, setOpenAccordionId] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<CampaignActivity | null>(null);
@@ -927,11 +931,28 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
       {/* Modal de don */}
       <MakeDonationModal
         isOpen={showDonationModal}
-        onClose={() => setShowDonationModal(false)}
+        onClose={() => {
+          setShowDonationModal(false);
+          setPendingDonationState(null);
+        }}
         balance={walletBalance}
         campaignId={campaign.id}
         accessToken={accessToken ?? undefined}
         donorName={user?.name ?? null}
+        onRequestRecharge={(state) => {
+          setPendingDonationState(state);
+          setShowDonationModal(false);
+          setShowDepositModal(true);
+        }}
+        initialDonationState={pendingDonationState}
+      />
+      <MakeDepositModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
+        onSuccess={() => {
+          setShowDepositModal(false);
+          setShowDonationModal(true);
+        }}
       />
     </div>
   );
