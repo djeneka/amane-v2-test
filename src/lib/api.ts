@@ -48,17 +48,21 @@ const getHeaders = (options?: { contentType?: string }) => ({
   ...(options?.contentType !== undefined ? { 'Content-Type': options.contentType } : { 'Content-Type': 'application/json' }),
 });
 
-export async function apiGet<T>(path: string, options?: { token?: string }): Promise<T> {
+export async function apiGet<T>(path: string, options?: { token?: string; cache?: RequestCache }): Promise<T> {
   const base = getBaseUrl().replace(/\/$/, '');
   const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
   const headers: Record<string, string> = { ...getHeaders() };
   if (options?.token) {
     headers['Authorization'] = `Bearer ${options.token}`;
   }
-  const res = await fetch(url, {
+  const fetchOptions: RequestInit = {
     method: 'GET',
     headers,
-  });
+  };
+  if (options?.cache !== undefined) {
+    fetchOptions.cache = options.cache;
+  }
+  const res = await fetch(url, fetchOptions);
   if (!res.ok) {
     const text = await res.text();
     if (res.status === 401) handleUnauthorized(text);

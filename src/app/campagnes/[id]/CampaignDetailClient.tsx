@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { 
   Heart, Users, MapPin, Calendar, ArrowRight, Play, Target,
   Droplets, BookOpen, UtensilsCrossed, CheckCircle2, Apple, HandCoins,
@@ -23,13 +24,13 @@ const TOAST_DURATION_MS = 4000;
 
 interface CampaignDetailClientProps {
   campaign: Campaign;
-  /** Nombre de donateurs (API statistics). Par défaut 0. */
   donorCount?: number;
 }
 
 export default function CampaignDetailClient({ campaign, donorCount = 0 }: CampaignDetailClientProps) {
   const t = useTranslations('campagnes');
   const tc = useTranslatedCampaign(campaign);
+  const router = useRouter();
   const { user, accessToken, isAuthenticated } = useAuth();
   const [selectedImage, setSelectedImage] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
@@ -1051,6 +1052,9 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
         onClose={() => {
           setShowDonationModal(false);
           setPendingDonationState(null);
+        }}
+        onSuccess={() => {
+          router.refresh();
         }}
         balance={walletBalance}
         campaignId={campaign.id}

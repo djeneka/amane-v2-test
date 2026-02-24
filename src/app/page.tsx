@@ -288,17 +288,17 @@ export default function Home() {
     },
     {
       name: 'Omar D.',
-      role: 'Investisseur Halal',
+      role: 'Utilisateur Amane+',
       location: 'Dakar, Sénégal',
-      content: 'Grâce à Amane+, je peux investir en toute sérénité. La plateforme respecte mes principes islamiques tout en offrant de bons rendements.',
+      content: 'Grâce à Amane+, je peux aider en toute sérénité : la plateforme respecte mes principes islamiques tout en offrant un cadre sécurisé, transparent et conforme à mes valeurs.',
       rating: 5,
       initials: 'OD'
     },
     {
       name: 'Fatima M.',
-      role: 'Cliente Takaful',
+      role: 'Utilisatrice Amane+',
       location: 'Bamako, Mali',
-      content: 'La protection Takaful d\'Amane+ me donne une vraie tranquillité d\'esprit. Une super app qui comprend mes besoins.',
+      content: 'Avec le calculateur de zakat intelligent, je détermine facilement et avec précision le montant à verser, conformément aux principes islamiques. Je peux ainsi aider avec discrétion et respect, tout en préservant pleinement la dignité des bénéficiaires.',
       rating: 5,
       initials: 'FM'
     }
