@@ -297,6 +297,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const signatureContainerRef = useRef<HTMLDivElement>(null);
+  const stepContentScrollRef = useRef<HTMLDivElement>(null);
 
   // Empêcher le scroll du body quand le modal est ouvert
   useEffect(() => {
@@ -423,6 +424,19 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
       setBeneficiaryShariahEligibility('AL_GHARIMOIN');
     }
   }, [monthlyIncomeOfBeneficiary]);
+
+  // Remettre le scroll en haut à chaque changement d'étape ou de catégorie (évite le saut vers "urgence vitale" sur Chrome)
+  useEffect(() => {
+    const el = stepContentScrollRef.current;
+    if (!el) return;
+    el.scrollTo(0, 0);
+    if (typeof window !== 'undefined') window.scrollTo(0, 0);
+    const id = setTimeout(() => {
+      el.scrollTo(0, 0);
+      if (typeof window !== 'undefined') window.scrollTo(0, 0);
+    }, 0);
+    return () => clearTimeout(id);
+  }, [currentStep, campaignCategory]);
 
   // Initialiser le canvas de signature
   useEffect(() => {
@@ -1223,13 +1237,21 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
             {campaignCategory === 'HEALTH' && (
               <div className="space-y-6 mt-8 bg-[#00644d]/10 rounded-3xl p-4">
                 <h4 className="text-lg font-semibold text-white">{t('form.healthDetails')}</h4>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <span className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${lifeThreateningEmergency ? 'bg-[#48BB78] border-[#48BB78]' : 'border-[#48BB78] bg-transparent'}`}>
-                    {lifeThreateningEmergency && <CheckCircle className="w-3.5 h-3.5 text-[#101919]" />}
-                  </span>
-                  <input type="checkbox" className="sr-only" checked={lifeThreateningEmergency} onChange={(e) => setLifeThreateningEmergency(e.target.checked)} />
-                  <span className="text-white text-sm">S&apos;agit-il d&apos;une urgence vitale (pronostic engagé sous 24h-48h) ?</span>
-                </label>
+                <div className="flex gap-3 flex-wrap items-center">
+                  <span className="text-white text-sm font-medium w-full">S&apos;agit-il d&apos;une urgence vitale (pronostic engagé sous 24h-48h) ?</span>
+                  {([true, false] as const).map((v) => (
+                    <motion.button
+                      key={String(v)}
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setLifeThreateningEmergency(v)}
+                      className={`rounded-3xl px-4 py-2 ${lifeThreateningEmergency === v ? 'bg-[#43B48F] text-white' : 'bg-[#1E2726] text-white hover:bg-[#2A3534]'}`}
+                    >
+                      {v ? t('form.yes') : t('form.no')}
+                    </motion.button>
+                  ))}
+                </div>
                 <div className="flex gap-3 flex-wrap">
                   <span className="text-white text-sm font-medium w-full">{t('form.patientCmuCard')}</span>
                   {([true, false] as const).map((v) => (
@@ -1927,7 +1949,11 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
                 </div>
 
                 {/* Contenu de l'étape - Panneau de droite */}
-                <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+                <div
+                  ref={stepContentScrollRef}
+                  className="flex-1 flex flex-col min-h-0 overflow-y-auto"
+                  style={{ overflowAnchor: 'none' }}
+                >
                   <div className="p-8 flex-1">
                     <h2 className="text-2xl font-bold text-white mb-2">
                       {t('form.title')}
