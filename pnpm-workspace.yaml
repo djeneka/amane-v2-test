@@ -1,0 +1,7 @@
+ignoredBuiltDependencies:
+  - core-js
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@swc/core'
+  - sharp

@@ -18,12 +18,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "Amane+ - Finance Islamique Éthique",
   description: "Votre plateforme de confiance pour les dons, la zakat, les investissements halal et la protection takaful. Ensemble, construisons un avenir meilleur.",
   keywords: "finance islamique, zakat, dons, takaful, investissements halal, épargne",
   authors: [{ name: "Amane+" }],
-  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
