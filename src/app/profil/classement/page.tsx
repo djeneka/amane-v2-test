@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { Trophy, Medal } from 'lucide-react';
+import { Trophy, Medal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMyRank, passToAnonymous, type RankingEntry } from '@/services/statistics';
+import { getMyRank, passToAnonymous, type RankingEntry, type RankingMeta } from '@/services/statistics';
 import { useTranslations } from 'next-intl';
+
+const RANKING_LIMIT = 10;
 
 function getInitials(name: string): string {
   return name
@@ -18,7 +20,6 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-/** Génère 1 chiffre + 1 lettre uniques et stables par userId */
 function getAnonymousSuffix(userId: string): string {
   const hex = userId.replace(/-/g, '');
   if (hex.length < 4) return '0A';
@@ -36,10 +37,18 @@ function getDisplayInitials(entry: RankingEntry): string {
   return entry.anonymous ? getAnonymousSuffix(entry.userId) : getInitials(entry.name);
 }
 
+/** Indique si l’URL de photo de profil est valide pour l’affichage */
+function hasValidProfilePicture(profilePicture: string | null | undefined): boolean {
+  const url = (profilePicture ?? '').trim();
+  return url.length > 0 && (url.startsWith('http://') || url.startsWith('https://'));
+}
+
 export default function ClassementPage() {
   const t = useTranslations('profil');
   const { isAuthenticated, accessToken, user } = useAuth();
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [meta, setMeta] = useState<RankingMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [anonymizeLoading, setAnonymizeLoading] = useState(false);
@@ -47,6 +56,7 @@ export default function ClassementPage() {
   useEffect(() => {
     if (!isAuthenticated || !accessToken) {
       setRanking([]);
+      setMeta(null);
       setLoading(false);
       setError(null);
       return;
@@ -54,9 +64,12 @@ export default function ClassementPage() {
     setLoading(true);
     setError(null);
     let cancelled = false;
-    getMyRank({ token: accessToken })
-      .then((list) => {
-        if (!cancelled) setRanking(list);
+    getMyRank({ token: accessToken, page, limit: RANKING_LIMIT })
+      .then((res) => {
+        if (!cancelled) {
+          setRanking(res.data);
+          setMeta(res.meta);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err?.message ?? t('loadError'));
@@ -65,9 +78,13 @@ export default function ClassementPage() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [isAuthenticated, accessToken]);
+  }, [isAuthenticated, accessToken, page]);
 
   const myEntry = user?.id ? ranking.find((e) => e.userId === user.id) : null;
+  const totalParticipants = meta?.total ?? ranking.length;
+  const totalPages = meta?.totalPages ?? 1;
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
 
   const handleToggleAnonymous = async () => {
     if (!user?.id || !accessToken) return;
@@ -78,8 +95,9 @@ export default function ClassementPage() {
         token: accessToken,
         anonymous: !myEntry?.anonymous,
       });
-      const list = await getMyRank({ token: accessToken });
-      setRanking(list);
+      const res = await getMyRank({ token: accessToken, page, limit: RANKING_LIMIT });
+      setRanking(res.data);
+      setMeta(res.meta);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('loadError'));
     } finally {
@@ -97,7 +115,7 @@ export default function ClassementPage() {
           <h1 className="text-white text-xl font-semibold">{t('classementTitle')}</h1>
           <p className="text-white/70 text-sm">
             {myEntry
-              ? t('classementSubtitleYou', { rank: myEntry.rank, total: ranking.length })
+              ? t('classementSubtitleYou', { rank: myEntry.rank, total: totalParticipants })
               : ranking.length > 0
                 ? t('classementSubtitleBrowse')
                 : t('classementEmpty')}
@@ -118,10 +136,11 @@ export default function ClassementPage() {
           {t('classementNoParticipants')}
         </div>
       ) : (
-        <div className="bg-[#101919]/50 rounded-2xl border border-white/10 overflow-hidden">
-          <div className="divide-y divide-white/10">
-            {ranking.map((entry, index) => {
-              const isMe = entry.userId === user?.id;
+        <>
+          <div className="bg-[#101919]/50 rounded-2xl border border-white/10 overflow-hidden">
+            <div className="divide-y divide-white/10">
+              {ranking.map((entry, index) => {
+                const isMe = entry.userId === user?.id;
               return (
                 <motion.div
                   key={entry.userId}
@@ -149,19 +168,27 @@ export default function ClassementPage() {
                     )}
                   </div>
                   <div className="flex-shrink-0">
-                    {!entry.anonymous && entry.profilePicture ? (
+                    {!entry.anonymous && hasValidProfilePicture(entry.profilePicture) ? (
                       <Image
-                        src={entry.profilePicture}
+                        src={entry.profilePicture.trim()}
                         alt={getDisplayName(entry, t('classementAnonymous'))}
                         width={44}
                         height={44}
                         className="rounded-full object-cover"
+                        unoptimized
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
                       />
-                    ) : (
-                      <div className="w-11 h-11 rounded-full bg-[#00644D]/30 flex items-center justify-center text-white font-semibold text-sm">
-                        {getDisplayInitials(entry)}
-                      </div>
-                    )}
+                    ) : null}
+                    <div
+                      className="w-11 h-11 rounded-full bg-[#00644D]/30 flex items-center justify-center text-white font-semibold text-sm"
+                      style={{ display: !entry.anonymous && hasValidProfilePicture(entry.profilePicture) ? 'none' : 'flex' }}
+                    >
+                      {getDisplayInitials(entry)}
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`font-medium truncate ${isMe ? 'text-[#00D9A5]' : 'text-white'}`}>
@@ -201,8 +228,38 @@ export default function ClassementPage() {
                 </motion.div>
               );
             })}
+            </div>
           </div>
-        </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 pt-4">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={!hasPrev}
+                className="flex items-center gap-1 px-4 py-2 rounded-xl bg-[#1E2726] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2A3534] transition-colors"
+                aria-label={t('classementPreviousPage')}
+              >
+                <ChevronLeft className="w-5 h-5" />
+                <span>{t('classementPreviousPage')}</span>
+              </button>
+              <span className="text-white/70 text-sm">
+                {t('classementPageInfo', { page, totalPages })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={!hasNext}
+                className="flex items-center gap-1 px-4 py-2 rounded-xl bg-[#1E2726] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2A3534] transition-colors"
+                aria-label={t('classementNextPage')}
+              >
+                <span>{t('classementNextPage')}</span>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

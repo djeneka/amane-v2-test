@@ -29,10 +29,10 @@ export default function Footer() {
   };
 
   const socialLinks = [
-    { name: 'Facebook', href: '#', icon: Facebook },
-    { name: 'Twitter', href: '#', icon: Twitter },
-    { name: 'Instagram', href: '#', icon: Instagram },
-    { name: 'LinkedIn', href: '#', icon: Linkedin },
+    { name: 'Facebook', href: 'https://www.facebook.com/amaneplus.ci', icon: Facebook },
+    // { name: 'Twitter', href: '#', icon: Twitter },
+    { name: 'Instagram', href: 'https://www.instagram.com/amaneplus.ci', icon: Instagram },
+    { name: 'LinkedIn', href: 'https://www.linkedin.com/company/amaneplus/', icon: Linkedin },
   ];
 
   return (
