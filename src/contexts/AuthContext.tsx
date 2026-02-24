@@ -18,13 +18,6 @@ interface AuthContextType {
   /** True une fois que le localStorage a été lu (évite redirections incorrectes au premier rendu) */
   authReady: boolean;
   login: (credentials: LoginCredentials) => Promise<boolean>;
-  register: (userData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    password: string;
-  }) => Promise<boolean>;
   logout: () => void;
   /** Rafraîchit l'utilisateur depuis GET /api/users/me (solde, score, etc.) */
   refreshUser: () => Promise<void>;
@@ -99,39 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (userData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    password: string;
-  }): Promise<boolean> => {
-    try {
-      // TODO: brancher sur l'API d'inscription quand disponible
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const newUser: User = {
-        id: Date.now().toString(),
-        email: userData.email,
-        phoneNumber: userData.phone,
-        name: `${userData.firstName} ${userData.lastName}`.trim(),
-        profilePicture: '',
-        emailVerified: false,
-        role: 'USER',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        wallet: { id: '', balance: 0, currency: 'XOF' },
-        score: { score: 0 },
-      };
-      setUser(newUser);
-      setIsAuthenticated(true);
-      localStorage.setItem(STORAGE_USER, JSON.stringify(newUser));
-      return true;
-    } catch (error) {
-      console.error('Erreur d\'inscription:', error);
-      return false;
-    }
-  };
-
   const logout = useCallback(() => {
     setUser(null);
     setAccessToken(null);
@@ -161,7 +121,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated,
     authReady,
     login,
-    register,
     logout,
     refreshUser,
     accessToken,

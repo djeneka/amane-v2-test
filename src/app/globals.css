@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes border-blink {
+  0%, 100% { border-color: rgb(90 182 120); }
+  50% { border-color: rgb(90 182 120 / 0.35); }
+}
+.animate-border-blink {
+  animation: border-blink 1.5s ease-in-out infinite;
+}

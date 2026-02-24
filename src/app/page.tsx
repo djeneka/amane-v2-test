@@ -42,6 +42,8 @@ export default function Home() {
   const [featuredCampaigns, setFeaturedCampaigns] = useState<Campaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
+  const [activeCampaignsCount, setActiveCampaignsCount] = useState(0);
+  const [totalActiveDonors, setTotalActiveDonors] = useState(0);
   const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
@@ -85,7 +87,10 @@ export default function Home() {
     setCampaignsError(null);
     getActiveCampaigns()
       .then((list) => {
-        if (!cancelled) setFeaturedCampaigns(list.slice(0, 3));
+        if (!cancelled) {
+          setFeaturedCampaigns(list.slice(0, 3));
+          setActiveCampaignsCount(list.length);
+        }
       })
       .catch((err) => {
         if (!cancelled) setCampaignsError(err?.message ?? t('errors.campaignsLoad'));
@@ -106,6 +111,8 @@ export default function Home() {
           byId[row.campaignId] = row.count;
         }
         setDonorCountByCampaignId(byId);
+        const totalDonors = stats.byCampaign.reduce((s, b) => s + b.count, 0);
+        setTotalActiveDonors(totalDonors);
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -770,7 +777,7 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
               { 
-                value: '247', 
+                value: totalActiveDonors.toLocaleString(localeCode), 
                 label: t('impact.activeDonors'), 
                 icon: Users, 
                 iconBg: 'bg-[#5AB678]',
@@ -778,7 +785,7 @@ export default function Home() {
                 cardBg: 'bg-[#152A2A]'
               },
               { 
-                value: '8.5%', 
+                value: t('activities.comingSoon'), 
                 label: t('impact.avgReturn'), 
                 icon: TrendingUp, 
                 iconBg: 'bg-[#5AB678]',
@@ -786,7 +793,7 @@ export default function Home() {
                 cardBg: 'bg-[#152A2A]'
               },
               { 
-                value: '18+', 
+                value: String(activeCampaignsCount), 
                 label: t('impact.activeCampaigns'), 
                 icon: Heart, 
                 iconBg: 'bg-pink-500',
@@ -794,7 +801,7 @@ export default function Home() {
                 cardBg: 'bg-[#152A2A]'
               },
               { 
-                value: '20+', 
+                value: t('activities.comingSoon'), 
                 label: t('impact.halalProducts'), 
                 icon: Bookmark, 
                 iconBg: 'bg-purple-500',

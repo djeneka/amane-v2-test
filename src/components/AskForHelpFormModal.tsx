@@ -549,7 +549,7 @@ export default function AskForHelpFormModal({ isOpen, onClose }: AskForHelpFormM
       .filter((dc) => documents[dc.key] != null)
       .map((dc) => [dc.key, documents[dc.key]!] as [string, File]);
     const uploadedUrls = await Promise.all(
-      documentEntries.map(([, file]) => uploadFile(file, 'aid-requests'))
+      documentEntries.map(([, file]) => uploadFile(file, 'aid-requests', accessToken))
     );
     const attachments = documentEntries.map(([key], i) => {
       const config = docConfigs.find((dc) => dc.key === key)!;

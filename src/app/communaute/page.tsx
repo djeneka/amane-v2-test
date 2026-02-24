@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getActiveCampaigns } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
 import { getActivities, type Activity } from '@/services/activities';
+import { getHtmlForRender, isHtmlContent } from '@/lib/campaign-html';
 
 const DEFAULT_ACTIVITY_IMAGE = '/images/no-picture.png';
 const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
@@ -57,6 +58,7 @@ export default function CommunautePage() {
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
   const [donorCountByCampaignId, setDonorCountByCampaignId] = useState<Record<string, number>>({});
+  const [totalActiveDonors, setTotalActiveDonors] = useState(0);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [activitiesError, setActivitiesError] = useState<string | null>(null);
@@ -103,6 +105,8 @@ export default function CommunautePage() {
           byId[row.campaignId] = row.count;
         }
         setDonorCountByCampaignId(byId);
+        const totalDonors = stats.byCampaign.reduce((s, b) => s + b.count, 0);
+        setTotalActiveDonors(totalDonors);
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -366,10 +370,10 @@ export default function CommunautePage() {
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
                             <h3 className="text-white text-2xl font-bold mb-2">{campaign.title}</h3>
-                            {campaign.description?.includes('<') ? (
+                            {campaign.description && isHtmlContent(campaign.description) ? (
                             <div
                               className="text-white/90 text-sm mb-4 line-clamp-3 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
-                              dangerouslySetInnerHTML={{ __html: campaign.description ?? '' }}
+                              dangerouslySetInnerHTML={{ __html: getHtmlForRender(campaign.description) }}
                             />
                             ) : (
                             <p className="text-white/90 text-sm mb-4 line-clamp-3">
@@ -827,7 +831,7 @@ export default function CommunautePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
                 { 
-                value: '15,247', 
+                value: totalActiveDonors.toLocaleString('fr-FR'), 
                 label: t('activeDonors'), 
                 icon: Users, 
                 iconBg: 'bg-[#5AB678]',
@@ -835,7 +839,7 @@ export default function CommunautePage() {
                 cardBg: 'bg-[#152A2A]'
                 },
                 { 
-                value: '8.5%', 
+                value: t('comingSoon'), 
                 label: t('avgReturn'), 
                 icon: TrendingUp, 
                 iconBg: 'bg-[#5AB678]',
@@ -843,7 +847,7 @@ export default function CommunautePage() {
                 cardBg: 'bg-[#152A2A]'
                 },
                 { 
-                value: '50+', 
+                value: String(allCampaigns.length), 
                 label: t('activeCampaigns'), 
                 icon: Heart, 
                 iconBg: 'bg-pink-500',
@@ -851,7 +855,7 @@ export default function CommunautePage() {
                 cardBg: 'bg-[#152A2A]'
                 },
                 { 
-                value: '200+', 
+                value: t('comingSoon'), 
                 label: t('halalProducts'), 
                 icon: Bookmark, 
                 iconBg: 'bg-purple-500',
