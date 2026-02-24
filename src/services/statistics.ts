@@ -50,7 +50,7 @@ export interface DonationsStatistics {
  * GET /api/statistics/donations
  */
 export async function getDonationsStatistics(): Promise<DonationsStatistics> {
-  const data = await apiGet<DonationsStatistics>('/api/statistics/donations');
+  const data = await apiGet<DonationsStatistics>('/api/statistics/donations', { cache: 'no-store' });
   return {
     total: typeof data.total === 'number' ? data.total : 0,
     totalAmount: typeof data.totalAmount === 'number' ? data.totalAmount : 0,

@@ -58,6 +58,7 @@ const API_CATEGORY_TO_FRONT: Record<string, Campaign['category']> = {
   SPECIAL_RAMADAN: 'special-ramadan',
   SPECIAL_TABASKI: 'special-tabaski',
   DEVELOPMENT: 'developpement',
+  HOUSING: 'developpement',
 };
 
 const DEFAULT_CAMPAIGN_IMAGE = '/images/no-picture.png';
@@ -145,7 +146,19 @@ export async function getActiveCampaigns(options?: { duration?: string }): Promi
   return list.map(mapApiCampaignToCampaign);
 }
 
+/**
+ * Récupère une campagne par ID. Utilise d'abord la liste des campagnes actives
+ * (même source que la liste) pour éviter les écarts de données, sinon appelle GET /api/campaigns/:id.
+ */
 export async function getCampaignById(id: string): Promise<Campaign | null> {
-  const campaign = await apiGet<ApiCampaign>(`/api/campaigns/${id}`);
+  const list = await apiGet<ApiCampaign[]>(
+    `/api/campaigns?${new URLSearchParams({ status: 'ACTIVE' }).toString()}`,
+    { cache: 'no-store' }
+  );
+  const inList = Array.isArray(list) ? list.find((c) => c.id === id) : null;
+  if (inList) {
+    return mapApiCampaignToCampaign(inList);
+  }
+  const campaign = await apiGet<ApiCampaign>(`/api/campaigns/${id}`, { cache: 'no-store' });
   return campaign ? mapApiCampaignToCampaign(campaign) : null;
 }

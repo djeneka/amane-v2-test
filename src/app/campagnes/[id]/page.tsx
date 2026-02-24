@@ -3,6 +3,9 @@ import CampaignNotFoundBlock from './CampaignNotFoundBlock';
 import { getCampaignById } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
 
+/** Désactive le cache pour toujours afficher les données à jour de la campagne */
+export const dynamic = 'force-dynamic';
+
 interface CampaignDetailPageProps {
   params: Promise<{
     id: string;
