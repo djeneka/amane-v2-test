@@ -8,7 +8,8 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useLocale } from '@/components/LocaleProvider';
 import ZakatCalculatorModal from '@/components/ZakatCalculatorModal';
-import PayZakatModal from '@/components/PayZakatModal';
+import PayZakatModal, { type PendingZakatState } from '@/components/PayZakatModal';
+import MakeDepositModal from '@/components/MakeDepositModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { getMyZakats, deleteZakat, createZakat, PENDING_ZAKAT_STORAGE_KEY, type Zakat, type CreateZakatBody } from '@/services/zakat';
 
@@ -104,6 +105,8 @@ export default function ZakatPage() {
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [zakatAmountToPay, setZakatAmountToPay] = useState<number | undefined>(undefined);
   const [zakatIdToPay, setZakatIdToPay] = useState<string | null>(null);
+  const [pendingZakatState, setPendingZakatState] = useState<PendingZakatState | null>(null);
+  const [showDepositModal, setShowDepositModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastVariant, setToastVariant] = useState<'success' | 'error'>('success');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -610,11 +613,26 @@ export default function ZakatPage() {
           setIsDonationModalOpen(false);
           setZakatAmountToPay(undefined);
           setZakatIdToPay(null);
+          setPendingZakatState(null);
         }}
         initialAmount={zakatAmountToPay}
         zakatId={zakatIdToPay}
         accessToken={accessToken ?? undefined}
         onSuccess={refetchZakats}
+        onRequestRecharge={(state) => {
+          setPendingZakatState(state);
+          setIsDonationModalOpen(false);
+          setShowDepositModal(true);
+        }}
+        initialZakatState={pendingZakatState}
+      />
+      <MakeDepositModal
+        isOpen={showDepositModal}
+        onClose={() => setShowDepositModal(false)}
+        onSuccess={() => {
+          setShowDepositModal(false);
+          setIsDonationModalOpen(true);
+        }}
       />
     </>
   );
