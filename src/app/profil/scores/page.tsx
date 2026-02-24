@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getMyDonations, type Donation } from '@/services/donations';
 import { getMyTransactions, type Transaction } from '@/services/transactions';
 import { getRankForScore, getNextRank } from '@/lib/rankRules';
-import { mySadaqahHistory, getMyRank, type SadaqahHistoryEntry, type RankingEntry } from '@/services/statistics';
+import { mySadaqahHistory, getMyRank, type SadaqahHistoryEntry, type RankingEntry, type RankingMeta } from '@/services/statistics';
 import { useTranslations } from 'next-intl';
 import { useLocale } from '@/components/LocaleProvider';
 
@@ -55,6 +55,7 @@ export default function ScoresPage() {
   const [sadaqahHistoryLoading, setSadaqahHistoryLoading] = useState(true);
   const [sadaqahHistoryError, setSadaqahHistoryError] = useState<string | null>(null);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [rankingMeta, setRankingMeta] = useState<RankingMeta | null>(null);
   const [rankingLoading, setRankingLoading] = useState(true);
   const [rankingError, setRankingError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -124,10 +125,11 @@ export default function ScoresPage() {
     return () => { cancelled = true; };
   }, [isAuthenticated, accessToken]);
 
-  // Classement (GET /api/ranking)
+  // Classement (GET /api/ranking paginé, première page)
   useEffect(() => {
     if (!isAuthenticated || !accessToken) {
       setRanking([]);
+      setRankingMeta(null);
       setRankingLoading(false);
       setRankingError(null);
       return;
@@ -135,9 +137,12 @@ export default function ScoresPage() {
     setRankingLoading(true);
     setRankingError(null);
     let cancelled = false;
-    getMyRank({ token: accessToken })
-      .then((list) => {
-        if (!cancelled) setRanking(list);
+    getMyRank({ token: accessToken, page: 1, limit: 10 })
+      .then((res) => {
+        if (!cancelled) {
+          setRanking(res.data);
+          setRankingMeta(res.meta);
+        }
       })
       .catch((err) => {
         if (!cancelled) setRankingError(err?.message ?? t('loadError'));
@@ -151,7 +156,7 @@ export default function ScoresPage() {
   // Position du user dans le classement (userId du contexte = id user)
   const myRankEntry = user?.id ? ranking.find((e) => e.userId === user.id) : null;
   const myRankPosition = myRankEntry?.rank ?? null;
-  const totalInRanking = ranking.length;
+  const totalInRanking = rankingMeta?.total ?? ranking.length;
 
   // Indicateurs d'impact (alignés sur la page home)
   const donationsCount = myDonations.length;
