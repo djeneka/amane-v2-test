@@ -21,6 +21,8 @@ export interface ApiCampaign {
   goals?: string;
   beneficiaries?: string[];
   picture: string | null;
+  /** Autres images de la campagne (galerie) */
+  otherPictures?: string[];
   startDate: string | null;
   endDate: string | null;
   category: string;
@@ -67,11 +69,14 @@ function mapApiCampaignToCampaign(api: ApiCampaign): Campaign {
     api.picture && typeof api.picture === 'string' && api.picture.trim()
       ? api.picture
       : DEFAULT_CAMPAIGN_IMAGE;
+  const otherPics = Array.isArray(api.otherPictures)
+    ? api.otherPictures.filter((url): url is string => typeof url === 'string' && !!url.trim())
+    : [];
   const activityImages =
     Array.isArray(api.activities) ?
       api.activities.flatMap((a) => (Array.isArray(a.images) ? a.images : [])) :
       [];
-  const allImages = [mainImage, ...activityImages].filter(Boolean);
+  const allImages = [mainImage, ...otherPics, ...activityImages].filter(Boolean);
   const firstVideo =
     Array.isArray(api.activities) &&
     api.activities[0]?.videos?.length

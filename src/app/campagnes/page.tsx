@@ -589,7 +589,7 @@ export default function CampagnesPage() {
                                 campaign.description.includes('<') ? (
                                   <div
                                     className="text-base font-normal text-white/90 mt-1 line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
-                                    dangerouslySetInnerHTML={{ __html: campaign.description }}
+                                    dangerouslySetInnerHTML={{ __html: getHtmlForRender(campaign.description) }}
                                   />
                                 ) : (
                                   <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
@@ -653,7 +653,7 @@ export default function CampagnesPage() {
                                       campaign.description.includes('<') ? (
                                         <div
                                           className="text-base font-normal text-white/90 mt-1 line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
-                                          dangerouslySetInnerHTML={{ __html: campaign.description }}
+                                          dangerouslySetInnerHTML={{ __html: getHtmlForRender(campaign.description) }}
                                         />
                                       ) : (
                                         <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
@@ -764,7 +764,7 @@ export default function CampagnesPage() {
                                 campaign.description.includes('<') ? (
                                   <div
                                     className="text-base font-normal text-white/90 mt-1 line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
-                                    dangerouslySetInnerHTML={{ __html: campaign.description }}
+                                    dangerouslySetInnerHTML={{ __html: getHtmlForRender(campaign.description) }}
                                   />
                                 ) : (
                                   <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">
@@ -828,7 +828,7 @@ export default function CampagnesPage() {
                                       campaign.description.includes('<') ? (
                                         <div
                                           className="text-base font-normal text-white/90 mt-1 line-clamp-2 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
-                                          dangerouslySetInnerHTML={{ __html: campaign.description }}
+                                          dangerouslySetInnerHTML={{ __html: getHtmlForRender(campaign.description) }}
                                         />
                                       ) : (
                                         <p className="text-base font-normal text-white/90 mt-1 line-clamp-2">

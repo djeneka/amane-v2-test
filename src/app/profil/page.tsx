@@ -242,7 +242,7 @@ export default function ProfilPage() {
       let profilePictureUrl = avatar;
       if (avatar.startsWith('data:')) {
         const file = dataUrlToFile(avatar, 'avatar.jpg');
-        profilePictureUrl = await uploadProfileImage(file);
+        profilePictureUrl = await uploadProfileImage(file, accessToken);
       }
       const payload = {
         name: `${userData.firstName} ${userData.lastName}`.trim() || user.name,

@@ -312,7 +312,7 @@ export default function MakeDonationModal({
             : {}),
         });
         const file = new File([blob], 'certificat-khatma-don.pdf', { type: 'application/pdf' });
-        const certificatUrl = await uploadCertificatePdf(file);
+        const certificatUrl = await uploadCertificatePdf(file, accessToken);
         thirdPartyPayload = { ...baseThirdPartyPayload, certificatUrl };
       }
       if (campaignId) {
@@ -816,6 +816,14 @@ export default function MakeDonationModal({
               <span>Suivant</span>
               <ChevronRight size={20} />
             </motion.button>
+          </div>
+          <div className="mx-0 sm:mx-12 rounded-xl border-2 border-[#5AB678] bg-[#0F1F1F]/50 p-4 animate-border-blink">
+            <p className="text-white/80 text-xs leading-relaxed">
+              En confirmant ce paiement, vous déclarez que les fonds utilisés proviennent d&apos;une source légale et conforme à la réglementation en vigueur. Vous garantissez qu&apos;ils ne sont liés ni au blanchiment de capitaux, ni au financement du terrorisme, ni à aucune autre activité illicite.
+            </p>
+            <p className="text-white/80 text-xs leading-relaxed mt-3">
+              AMANE+ se réserve le droit de suspendre ou de bloquer toute transaction dont l&apos;origine semblerait suspecte, conformément aux dispositions applicables en matière de lutte contre le blanchiment de capitaux et le financement du terrorisme (LBC/FT).
+            </p>
           </div>
         </div>
       );

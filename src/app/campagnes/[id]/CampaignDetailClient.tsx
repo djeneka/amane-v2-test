@@ -8,7 +8,7 @@ import {
   Heart, Users, MapPin, Calendar, ArrowRight, Play, Target,
   Droplets, BookOpen, UtensilsCrossed, CheckCircle2, Apple, HandCoins,
   ChevronDown, CircleHelp, Leaf, Eye, X, ChevronLeft, ChevronRight,
-  FileText, BarChart3
+  FileText, BarChart3, Download, Loader2
 } from 'lucide-react';
 import MakeDonationModal from '@/components/MakeDonationModal';
 import type { PendingDonationState } from '@/components/MakeDonationModal';
@@ -41,6 +41,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   const [selectedActivity, setSelectedActivity] = useState<CampaignActivity | null>(null);
   const [activitySlideIndex, setActivitySlideIndex] = useState(0);
   const [impactCardsSlideIndex, setImpactCardsSlideIndex] = useState(0);
+  const [downloadingDoc, setDownloadingDoc] = useState<'budget' | 'statement' | null>(null);
 
   // Réinitialiser le slide à l'ouverture du modal
   useEffect(() => {
@@ -50,6 +51,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   // Réinitialiser le slider des cartes impact au changement de campagne
   useEffect(() => {
     setImpactCardsSlideIndex(0);
+    setSelectedImage(0);
   }, [campaign.id]);
 
   const walletBalance = user?.wallet?.balance ?? 0;
@@ -109,10 +111,57 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   };
   const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? t('typeSadaqah');
 
+  /** Liste des images de la galerie : image principale + autres images */
+  const galleryImages =
+    campaign.images?.length
+      ? campaign.images
+      : campaign.image
+        ? [campaign.image]
+        : ['/images/no-picture.png'];
+
+  // Défilement automatique des slides (toutes les 5 s, uniquement si plusieurs images et pas de vidéo)
+  useEffect(() => {
+    if (galleryImages.length <= 1 || showVideo) return;
+    const interval = setInterval(() => {
+      setSelectedImage((prev) => (prev + 1) % galleryImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [campaign.id, galleryImages.length, showVideo]);
+
   const impactStats = [
     { icon: Users, value: donorCount.toLocaleString('fr-FR'), labelKey: 'donors' },
   ];
 
+  /** Télécharge un document sans ouvrir l'URL (évite d'exposer l'URL S3 dans la barre d'adresse). */
+  const handleDownloadDocument = (url: string, type: 'budget' | 'statement') => {
+    const defaultName = type === 'budget' ? 'budget-previsionnel.pdf' : 'releve-financier.pdf';
+    let filename: string;
+    try {
+      const pathname = new URL(url).pathname;
+      filename = pathname.split('/').pop() || defaultName;
+    } catch {
+      filename = defaultName;
+    }
+    setDownloadingDoc(type);
+    fetch(url, { mode: 'cors' })
+      .then((res) => {
+        if (!res.ok) throw new Error('Download failed');
+        return res.blob();
+      })
+      .then((blob) => {
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(objectUrl);
+      })
+      .catch(() => {
+        setToastMessage(t('documentDownloadError'));
+        setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+      })
+      .finally(() => setDownloadingDoc(null));
+  };
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom right, #0d4d3d, #001a14)' }}>
@@ -180,19 +229,50 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 />
               ) : (
                 <>
-                  {/* Image avec flou artistique + scale pour éviter les bords blancs */}
+                  {/* Slide : image principale avec transition */}
                   <div className="absolute inset-0">
-                    <img
-                      src={campaign.images?.[selectedImage] || campaign.image || '/images/no-picture.png'}
-                      alt={tc.title}
-                      className="w-full h-full object-cover scale-105"
-                    />
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.img
+                        key={selectedImage}
+                        src={galleryImages[Math.min(selectedImage, galleryImages.length - 1)] ?? '/images/no-picture.png'}
+                        alt={`${tc.title} – image ${selectedImage + 1}`}
+                        className="w-full h-full object-cover scale-105"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                      />
+                    </AnimatePresence>
                   </div>
                   {/* Overlay sombre pour contraste et lisibilité des badges */}
                   <div
                     className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/35 to-black/55"
                     aria-hidden
                   />
+                  {/* Miniatures carrées en overlay (bas) – au clic, change l'image affichée */}
+                  {galleryImages.length > 1 && (
+                    <div className="absolute bottom-4 left-4 right-4 flex justify-center gap-2 flex-wrap">
+                      {galleryImages.map((url, i) => (
+                        <button
+                          key={url}
+                          type="button"
+                          onClick={() => setSelectedImage(i)}
+                          className={`relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 ring-2 transition-all focus:outline-none focus:ring-offset-2 focus:ring-offset-transparent ${
+                            i === selectedImage
+                              ? 'ring-white ring-offset-1 scale-105'
+                              : 'ring-white/40 hover:ring-white/70 opacity-90 hover:opacity-100'
+                          }`}
+                          aria-label={`Voir image ${i + 1}`}
+                        >
+                          <img
+                            src={url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
 
@@ -406,15 +486,19 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                                   </p>
                                   <div className="flex flex-col gap-3">
                                     {campaign.provisionalBudget ? (
-                                      <a
-                                        href={campaign.provisionalBudget}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-[#43b48f] bg-[#43b48f]/5 px-4 py-3 text-[#43b48f] font-medium text-sm hover:bg-[#43b48f]/10 transition-colors"
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDownloadDocument(campaign.provisionalBudget!, 'budget')}
+                                        disabled={downloadingDoc === 'budget'}
+                                        className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-[#43b48f] bg-[#43b48f]/5 px-4 py-3 text-[#43b48f] font-medium text-sm hover:bg-[#43b48f]/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-left"
                                       >
-                                        <FileText size={22} className="shrink-0" />
+                                        {downloadingDoc === 'budget' ? (
+                                          <Loader2 size={22} className="shrink-0 animate-spin" />
+                                        ) : (
+                                          <Download size={22} className="shrink-0" />
+                                        )}
                                         <span>{t('provisionalBudget')}</span>
-                                      </a>
+                                      </button>
                                     ) : (
                                       <div className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-white/20 bg-white/5 px-4 py-3 text-white/50 text-sm">
                                         <FileText size={22} className="shrink-0" />
@@ -423,15 +507,19 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                                       </div>
                                     )}
                                     {campaign.financialStatement ? (
-                                      <a
-                                        href={campaign.financialStatement}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-[#43b48f] bg-[#43b48f]/5 px-4 py-3 text-[#43b48f] font-medium text-sm hover:bg-[#43b48f]/10 transition-colors"
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDownloadDocument(campaign.financialStatement!, 'statement')}
+                                        disabled={downloadingDoc === 'statement'}
+                                        className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-[#43b48f] bg-[#43b48f]/5 px-4 py-3 text-[#43b48f] font-medium text-sm hover:bg-[#43b48f]/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-left"
                                       >
-                                        <BarChart3 size={22} className="shrink-0" />
+                                        {downloadingDoc === 'statement' ? (
+                                          <Loader2 size={22} className="shrink-0 animate-spin" />
+                                        ) : (
+                                          <Download size={22} className="shrink-0" />
+                                        )}
                                         <span>{t('financialStatement')}</span>
-                                      </a>
+                                      </button>
                                     ) : (
                                       <div className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-white/20 bg-white/5 px-4 py-3 text-white/50 text-sm">
                                         <BarChart3 size={22} className="shrink-0" />
