@@ -21,6 +21,7 @@ import ServiceCards from '@/components/ServiceCards';
 import { takafulProducts } from '@/data/mockData';
 import type { Campaign } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCampaignTranslations } from '@/contexts/CampaignTranslationsContext';
 import { getActiveCampaigns } from '@/services/campaigns';
 import { getTakafulPlans } from '@/services/takaful-plans';
 import { getDonationsStatistics } from '@/services/statistics';
@@ -34,6 +35,7 @@ import ZakatCalculatorModal from '@/components/ZakatCalculatorModal';
 
 export default function Home() {
   const { isAuthenticated, user, accessToken } = useAuth();
+  const { getTranslatedCampaign } = useCampaignTranslations();
   const t = useTranslations('home');
   const { locale } = useLocale();
   const localeCode = locale === 'en' ? 'en-GB' : 'fr-FR';
@@ -1003,6 +1005,7 @@ export default function Home() {
               </div>
             )}
             {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
+              const translated = getTranslatedCampaign(campaign);
               const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
               const amountSpent = campaign.amountSpent ?? 0;
               const currentAmount = campaign.currentAmount;
@@ -1023,7 +1026,7 @@ export default function Home() {
                       <div className="absolute inset-0">
                         <img
                           src={campaign.image || '/images/no-picture.png'}
-                          alt={campaign.title}
+                          alt={translated.title}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
@@ -1049,7 +1052,7 @@ export default function Home() {
                           {donorCount.toLocaleString(localeCode)} {t('campaigns.donors')}
                         </p>
                         <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
-                          {campaign.title}
+                          {translated.title}
                         </h3>
                         <div className="space-y-2">
                           <div className="flex justify-between items-center gap-2 text-sm">
@@ -1613,6 +1616,7 @@ export default function Home() {
               </div>
             )}
             {!campaignsLoading && !campaignsError && featuredCampaigns.map((campaign, index) => {
+              const translated = getTranslatedCampaign(campaign);
               const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
               const amountSpent = campaign.amountSpent ?? 0;
               const currentAmount = campaign.currentAmount;
@@ -1633,7 +1637,7 @@ export default function Home() {
                       <div className="absolute inset-0">
                         <img
                           src={campaign.image || '/images/no-picture.png'}
-                          alt={campaign.title}
+                          alt={translated.title}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
@@ -1659,7 +1663,7 @@ export default function Home() {
                           {donorCount.toLocaleString(localeCode)} {t('campaigns.donors')}
                         </p>
                         <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
-                          {campaign.title}
+                          {translated.title}
                         </h3>
                         <div className="space-y-2">
                           <div className="flex justify-between items-center gap-2 text-sm">

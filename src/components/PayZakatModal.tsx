@@ -8,18 +8,6 @@ import { useRouter } from 'next/navigation';
 import { payZakat } from '@/services/zakat';
 import { getCurrentUser } from '@/services/user';
 
-interface PayZakatModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  balance?: number;
-  initialAmount?: number; // Montant initial à pré-remplir
-  /** ID de la zakat à payer (obligatoire pour envoyer le paiement) */
-  zakatId?: string | null;
-  /** JWT pour l’API (obligatoire pour envoyer le paiement) */
-  accessToken?: string | null;
-  /** Appelé après un paiement réussi (ex. pour rafraîchir la liste des zakats) */
-  onSuccess?: () => void;
-}
 
 const STEPS = [
   { id: 1, label: 'Montant' },
@@ -28,6 +16,30 @@ const STEPS = [
 ];
 
 type PaymentFrequency = 'monthly' | 'bimonthly' | 'quarterly';
+
+/** État du paiement zakat à restaurer après un rechargement (pour rouvrir le modal avec les mêmes infos) */
+export interface PendingZakatState {
+  currentStep: number;
+  amount: string;
+  zakatId: string | null;
+  isPaymentPlanned: boolean;
+  startDate: string;
+  frequency: PaymentFrequency;
+}
+
+interface PayZakatModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  balance?: number;
+  initialAmount?: number;
+  zakatId?: string | null;
+  accessToken?: string | null;
+  onSuccess?: () => void;
+  /** Appelé quand l'utilisateur clique sur "Se recharger" (montant > solde) : ferme le modal, ouvre le dépôt, puis rouvre le modal zakat avec initialZakatState au succès */
+  onRequestRecharge?: (state: PendingZakatState) => void;
+  /** État à restaurer à l'ouverture (après rechargement réussi) */
+  initialZakatState?: PendingZakatState | null;
+}
 
 function parseApiErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
@@ -48,6 +60,8 @@ export default function PayZakatModal({
   zakatId = null,
   accessToken = null,
   onSuccess,
+  onRequestRecharge,
+  initialZakatState = null,
 }: PayZakatModalProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -79,7 +93,7 @@ export default function PayZakatModal({
     };
   }, [isOpen]);
 
-  // Réinitialiser le formulaire quand le modal se ferme
+  // Réinitialiser ou restaurer le formulaire à l'ouverture
   useEffect(() => {
     if (!isOpen) {
       setCurrentStep(1);
@@ -93,10 +107,17 @@ export default function PayZakatModal({
       setSubmitError(null);
       setIsSubmitting(false);
       setWalletBalanceFromApi(null);
-    } else if (initialAmount) {
+    } else if (initialZakatState) {
+      setCurrentStep(initialZakatState.currentStep);
+      setAmount(initialZakatState.amount);
+      setIsPaymentPlanned(initialZakatState.isPaymentPlanned);
+      setStartDate(initialZakatState.startDate);
+      setFrequency(initialZakatState.frequency);
+      setSubmitError(null);
+    } else if (initialAmount !== undefined) {
       setAmount(initialAmount.toString());
     }
-  }, [isOpen, initialAmount]);
+  }, [isOpen, initialZakatState, initialAmount]);
 
   // Récupérer le solde du wallet à l'ouverture du modal
   useEffect(() => {
@@ -519,6 +540,33 @@ export default function PayZakatModal({
               )}
             </AnimatePresence>
 
+            {amount && parseFloat(amount) > effectiveBalance && (
+              <p className="text-red-400 text-sm text-center mt-4 mx-0 sm:mx-12">
+                Le montant ne peut pas dépasser votre solde ({effectiveBalance.toLocaleString('fr-FR')} F).
+              </p>
+            )}
+            {amount && parseFloat(amount) > effectiveBalance && onRequestRecharge && (
+              <p className="text-center mt-2 mx-0 sm:mx-12">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onRequestRecharge({
+                      currentStep: 1,
+                      amount,
+                      zakatId: zakatId ?? null,
+                      isPaymentPlanned,
+                      startDate,
+                      frequency,
+                    });
+                  }}
+                  className="text-[#5AB678] hover:text-[#66ff99] underline text-sm font-medium"
+                >
+                  Se recharger
+                </button>
+              </p>
+            )}
+
             {/* Boutons de navigation */}
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-4 pb-2 mx-0 sm:mx-12">
               <motion.button
@@ -535,7 +583,7 @@ export default function PayZakatModal({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleNext}
-                disabled={!amount || parseFloat(amount) <= 0 || (isPaymentPlanned && !startDate)}
+                disabled={!amount || parseFloat(amount) <= 0 || (isPaymentPlanned && !startDate) || parseFloat(amount) > effectiveBalance}
                 className="flex-1 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl p-3 sm:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm sm:text-base"
               >
                 <span>Suivant</span>
@@ -585,6 +633,33 @@ export default function PayZakatModal({
                   </span>
                 </div>
               </motion.div>
+            )}
+
+            {parseFloat(amount) > effectiveBalance && (
+              <p className="text-red-400 text-sm text-center mt-4 mx-0 sm:mx-12">
+                Le montant ne peut pas dépasser votre solde ({effectiveBalance.toLocaleString('fr-FR')} F).
+              </p>
+            )}
+            {parseFloat(amount) > effectiveBalance && onRequestRecharge && (
+              <p className="text-center mt-2 mx-0 sm:mx-12">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onRequestRecharge({
+                      currentStep: 2,
+                      amount,
+                      zakatId: zakatId ?? null,
+                      isPaymentPlanned,
+                      startDate,
+                      frequency,
+                    });
+                  }}
+                  className="text-[#5AB678] hover:text-[#66ff99] underline text-sm font-medium"
+                >
+                  Se recharger
+                </button>
+              </p>
             )}
 
             {/* Boutons de navigation */}
@@ -671,6 +746,27 @@ export default function PayZakatModal({
             {submitError && (
               <div className="mx-0 sm:mx-12 rounded-xl bg-red-500/20 border border-red-400/40 p-3">
                 <p className="text-red-300 text-sm text-center">{submitError}</p>
+                {onRequestRecharge && (
+                  <p className="text-center mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onRequestRecharge({
+                          currentStep: 3,
+                          amount,
+                          zakatId: zakatId ?? null,
+                          isPaymentPlanned,
+                          startDate,
+                          frequency,
+                        });
+                      }}
+                      className="text-[#5AB678] hover:text-[#66ff99] underline text-sm font-medium"
+                    >
+                      Se recharger
+                    </button>
+                  </p>
+                )}
               </div>
             )}
 
@@ -689,7 +785,7 @@ export default function PayZakatModal({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleSubmit}
-                disabled={securityCode.length < 4 || isSubmitting}
+                disabled={securityCode.length < 4 || isSubmitting || (!!accessToken && parseFloat(amount) > effectiveBalance)}
                 className="flex-1 bg-[#3AE1B4] text-[#101919] rounded-3xl p-3 sm:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm sm:text-base"
               >
                 {isSubmitting ? (

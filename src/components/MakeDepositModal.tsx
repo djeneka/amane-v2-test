@@ -6,6 +6,7 @@ import { X, ChevronRight, ChevronLeft, Smartphone, Building2, CreditCard, User, 
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { initiatePayment, checkPaymentStatus, confirmTopUp } from '@/services/payments';
 
 interface MakeDepositModalProps {
@@ -27,11 +28,11 @@ const OPERATOR_SERVICE_CODE: Record<Exclude<Operator, null>, string> = {
 };
 
 const STEPS = [
-  { id: 1, label: "Informations de base", icon: "/icons/image 33(1).png" },
-  { id: 2, label: "Choix de l'opérateur", icon: "/icons/image 34.png" },
-  { id: 3, label: "Numéro de dépôt", icon: "/icons/image 35(1).png" },
-  { id: 4, label: "Montant", icon: "/icons/image 36.png" },
-  { id: 5, label: "Confirmation", icon: null },
+  { id: 1, labelKey: 'step1Label' as const, icon: "/icons/image 33(1).png" },
+  { id: 2, labelKey: 'step2Label' as const, icon: "/icons/image 34.png" },
+  { id: 3, labelKey: 'step3Label' as const, icon: "/icons/image 35(1).png" },
+  { id: 4, labelKey: 'step4Label' as const, icon: "/icons/image 36.png" },
+  { id: 5, labelKey: 'step5Label' as const, icon: null },
 ];
 
 const POLL_INTERVAL_MS = 2000;
@@ -40,6 +41,7 @@ const POLL_TIMEOUT_MS = 180000; // 3 min
 export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDepositModalProps) {
   const { user, accessToken, refreshUser } = useAuth();
   const router = useRouter();
+  const t = useTranslations('makeDepositModal');
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(null);
   const [selectedOperator, setSelectedOperator] = useState<Operator>(null);
@@ -150,7 +152,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
         }
         setWavePaymentModalOpen(false);
         setWavePaymentUrl(null);
-        setPaymentError('Paiement échoué');
+        setPaymentError(t('paymentFailed'));
         setWaitingForPayment(false);
         setPendingTransactionNumber(null);
         setPendingAmount(0);
@@ -190,7 +192,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
           }
           setWavePaymentModalOpen(false);
           setWavePaymentUrl(null);
-          setPaymentError('Paiement échoué');
+          setPaymentError(t('paymentFailed'));
           setWaitingForPayment(false);
           setPendingTransactionNumber(null);
           setPendingAmount(0);
@@ -247,7 +249,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
     // Mobile money : appeler l'API de paiement direct (montant total = base + frais si "Payer les frais" coché)
     if (selectedPaymentMethod === 'mobile-money' && serviceCode && depositNumber.trim() && totalAmount > 0) {
       if (!accessToken) {
-        setPaymentError('Vous devez être connecté pour effectuer un dépôt.');
+        setPaymentError(t('mustBeConnected'));
         return;
       }
       const phoneNumber = depositNumber.trim().startsWith('0') ? depositNumber.trim() : `0${depositNumber.trim()}`;
@@ -284,11 +286,11 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
         setPendingAmount(amountNum);
         setWaitingForPayment(true);
       } catch (err) {
-        const rawMessage = err instanceof Error ? err.message : 'Erreur lors de l\'initiation du paiement.';
+        const rawMessage = err instanceof Error ? err.message : t('errorInitiation');
         const isDirectPaymentCatch =
           rawMessage.includes('Direct payment initiated with catch error') ||
           rawMessage.includes('"statusCode":400');
-        setPaymentError(isDirectPaymentCatch ? 'Paiement echoué, verifier votre solde' : rawMessage);
+        setPaymentError(isDirectPaymentCatch ? t('paymentFailedBalance') : rawMessage);
       } finally {
         setPaymentLoading(false);
       }
@@ -304,7 +306,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
     router.push('/transactions');
   };
 
-  const showUnavailableToast = () => setUnavailableToast('Service indisponible');
+  const showUnavailableToast = () => setUnavailableToast(t('serviceUnavailable'));
 
   const handleCloseWaveModal = () => {
     if (pollingIntervalRef.current) {
@@ -317,7 +319,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
     setPendingTransactionNumber(null);
     setPendingAmount(0);
     pendingCreditAmountRef.current = 0;
-    setPaymentError('Paiement annulé');
+    setPaymentError(t('paymentCancelled'));
   };
 
   const renderStepContent = () => {
@@ -326,9 +328,9 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-white text-2xl font-bold mb-8 text-left">Déposer de l'argent</h2>
-              <h3 className="text-white text-lg mb-2">Mode de paiement</h3>
-              <p className="text-white/60 text-sm">Veuillez sélectionner un mode de paiement.</p>
+              <h2 className="text-white text-2xl font-bold mb-8 text-left">{t('title')}</h2>
+              <h3 className="text-white text-lg mb-2">{t('paymentMethodTitle')}</h3>
+              <p className="text-white/60 text-sm">{t('paymentMethodHint')}</p>
             </div>
 
             {unavailableToast && (
@@ -347,9 +349,9 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
               >
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 rounded-full bg-[#0F1F1F] flex items-center justify-center">
-                    <Image src="/icons/mobile-coin(1).png" alt="Mobile money" width={24} height={24} />
+                    <Image src="/icons/mobile-coin(1).png" alt={t('altMobileMoney')} width={24} height={24} />
                   </div>
-                  <span className="text-white font-medium">Mobile money</span>
+                  <span className="text-white font-medium">{t('mobileMoney')}</span>
                 </div>
                 <ChevronRight className="text-[#5AB678]" size={20} />
               </motion.button>
@@ -362,9 +364,9 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
               >
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 rounded-full bg-[#0F1F1F] flex items-center justify-center opacity-80">
-                    <Image src="/icons/bank.png" alt="Virement bancaire" width={24} height={24} className="opacity-70" />
+                    <Image src="/icons/bank.png" alt={t('altBankTransfer')} width={24} height={24} className="opacity-70" />
                   </div>
-                  <span className="text-white/70 font-medium">Virement bancaire</span>
+                  <span className="text-white/70 font-medium">{t('bankTransfer')}</span>
                 </div>
                 <ChevronRight className="text-white/40" size={20} />
               </button>
@@ -377,9 +379,9 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
               >
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 rounded-full bg-[#0F1F1F] flex items-center justify-center opacity-80">
-                    <Image src="/icons/credit-card-g.png" alt="Carte de débit ou wallet" width={24} height={24} className="opacity-70" />
+                    <Image src="/icons/credit-card-g.png" alt={t('altCardWallet')} width={24} height={24} className="opacity-70" />
                   </div>
-                  <span className="text-white/70 font-medium">Carte de débit ou wallet</span>
+                  <span className="text-white/70 font-medium">{t('cardWallet')}</span>
                 </div>
                 <ChevronRight className="text-white/40" size={20} />
               </button>
@@ -391,8 +393,8 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-white text-lg mb-2">Choix de l'opérateur</h3>
-              <p className="text-white/60 text-sm">Sélectionnez votre opérateur mobile money.</p>
+              <h3 className="text-white text-lg mb-2">{t('operatorTitle')}</h3>
+              <p className="text-white/60 text-sm">{t('operatorHint')}</p>
             </div>
             
             <div className="space-y-3 bg-[#101919] rounded-xl p-4">
@@ -435,7 +437,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 onClick={handleBack}
                 className="flex-1 bg-[#101919] text-white rounded-xl p-3 md:p-4 font-semibold hover:bg-[#101919]/80 transition-colors border border-white/10 text-sm md:text-base"
               >
-                Précédent
+                {t('previous')}
               </motion.button>
             </div>
           </div>
@@ -456,8 +458,8 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-white text-lg mb-2">Numéro de dépôt</h3>
-              <p className="text-white/60 text-sm">Veuillez saisir le numéro de dépôt</p>
+              <h3 className="text-white text-lg mb-2">{t('depositNumberTitle')}</h3>
+              <p className="text-white/60 text-sm">{t('depositNumberHint')}</p>
             </div>
 
             {/* Opérateur sélectionné */}
@@ -490,7 +492,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                   <User className="text-[#5AB678]" size={24} />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-white font-medium">Mon numéro</span>
+                  <span className="text-white font-medium">{t('myNumber')}</span>
                   <span className="text-white/60 text-sm">{userPhoneNumber}</span>
                 </div>
               </div>
@@ -500,18 +502,18 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
             {/* Séparateur */}
             <div className="flex items-center justify-center my-4">
               <div className="flex-1 h-px bg-white/20"></div>
-              <span className="px-4 text-white/60 text-sm">Ou saisir un autre numéro</span>
+              <span className="px-4 text-white/60 text-sm">{t('orEnterOther')}</span>
               <div className="flex-1 h-px bg-white/20"></div>
             </div>
 
             {/* Champ de saisie */}
             <div>
-              <label className="block text-white/60 text-sm mb-2">Numéro {operatorInfo.name}</label>
+              <label className="block text-white/60 text-sm mb-2">{t('numberLabel', { operator: operatorInfo.name })}</label>
               <div className="relative">
                 <div className="flex items-center bg-[#101919] border border-white/10 rounded-xl p-4 focus-within:border-[#5AB678] transition-colors">
                   <Image 
                     src="/images/civ.png" 
-                    alt="Côte d'Ivoire" 
+                    alt={t('altCoteIvoire')} 
                     width={24} 
                     height={24}
                     className="object-contain mr-2"
@@ -527,7 +529,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                       setDepositNumber(e.target.value);
                       setUseMyNumber(false);
                     }}
-                    placeholder="Ex: 0123456789"
+                    placeholder={t('numberPlaceholder')}
                     className="flex-1 bg-transparent text-white placeholder-white/40 focus:outline-none"
                   />
                 </div>
@@ -538,7 +540,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
             {selectedOperator === 'orange' && (
               <div>
                 <label className="block text-white/60 text-sm mb-2">
-                  Composer le #144*82# pour générer le code de paiement
+                  {t('otpHint')}
                 </label>
                 <div className="relative">
                   <div className="flex items-center bg-[#101919] border border-white/10 rounded-xl p-4 focus-within:border-[#5AB678] transition-colors">
@@ -548,7 +550,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                       autoComplete="one-time-code"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                      placeholder="Code OTP"
+                      placeholder={t('otpPlaceholder')}
                       className="flex-1 bg-transparent text-white placeholder-white/40 focus:outline-none"
                     />
                   </div>
@@ -565,7 +567,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 className="flex-1 bg-[#101919] text-white rounded-xl p-4 font-semibold hover:bg-[#1A2A2A]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2"
               >
                 <ChevronLeft size={20} />
-                <span>Précédent</span>
+                <span>{t('previous')}</span>
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -574,7 +576,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 disabled={!depositNumber.trim() || (selectedOperator === 'orange' && !otp.trim())}
                 className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base"
               >
-                <span>Suivant</span>
+                <span>{t('next')}</span>
                 <ChevronRight size={18} className="md:w-5 md:h-5" />
               </motion.button>
             </div>
@@ -596,8 +598,8 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-white text-lg mb-2">Montant</h3>
-              <p className="text-white/60 text-sm">Entrez le montant que vous souhaitez déposer.</p>
+              <h3 className="text-white text-lg mb-2">{t('amountTitle')}</h3>
+              <p className="text-white/60 text-sm">{t('amountHint')}</p>
             </div>
             {/* En-tête de l'opérateur */}
             {selectedOperator && (
@@ -618,7 +620,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
 
             {/* Section Montant du dépôt */}
             <div className="bg-gradient-to-r from-[#101919] to-[#0F1F1F] rounded-xl p-4 md:p-6 mx-4 md:mx-12">
-              <h3 className="text-white text-lg mb-4 text-center">Montant du dépôt</h3>
+              <h3 className="text-white text-lg mb-4 text-center">{t('depositAmountTitle')}</h3>
               
               {/* Champ de saisie du montant */}
               <div className="mb-4 relative">
@@ -633,17 +635,16 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                   type="tel"
                   value={amount}
                   onChange={(e) => {
-                    // Extraire uniquement les chiffres
                     const numericValue = e.target.value.replace(/\D/g, '');
                     setAmount(numericValue);
                   }}
-                  placeholder="Saisissez le montant"
+                  placeholder={t('amountPlaceholder')}
                   className="w-full bg-[#0F1F1F] text-white text-base font-normal placeholder-white/40 focus:outline-none border border-white/10 rounded-lg p-3 focus:border-[#5AB678] transition-colors"
                 />
               </div>
 
               {/* Texte "Ou choisissez un montant par défaut" */}
-              <p className="text-white/60 text-sm mb-4 text-center">Ou choisissez un montant par défaut</p>
+              <p className="text-white/60 text-sm mb-4 text-center">{t('orChooseDefault')}</p>
 
               {/* Boutons de montants prédéfinis */}
               <div className="flex space-x-3 justify-center">
@@ -668,13 +669,13 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
             {/* Résumé de la transaction */}
             <div className="bg-[#101919] rounded-xl p-4 md:p-6 mx-4 md:mx-12">
               <div className="flex justify-between items-center">
-                <span className="text-white/60">Frais d'opération (2,5 %) :</span>
+                <span className="text-white/60">{t('operationFees')}</span>
                 <span className="text-white font-semibold">
                   {transactionFee > 0 ? `${transactionFee.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-white/60">Montant total :</span>
+                <span className="text-white/60">{t('totalAmount')}</span>
                 <span className="text-white font-semibold">
                   {totalAmount > 0 ? `${totalAmount.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
                 </span>
@@ -682,11 +683,11 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
               
               {/* Toggle "Payer les frais" */}
               <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                <span className="text-white">Payer les frais</span>
+                <span className="text-white">{t('payFees')}</span>
                 <button
                   onClick={() => setPayFees(!payFees)}
-                  aria-label={payFees ? 'Désactiver le paiement des frais' : 'Activer le paiement des frais'}
-                  title={payFees ? 'Désactiver le paiement des frais' : 'Activer le paiement des frais'}
+                  aria-label={payFees ? t('payFeesAriaOff') : t('payFeesAriaOn')}
+                  title={payFees ? t('payFeesAriaOff') : t('payFeesAriaOn')}
                   className={`relative w-12 h-6 rounded-full transition-colors ${
                     payFees ? 'bg-[#5AB678]' : 'bg-[#101919] border border-white/20'
                   }`}
@@ -709,7 +710,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 className="flex-1 bg-[#101919] text-white rounded-xl p-3 md:p-4 font-semibold hover:bg-[#101919]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2 text-sm md:text-base"
               >
                 <ChevronLeft size={18} className="md:w-5 md:h-5" />
-                <span>Précédent</span>
+                <span>{t('previous')}</span>
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -718,7 +719,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 disabled={!amount || baseAmount <= 0}
                 className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base"
               >
-                <span>Suivant</span>
+                <span>{t('next')}</span>
                 <ChevronRight size={18} className="md:w-5 md:h-5" />
               </motion.button>
             </div>
@@ -730,32 +731,27 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
         if (isSuccess) {
           return (
             <div className="flex flex-col items-center justify-center py-12 space-y-6">
-              {/* Icône de succès */}
               <div className="rounded-full bg-[#5AB678] border-2 border-[#5AB678]/80 flex items-center justify-center">
-                <Image src="/icons/valid-circle.png" alt="Succès" width={48} height={48} className="object-contain" />
+                <Image src="/icons/valid-circle.png" alt={t('altSuccess')} width={48} height={48} className="object-contain" />
               </div>
 
-              {/* Titre */}
-              <h2 className="text-white text-3xl font-bold text-center">Succès</h2>
+              <h2 className="text-white text-3xl font-bold text-center">{t('successTitle')}</h2>
 
-              {/* Message de confirmation */}
               <p className="text-white text-center text-lg">
-                Votre dépôt a été créé avec succès.
+                {t('successMessage')}
               </p>
 
-              {/* Instruction */}
               <p className="text-white/60 text-center text-sm max-w-md">
-                Veuillez cliquer sur le bouton ci-dessous pour consulter l'historique.
+                {t('successHint')}
               </p>
 
-              {/* Bouton Consulter l'historique */}
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleViewHistory}
                 className="bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-2xl px-8 py-4 font-semibold hover:opacity-90 transition-opacity mt-4"
               >
-                Consulter l'historique
+                {t('viewHistory')}
               </motion.button>
             </div>
           );
@@ -765,35 +761,35 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-white text-lg mb-2">Confirmation</h3>
-              <p className="text-white/60 text-sm">Vérifiez les informations avant de confirmer.</p>
+              <h3 className="text-white text-lg mb-2">{t('confirmationTitle')}</h3>
+              <p className="text-white/60 text-sm">{t('confirmationHint')}</p>
             </div>
             
             <div className="bg-[#00644d]/10 rounded-xl p-6 space-y-4">
               <div className="flex justify-between">
-                <span className="text-white/60">Mode de paiement:</span>
+                <span className="text-white/60">{t('paymentMethodLabel')}</span>
                 <span className="text-white font-medium">
-                  {selectedPaymentMethod === 'mobile-money' && 'Mobile money'}
-                  {selectedPaymentMethod === 'bank-transfer' && 'Virement bancaire'}
-                  {selectedPaymentMethod === 'card-wallet' && 'Carte de débit ou wallet'}
+                  {selectedPaymentMethod === 'mobile-money' && t('mobileMoney')}
+                  {selectedPaymentMethod === 'bank-transfer' && t('bankTransfer')}
+                  {selectedPaymentMethod === 'card-wallet' && t('cardWallet')}
                 </span>
               </div>
               {selectedOperator && (
                 <div className="flex justify-between">
-                  <span className="text-white/60">Opérateur:</span>
+                  <span className="text-white/60">{t('operatorLabel')}</span>
                   <span className="text-white font-medium capitalize">{selectedOperator}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-white/60">Numéro:</span>
+                <span className="text-white/60">{t('numberLabelShort')}</span>
                 <span className="text-white font-medium">{depositNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/60">Montant:</span>
+                <span className="text-white/60">{t('amountLabel')}</span>
                 <span className="text-white font-medium">{baseAmount.toLocaleString('fr-FR')} F CFA</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/60">Frais d'opération (2,5 %) :</span>
+                <span className="text-white/60">{t('operationFees')}</span>
                 <span className="text-white font-semibold">
                   {transactionFee > 0 ? `${transactionFee.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
                 </span>
@@ -801,7 +797,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
             </div>
             <div className="bg-[#00644d]/10 rounded-xl p-6 space-y-4">
               <div className="flex justify-between">
-                <span className="text-white/60">Montant total:</span>
+                <span className="text-white/60">{t('totalAmountLabel')}</span>
                 <span className="text-white font-semibold">
                   {totalAmount > 0 ? `${totalAmount.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
                 </span>
@@ -817,8 +813,8 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
             {waitingForPayment ? (
               <div className="flex flex-col items-center justify-center py-6 space-y-4">
                 <Loader2 className="text-[#5AB678] w-10 h-10 animate-spin" />
-                <p className="text-white text-center">En attente de la confirmation du paiement...</p>
-                <p className="text-white/60 text-sm text-center">Vous avez 3 min pour confirmer le paiement</p>
+                <p className="text-white text-center">{t('waitingPayment')}</p>
+                <p className="text-white/60 text-sm text-center">{t('waitingPaymentHint')}</p>
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
@@ -830,7 +826,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                   className="flex-1 bg-[#101919] text-white rounded-xl p-3 md:p-4 font-semibold hover:bg-[#1a2a2a]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft size={18} className="md:w-5 md:h-5" />
-                  <span>Précédent</span>
+                  <span>{t('previous')}</span>
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -839,7 +835,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                   disabled={paymentLoading}
                   className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span>{paymentLoading ? 'En cours...' : 'Confirmer'}</span>
+                  <span>{paymentLoading ? t('inProgress') : t('confirm')}</span>
                   {!paymentLoading && <ChevronRight size={18} className="md:w-5 md:h-5" />}
                 </motion.button>
               </div>
@@ -877,7 +873,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
               <button
                 onClick={onClose}
                 className="absolute top-4 right-4 md:top-6 md:right-6 w-8 h-8 md:w-10 md:h-10 bg-[#5AB678] rounded-full flex items-center justify-center hover:bg-[#5AB678]/80 transition-colors z-10"
-                aria-label="Fermer"
+                aria-label={t('closeAria')}
               >
                 <X size={16} className="md:w-5 md:h-5 text-[#101919]" />
               </button>
@@ -913,7 +909,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                                 : 'text-white/40'
                             }`}
                           >
-                            {step.label.split(' ')[0]}
+                            {t(step.labelKey).split(' ')[0]}
                           </p>
                         </div>
                         {!isLast && (
@@ -1007,7 +1003,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                                   : 'text-white/40'
                               }`}
                             >
-                              {step.label}
+                              {t(step.labelKey)}
                             </p>
                           </div>
                         </div>
@@ -1044,12 +1040,12 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 className="fixed inset-0 z-[60] flex flex-col bg-[#0A1515]"
               >
                 <div className="flex items-center justify-between shrink-0 px-4 py-3 bg-[#101919] border-b border-white/10">
-                  <h3 className="text-white font-semibold">Finalisez votre paiement Wave</h3>
+                  <h3 className="text-white font-semibold">{t('waveModalTitle')}</h3>
                   <button
                     type="button"
                     onClick={handleCloseWaveModal}
                     className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
-                    aria-label="Fermer"
+                    aria-label={t('closeAria')}
                   >
                     <X size={20} />
                   </button>
@@ -1057,7 +1053,7 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 <div className="flex-1 min-h-0 w-full">
                   <iframe
                     src={wavePaymentUrl}
-                    title="Paiement Wave"
+                    title={t('wavePaymentTitle')}
                     className="w-full h-full border-0"
                     sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
                   />

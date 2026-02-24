@@ -15,6 +15,7 @@ import CampaignCard from '@/components/CampaignCard';
 import Wallet from '@/components/Wallet';
 import type { Campaign } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCampaignTranslations } from '@/contexts/CampaignTranslationsContext';
 import { getActiveCampaigns } from '@/services/campaigns';
 import { getMyDonations, type Donation as ApiDonation } from '@/services/donations';
 import { getDonationsStatistics } from '@/services/statistics';
@@ -37,6 +38,7 @@ interface FormattedTransaction {
 
 export default function TransactionsPage() {
   const { isAuthenticated, accessToken, authReady, user } = useAuth();
+  const { getTranslatedCampaign } = useCampaignTranslations();
   const t = useTranslations('transactions');
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState('tout');
@@ -722,6 +724,7 @@ export default function TransactionsPage() {
               </div>
             )}
             {!campaignsLoading && !campaignsError && popularCampaigns.map((campaign, index) => {
+              const translated = getTranslatedCampaign(campaign);
               const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
               const amountSpent = campaign.amountSpent ?? 0;
               const currentAmount = campaign.currentAmount;
@@ -742,7 +745,7 @@ export default function TransactionsPage() {
                       <div className="absolute inset-0">
                         <img
                           src={campaign.image || '/images/no-picture.png'}
-                          alt={campaign.title}
+                          alt={translated.title}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
@@ -768,7 +771,7 @@ export default function TransactionsPage() {
                           {donorCount.toLocaleString('fr-FR')} {t('donors')}
                         </p>
                         <h3 className="text-xl lg:text-2xl font-bold text-white mb-3 line-clamp-2">
-                          {campaign.title}
+                          {translated.title}
                         </h3>
                         <div className="space-y-2">
                           <div className="flex justify-between items-center gap-2 text-sm">
