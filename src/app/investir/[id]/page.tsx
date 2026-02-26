@@ -490,14 +490,17 @@ export default function InvestirDetailPage() {
                     <Apple size={24} />
                     <span>Disponible sur l'App Store</span>
                   </motion.button>
-                  <motion.button
+                  <motion.a
+                    href="https://play.google.com/store/apps/details?id=com.infinity.africa.technologies.amaneplus"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="bg-black text-white px-6 py-4 rounded-xl font-semibold hover:bg-gray-900 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Play size={24} />
                     <span>Télécharger sur Google Play</span>
-                  </motion.button>
+                  </motion.a>
                 </div>
               </motion.div>
             </div>
