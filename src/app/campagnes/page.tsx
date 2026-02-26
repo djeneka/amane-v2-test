@@ -904,8 +904,12 @@ export default function CampagnesPage() {
                 const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
                 const amountSpent = campaign.amountSpent ?? 0;
                 const currentAmount = campaign.currentAmount;
-                const totalForBar = Math.max(currentAmount, amountSpent, 1);
-                const spentPercent = totalForBar > 0 ? (amountSpent / totalForBar) * 100 : 0;
+                const targetAmount = campaign.targetAmount ?? 0;
+                /** Un seul affichage : objectif (collecté/cible) si targetAmount > 0, sinon déboursé/collecté */
+                const useTargetBar = targetAmount > 0;
+                const barPercent = useTargetBar
+                  ? Math.min(100, (currentAmount / targetAmount) * 100)
+                  : (Math.max(currentAmount, amountSpent, 1) > 0 ? (amountSpent / Math.max(currentAmount, amountSpent, 1)) * 100 : 0);
                 const categoryConfig = categories.find((c) => c.id === campaign.category);
                 const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
                 return (
@@ -957,24 +961,37 @@ export default function CampagnesPage() {
                             {tc.title}
                           </h3>
 
-                          {/* Montants + barre de progression */}
+                          {/* Toujours une barre : si targetAmount > 0 → collecté/cible, sinon → déboursé/collecté par défaut */}
                           <div className="space-y-2">
                             <div className="flex justify-between items-center gap-2 text-sm">
-                              <span className="text-[#5AB678] font-semibold">
-                                {formatAmount(amountSpent)} {t('disbursed')}
-                              </span>
-                              <span className="text-white font-medium">
-                                {formatAmount(currentAmount)} {t('collected')}
-                              </span>
+                              {useTargetBar ? (
+                                <>
+                                  <span className="text-white font-medium">
+                                    {formatAmount(currentAmount)} {t('collected')}
+                                  </span>
+                                  <span className="text-[#5AB678] font-semibold">
+                                    {formatAmount(targetAmount)} {t('target')}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-[#5AB678] font-semibold">
+                                    {formatAmount(amountSpent)} {t('disbursed')}
+                                  </span>
+                                  <span className="text-white font-medium">
+                                    {formatAmount(currentAmount)} {t('collected')}
+                                  </span>
+                                </>
+                              )}
                             </div>
-                            <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
+                            <div className="w-full h-2 bg-white rounded-full overflow-hidden flex">
                               <div
                                 className="h-full rounded-l-full bg-[#5AB678] transition-all duration-300"
-                                style={{ width: `${Math.min(100, spentPercent)}%` }}
+                                style={{ width: `${Math.min(100, barPercent)}%` }}
                               />
                               <div
                                 className="h-full flex-1 bg-white/40"
-                                style={{ width: `${Math.max(0, 100 - spentPercent)}%` }}
+                                style={{ width: `${Math.max(0, 100 - barPercent)}%` }}
                               />
                             </div>
                           </div>
@@ -1045,7 +1062,7 @@ export default function CampagnesPage() {
                         </div>
 
                         <div className="flex-1 w-full min-w-0">
-                          <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 group-hover:text-blue-600 transition-colors break-words">
+                          <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 group-hover:text-[#5AB678] transition-colors break-words">
                             {tc.title}
                           </h3>
                           {isHtmlContent(tc.description) ? (
@@ -1079,22 +1096,43 @@ export default function CampagnesPage() {
                           </div>
 
                           <div className="space-y-3">
-                            <div className="flex justify-between text-sm gap-4">
-                              <span className="text-[#5AB678] font-semibold">
-                                {formatAmount(campaign.amountSpent ?? 0)} {t('disbursed')}
-                              </span>
-                              <span className="text-white font-medium">
-                                {formatAmount(campaign.currentAmount)} {t('collected')}
-                              </span>
-                            </div>
-                            {(campaign.targetAmount > 0 || (campaign.currentAmount > 0 || (campaign.amountSpent ?? 0) > 0)) && (
-                            <div className="w-full bg-white/20 rounded-full h-2 sm:h-3 overflow-hidden flex">
-                              <div
-                                className="h-full bg-[#5AB678]"
-                                style={{ width: `${Math.min(100, ((campaign.amountSpent ?? 0) / Math.max(campaign.currentAmount, campaign.amountSpent ?? 0, 1)) * 100)}%` }}
-                              />
-                              <div className="h-full flex-1 bg-white/40" />
-                            </div>
+                            {/* Toujours une barre : si targetAmount > 0 → collecté/cible, sinon → déboursé/collecté par défaut */}
+                            {((campaign.targetAmount ?? 0) > 0) ? (
+                              <>
+                                <div className="flex justify-between text-sm gap-4">
+                                  <span className="text-white font-medium">
+                                    {formatAmount(campaign.currentAmount)} {t('collected')}
+                                  </span>
+                                  <span className="text-[#5AB678] font-semibold">
+                                    {formatAmount(campaign.targetAmount ?? 0)} {t('target')}
+                                  </span>
+                                </div>
+                                <div className="w-full bg-white rounded-full h-2 sm:h-3 overflow-hidden flex">
+                                  <div
+                                    className="h-full bg-[#5AB678]"
+                                    style={{ width: `${Math.min(100, ((campaign.targetAmount ?? 0) > 0 ? (campaign.currentAmount / (campaign.targetAmount ?? 1)) * 100 : 0))}%` }}
+                                  />
+                                  <div className="h-full flex-1 bg-white/40" />
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex justify-between text-sm gap-4">
+                                  <span className="text-[#5AB678] font-semibold">
+                                    {formatAmount(campaign.amountSpent ?? 0)} {t('disbursed')}
+                                  </span>
+                                  <span className="text-white font-medium">
+                                    {formatAmount(campaign.currentAmount)} {t('collected')}
+                                  </span>
+                                </div>
+                                <div className="w-full bg-white rounded-full h-2 sm:h-3 overflow-hidden flex">
+                                  <div
+                                    className="h-full bg-[#5AB678]"
+                                    style={{ width: `${Math.min(100, ((campaign.amountSpent ?? 0) / Math.max(campaign.currentAmount, campaign.amountSpent ?? 0, 1)) * 100)}%` }}
+                                  />
+                                  <div className="h-full flex-1 bg-white/40" />
+                                </div>
+                              </>
                             )}
 
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -1102,7 +1140,8 @@ export default function CampagnesPage() {
                               <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-[#00644d]/40 text-white rounded-xl font-semibold hover:bg-[#00644d]/20 transition-all duration-200 flex items-center justify-center space-x-2"
+                                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
+                                style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
                               >
                                 <span>{t('support')}</span>
                                 <ArrowRight size={14} className="sm:w-4 sm:h-4" />

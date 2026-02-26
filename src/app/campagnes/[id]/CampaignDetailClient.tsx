@@ -320,22 +320,46 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 <h2 className="text-xl lg:text-2xl font-bold text-white uppercase leading-tight mb-3">
                   {tc.title}
                 </h2>
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm text-[#43b48f] font-bold">
-                    {formatAmount(campaign.amountSpent ?? 0)} {t('disbursed')}
-                  </p>
-                  <p className="text-sm text-gray-300 font-bold">
-                    {formatAmount(campaign.currentAmount)} {t('collected')}
-                  </p>
-                </div>
-                <div className="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${spentRatio}%` }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                    className="h-full rounded-full bg-[#43b48f]"
-                  />
-                </div>
+                {campaign.targetAmount > 0 && (
+                  <>
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-sm text-gray-300 font-bold">
+                        {formatAmount(campaign.currentAmount)} {t('collected')}
+                      </p>
+                      <p className="text-sm text-[#43b48f] font-bold">
+                        {formatAmount(campaign.targetAmount)} {t('target')}
+                      </p>
+                    </div>
+                    <div className="w-full bg-white rounded-full h-2.5 overflow-hidden mb-4">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        transition={{ duration: 0.8, delay: 0.2 }}
+                        className="h-full rounded-full bg-[#43b48f]"
+                      />
+                    </div>
+                  </>
+                )}
+                {(((campaign.targetAmount ?? 0) === 0) || (campaign.amountSpent ?? 0) > 0) && (
+                  <>
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-sm text-[#43b48f] font-bold">
+                        {formatAmount(campaign.amountSpent ?? 0)} {t('disbursed')}
+                      </p>
+                      <p className="text-sm text-gray-300 font-bold">
+                        {formatAmount(campaign.currentAmount)} {t('collected')}
+                      </p>
+                    </div>
+                    <div className="w-full bg-white rounded-full h-2.5 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${spentRatio}%` }}
+                        transition={{ duration: 0.8, delay: 0.2 }}
+                        className="h-full rounded-full bg-[#43b48f]"
+                      />
+                    </div>
+                  </>
+                )}
                 {campaign.duration === 'PONCTUAL' && (
                   <p className="text-sm text-white/70 mt-2 flex items-center gap-1.5">
                     <Calendar size={14} className="shrink-0 text-[#43b48f]" aria-hidden />

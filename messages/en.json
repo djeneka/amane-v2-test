@@ -780,6 +780,7 @@
     "donors": "donors",
     "disbursed": "disbursed",
     "collected": "collected",
+    "target": "target",
     "supportCampaign": "Support this campaign",
     "support": "Support",
     "endsOn": "Ends on",
