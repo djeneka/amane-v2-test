@@ -1009,8 +1009,11 @@ export default function Home() {
               const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
               const amountSpent = campaign.amountSpent ?? 0;
               const currentAmount = campaign.currentAmount;
-              const totalForBar = Math.max(currentAmount, amountSpent, 1);
-              const spentPercent = totalForBar > 0 ? (amountSpent / totalForBar) * 100 : 0;
+              const targetAmount = campaign.targetAmount ?? 0;
+              const useTargetBar = targetAmount > 0;
+              const barPercent = useTargetBar
+                ? Math.min(100, (currentAmount / targetAmount) * 100)
+                : (Math.max(currentAmount, amountSpent, 1) > 0 ? (amountSpent / Math.max(currentAmount, amountSpent, 1)) * 100 : 0);
               const categoryConfig = campaignCategoriesForCards.find((c) => c.id === campaign.category);
               const typeLabel = campaignTypeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
               return (
@@ -1056,21 +1059,34 @@ export default function Home() {
                         </h3>
                         <div className="space-y-2">
                           <div className="flex justify-between items-center gap-2 text-sm">
-                            <span className="text-[#5AB678] font-semibold">
-                              {formatCampaignAmount(amountSpent)} {t('campaigns.spent')}
-                            </span>
-                            <span className="text-white font-medium">
-                              {formatCampaignAmount(currentAmount)} {t('campaigns.collected')}
-                            </span>
+                            {useTargetBar ? (
+                              <>
+                                <span className="text-white font-medium">
+                                  {formatCampaignAmount(currentAmount)} {t('campaigns.collected')}
+                                </span>
+                                <span className="text-[#5AB678] font-semibold">
+                                  {formatCampaignAmount(targetAmount)} {t('campaigns.target')}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[#5AB678] font-semibold">
+                                  {formatCampaignAmount(amountSpent)} {t('campaigns.spent')}
+                                </span>
+                                <span className="text-white font-medium">
+                                  {formatCampaignAmount(currentAmount)} {t('campaigns.collected')}
+                                </span>
+                              </>
+                            )}
                           </div>
-                          <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
+                          <div className="w-full h-2 bg-white rounded-full overflow-hidden flex">
                             <div
                               className="h-full rounded-l-full bg-[#5AB678] transition-all duration-300"
-                              style={{ width: `${Math.min(100, spentPercent)}%` }}
+                              style={{ width: `${Math.min(100, barPercent)}%` }}
                             />
                             <div
                               className="h-full flex-1 bg-white/40"
-                              style={{ width: `${Math.max(0, 100 - spentPercent)}%` }}
+                              style={{ width: `${Math.max(0, 100 - barPercent)}%` }}
                             />
                           </div>
                         </div>
@@ -1620,8 +1636,11 @@ export default function Home() {
               const donorCount = donorCountByCampaignId[campaign.id] ?? 0;
               const amountSpent = campaign.amountSpent ?? 0;
               const currentAmount = campaign.currentAmount;
-              const totalForBar = Math.max(currentAmount, amountSpent, 1);
-              const spentPercent = totalForBar > 0 ? (amountSpent / totalForBar) * 100 : 0;
+              const targetAmount = campaign.targetAmount ?? 0;
+              const useTargetBar = targetAmount > 0;
+              const barPercent = useTargetBar
+                ? Math.min(100, (currentAmount / targetAmount) * 100)
+                : (Math.max(currentAmount, amountSpent, 1) > 0 ? (amountSpent / Math.max(currentAmount, amountSpent, 1)) * 100 : 0);
               const categoryConfig = campaignCategoriesForCards.find((c) => c.id === campaign.category);
               const typeLabel = campaignTypeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
               return (
@@ -1667,21 +1686,34 @@ export default function Home() {
                         </h3>
                         <div className="space-y-2">
                           <div className="flex justify-between items-center gap-2 text-sm">
-                            <span className="text-[#5AB678] font-semibold">
-                              {formatCampaignAmount(amountSpent)} {t('campaigns.spent')}
-                            </span>
-                            <span className="text-white font-medium">
-                              {formatCampaignAmount(currentAmount)} {t('campaigns.collected')}
-                            </span>
+                            {useTargetBar ? (
+                              <>
+                                <span className="text-white font-medium">
+                                  {formatCampaignAmount(currentAmount)} {t('campaigns.collected')}
+                                </span>
+                                <span className="text-[#5AB678] font-semibold">
+                                  {formatCampaignAmount(targetAmount)} {t('campaigns.target')}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[#5AB678] font-semibold">
+                                  {formatCampaignAmount(amountSpent)} {t('campaigns.spent')}
+                                </span>
+                                <span className="text-white font-medium">
+                                  {formatCampaignAmount(currentAmount)} {t('campaigns.collected')}
+                                </span>
+                              </>
+                            )}
                           </div>
-                          <div className="w-full h-2 bg-white/30 rounded-full overflow-hidden flex">
+                          <div className="w-full h-2 bg-white rounded-full overflow-hidden flex">
                             <div
                               className="h-full rounded-l-full bg-[#5AB678] transition-all duration-300"
-                              style={{ width: `${Math.min(100, spentPercent)}%` }}
+                              style={{ width: `${Math.min(100, barPercent)}%` }}
                             />
                             <div
                               className="h-full flex-1 bg-white/40"
-                              style={{ width: `${Math.max(0, 100 - spentPercent)}%` }}
+                              style={{ width: `${Math.max(0, 100 - barPercent)}%` }}
                             />
                           </div>
                         </div>
