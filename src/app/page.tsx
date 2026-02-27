@@ -90,7 +90,9 @@ export default function Home() {
     getActiveCampaigns()
       .then((list) => {
         if (!cancelled) {
-          setFeaturedCampaigns(list.slice(0, 3));
+          const featured = list.filter((c) => c.featured).slice(0, 3);
+          const other = list.filter((c) => !c.featured);
+          setFeaturedCampaigns([...featured, ...other.slice(0, Math.max(0, 3 - featured.length))]);
           setActiveCampaignsCount(list.length);
         }
       })

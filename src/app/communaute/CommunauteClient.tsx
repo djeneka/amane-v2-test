@@ -155,9 +155,9 @@ export default function CommunautePage() {
   const typeLabels: Record<string, string> = { ZAKAT: 'Zakat', SADAQAH: 'Sadaqah' };
 
   const latestCampaigns = allCampaigns.slice(0, 3);
-  const popularCampaigns = [...allCampaigns]
-    .sort((a, b) => (donorCountByCampaignId[b.id] ?? 0) - (donorCountByCampaignId[a.id] ?? 0))
-    .slice(0, 6);
+  const featuredFirst = allCampaigns.filter((c) => c.featured).slice(0, 3);
+  const otherActive = allCampaigns.filter((c) => !c.featured);
+  const popularCampaigns = [...featuredFirst, ...otherActive.slice(0, Math.max(0, 3 - featuredFirst.length))];
 
   if (!isAuthenticated) {
     return null;
