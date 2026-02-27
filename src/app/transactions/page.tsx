@@ -63,9 +63,9 @@ export default function TransactionsPage() {
   ];
   const formatCampaignAmount = (amount: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
-  const popularCampaigns = [...allCampaigns]
-    .sort((a, b) => (donorCountByCampaignId[b.id] ?? 0) - (donorCountByCampaignId[a.id] ?? 0))
-    .slice(0, 6);
+  const featuredFirst = allCampaigns.filter((c) => c.featured).slice(0, 3);
+  const otherActive = allCampaigns.filter((c) => !c.featured);
+  const popularCampaigns = [...featuredFirst, ...otherActive.slice(0, Math.max(0, 3 - featuredFirst.length))];
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
   const [apiTransactions, setApiTransactions] = useState<ApiTransaction[]>([]);
