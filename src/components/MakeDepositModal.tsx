@@ -38,6 +38,15 @@ const STEPS = [
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 180000; // 3 min
 
+/** Détection iOS (client-side) : permet d’ouvrir Wave dans le navigateur au lieu de l’iframe */
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
 export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDepositModalProps) {
   const { user, accessToken, refreshUser } = useAuth();
   const router = useRouter();
@@ -62,6 +71,8 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
   /** Modal Wave : iframe avec l’URL de paiement (ouvert pour Wave uniquement) */
   const [wavePaymentModalOpen, setWavePaymentModalOpen] = useState(false);
   const [wavePaymentUrl, setWavePaymentUrl] = useState<string | null>(null);
+  /** iOS : connu après hydratation pour afficher message + lien au lieu de l’iframe */
+  const [isIOSDevice, setIsIOSDevice] = useState(false);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingStartRef = useRef<number>(0);
   const pendingTxnRef = useRef<string | null>(null);
@@ -80,6 +91,11 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
   const baseAmount = amount ? Math.round(parseFloat(amount)) : 0;
   const transactionFee = amount ? Math.round(baseAmount * FEE_RATE) : 0;
   const totalAmount = payFees ? baseAmount + transactionFee : baseAmount;
+  // Détection iOS côté client (évite hydratation incorrecte)
+  useEffect(() => {
+    setIsIOSDevice(isIOS());
+  }, []);
+
   // Empêcher le scroll du body quand le modal est ouvert
   useEffect(() => {
     if (isOpen) {
@@ -271,6 +287,9 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
         if (paymentUrl) {
           setWavePaymentUrl(paymentUrl);
           setWavePaymentModalOpen(true);
+          if (isIOS()) {
+            window.open(paymentUrl, '_blank', 'noopener,noreferrer');
+          }
           pendingTxnRef.current = res.data.transactionNumber;
           pendingAmountRef.current = amountNum;
           pendingCreditAmountRef.current = creditAmount;
@@ -430,12 +449,12 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
               ))}
             </div>
 
-            <div className="flex space-x-3">
+            <div className="flex justify-center mx-auto pt-2">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleBack}
-                className="flex-1 bg-[#101919] text-white rounded-xl p-3 md:p-4 font-semibold hover:bg-[#101919]/80 transition-colors border border-white/10 text-sm md:text-base"
+                className="max-w-[120px] sm:max-w-none py-2.5 px-3 sm:p-4 bg-[#101919] text-white rounded-xl font-semibold hover:bg-[#101919]/80 transition-colors border border-white/10 text-xs sm:text-base"
               >
                 {t('previous')}
               </motion.button>
@@ -559,14 +578,14 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
             )}
 
             {/* Boutons de navigation */}
-            <div className="flex space-x-3 pt-4">
+            <div className="flex flex-row justify-center items-center gap-2 sm:gap-3 pt-4 mx-auto w-full max-w-sm">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleBack}
-                className="flex-1 bg-[#101919] text-white rounded-xl p-4 font-semibold hover:bg-[#1A2A2A]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2"
+                className="flex-1 max-w-[120px] sm:max-w-none py-2.5 px-2 sm:p-4 bg-[#101919] text-white rounded-xl font-semibold hover:bg-[#1A2A2A]/80 transition-colors border border-white/10 flex items-center justify-center gap-1 sm:space-x-2 text-xs sm:text-base"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={18} className="shrink-0 sm:w-5 sm:h-5" />
                 <span>{t('previous')}</span>
               </motion.button>
               <motion.button
@@ -574,10 +593,10 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 whileTap={{ scale: 0.98 }}
                 onClick={handleNext}
                 disabled={!depositNumber.trim() || (selectedOperator === 'orange' && !otp.trim())}
-                className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base"
+                className="flex-1 max-w-[120px] sm:max-w-none py-2.5 px-2 sm:p-4 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-1 sm:space-x-2 text-xs sm:text-base"
               >
                 <span>{t('next')}</span>
-                <ChevronRight size={18} className="md:w-5 md:h-5" />
+                <ChevronRight size={18} className="shrink-0 sm:w-5 sm:h-5" />
               </motion.button>
             </div>
           </div>
@@ -596,120 +615,123 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
           : { name: '', icon: '' };
 
         return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-white text-lg mb-2">{t('amountTitle')}</h3>
-              <p className="text-white/60 text-sm">{t('amountHint')}</p>
-            </div>
-            {/* En-tête de l'opérateur */}
-            {selectedOperator && (
-              <div className="flex flex-col items-center py-4 mx-4 md:mx-8">
-                <div className="w-16 h-16 rounded-full bg-[#0F1F1F] flex items-center justify-center mb-2">
-                  <Image 
-                    src={operatorInfoStep4.icon} 
-                    alt={operatorInfoStep4.name} 
-                    width={40} 
-                    height={40}
-                    className="object-contain"
+          <div className="flex flex-col min-h-0">
+            {/* Zone scrollable : hauteur augmentée pour voir plus d'éléments */}
+            <div className="max-h-[65vh] sm:max-h-[70vh] overflow-y-auto overscroll-y-contain space-y-6 pr-1">
+              <div>
+                <h3 className="text-white text-lg mb-2">{t('amountTitle')}</h3>
+                <p className="text-white/60 text-sm">{t('amountHint')}</p>
+              </div>
+              {/* En-tête de l'opérateur */}
+              {selectedOperator && (
+                <div className="flex flex-col items-center py-2 md:py-4 mx-2 md:mx-8">
+                  <div className="w-16 h-16 rounded-full bg-[#0F1F1F] flex items-center justify-center mb-2">
+                    <Image 
+                      src={operatorInfoStep4.icon} 
+                      alt={operatorInfoStep4.name} 
+                      width={40} 
+                      height={40}
+                      className="object-contain"
+                    />
+                  </div>
+                  <span className="text-white font-medium mb-1">{operatorInfoStep4.name}</span>
+                  <span className="text-white/60 text-sm">{depositNumber ? `+225 ${depositNumber}` : userPhoneNumber}</span>
+                </div>
+              )}
+
+              {/* Section Montant du dépôt */}
+              <div className="bg-gradient-to-r from-[#101919] to-[#0F1F1F] rounded-xl p-3 md:p-6 mx-2 md:mx-12">
+                <h3 className="text-white text-lg mb-3 md:mb-4 text-center">{t('depositAmountTitle')}</h3>
+                
+                {/* Champ de saisie du montant */}
+                <div className="mb-4 relative">
+                  <div className="text-white text-2xl md:text-4xl font-bold min-h-[48px] flex items-center justify-center mb-2">
+                    {amount ? (
+                      <span>{baseAmount.toLocaleString('fr-FR')} F CFA</span>
+                    ) : (
+                      <span className="text-white/40">0 F CFA</span>
+                    )}
+                  </div>
+                  <input
+                    type="tel"
+                    value={amount}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/\D/g, '');
+                      setAmount(numericValue);
+                    }}
+                    placeholder={t('amountPlaceholder')}
+                    className="w-full bg-[#0F1F1F] text-white text-base font-normal placeholder-white/40 focus:outline-none border border-white/10 rounded-lg p-3 focus:border-[#5AB678] transition-colors"
                   />
                 </div>
-                <span className="text-white font-medium mb-1">{operatorInfoStep4.name}</span>
-                <span className="text-white/60 text-sm">{depositNumber ? `+225 ${depositNumber}` : userPhoneNumber}</span>
-              </div>
-            )}
 
-            {/* Section Montant du dépôt */}
-            <div className="bg-gradient-to-r from-[#101919] to-[#0F1F1F] rounded-xl p-4 md:p-6 mx-4 md:mx-12">
-              <h3 className="text-white text-lg mb-4 text-center">{t('depositAmountTitle')}</h3>
-              
-              {/* Champ de saisie du montant */}
-              <div className="mb-4 relative">
-                <div className="text-white text-2xl md:text-4xl font-bold min-h-[48px] flex items-center justify-center mb-2">
-                  {amount ? (
-                    <span>{baseAmount.toLocaleString('fr-FR')} F CFA</span>
-                  ) : (
-                    <span className="text-white/40">0 F CFA</span>
-                  )}
+                {/* Texte "Ou choisissez un montant par défaut" */}
+                <p className="text-white/60 text-sm mb-3 md:mb-4 text-center">{t('orChooseDefault')}</p>
+
+                {/* Boutons de montants prédéfinis */}
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {defaultAmounts.map((defaultAmount) => (
+                    <motion.button
+                      key={defaultAmount}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setAmount(defaultAmount.toString())}
+                      className={`w-fit rounded-2xl p-2 text-lg font-semibold transition-colors ${
+                        amount === defaultAmount.toString()
+                          ? 'bg-[#5AB678] text-white'
+                          : 'bg-[#101919] text-white border border-white/10 hover:border-[#5AB678]/50'
+                      }`}
+                    >
+                      {defaultAmount.toLocaleString('fr-FR')}
+                    </motion.button>
+                  ))}
                 </div>
-                <input
-                  type="tel"
-                  value={amount}
-                  onChange={(e) => {
-                    const numericValue = e.target.value.replace(/\D/g, '');
-                    setAmount(numericValue);
-                  }}
-                  placeholder={t('amountPlaceholder')}
-                  className="w-full bg-[#0F1F1F] text-white text-base font-normal placeholder-white/40 focus:outline-none border border-white/10 rounded-lg p-3 focus:border-[#5AB678] transition-colors"
-                />
               </div>
 
-              {/* Texte "Ou choisissez un montant par défaut" */}
-              <p className="text-white/60 text-sm mb-4 text-center">{t('orChooseDefault')}</p>
-
-              {/* Boutons de montants prédéfinis */}
-              <div className="flex space-x-3 justify-center">
-                {defaultAmounts.map((defaultAmount) => (
-                  <motion.button
-                    key={defaultAmount}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setAmount(defaultAmount.toString())}
-                    className={`w-fit rounded-2xl p-2 text-lg font-semibold transition-colors ${
-                      amount === defaultAmount.toString()
-                        ? 'bg-[#5AB678] text-white'
-                        : 'bg-[#101919] text-white border border-white/10 hover:border-[#5AB678]/50'
+              {/* Résumé de la transaction */}
+              <div className="bg-[#101919] rounded-xl p-3 md:p-6 mx-2 md:mx-12">
+                <div className="flex justify-between items-center">
+                  <span className="text-white/60">{t('operationFees')}</span>
+                  <span className="text-white font-semibold">
+                    {transactionFee > 0 ? `${transactionFee.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/60">{t('totalAmount')}</span>
+                  <span className="text-white font-semibold">
+                    {totalAmount > 0 ? `${totalAmount.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
+                  </span>
+                </div>
+                
+                {/* Toggle "Payer les frais" */}
+                <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                  <span className="text-white">{t('payFees')}</span>
+                  <button
+                    onClick={() => setPayFees(!payFees)}
+                    aria-label={payFees ? t('payFeesAriaOff') : t('payFeesAriaOn')}
+                    title={payFees ? t('payFeesAriaOff') : t('payFeesAriaOn')}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      payFees ? 'bg-[#5AB678]' : 'bg-[#101919] border border-white/20'
                     }`}
                   >
-                    {defaultAmount.toLocaleString('fr-FR')}
-                  </motion.button>
-                ))}
+                    <div
+                      className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        payFees ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Résumé de la transaction */}
-            <div className="bg-[#101919] rounded-xl p-4 md:p-6 mx-4 md:mx-12">
-              <div className="flex justify-between items-center">
-                <span className="text-white/60">{t('operationFees')}</span>
-                <span className="text-white font-semibold">
-                  {transactionFee > 0 ? `${transactionFee.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-white/60">{t('totalAmount')}</span>
-                <span className="text-white font-semibold">
-                  {totalAmount > 0 ? `${totalAmount.toLocaleString('fr-FR')} FCFA` : '0 FCFA'}
-                </span>
-              </div>
-              
-              {/* Toggle "Payer les frais" */}
-              <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                <span className="text-white">{t('payFees')}</span>
-                <button
-                  onClick={() => setPayFees(!payFees)}
-                  aria-label={payFees ? t('payFeesAriaOff') : t('payFeesAriaOn')}
-                  title={payFees ? t('payFeesAriaOff') : t('payFeesAriaOn')}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    payFees ? 'bg-[#5AB678]' : 'bg-[#101919] border border-white/20'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      payFees ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* Boutons de navigation */}
-            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-8 sm:mb-0">
+            {/* Boutons toujours visibles en bas (hors zone scroll), un peu descendus */}
+            <div className="shrink-0 flex flex-row justify-center items-center gap-2 sm:gap-3 mx-auto w-full max-w-sm mt-4 pt-2 pb-2">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleBack}
-                className="flex-1 bg-[#101919] text-white rounded-xl p-3 md:p-4 font-semibold hover:bg-[#101919]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2 text-sm md:text-base"
+                className="flex-1 max-w-[115px] sm:max-w-none bg-[#101919] text-white rounded-xl py-2.5 px-2 sm:p-4 font-semibold hover:bg-[#101919]/80 transition-colors border border-white/10 flex items-center justify-center gap-1 sm:space-x-2 text-xs sm:text-sm"
               >
-                <ChevronLeft size={18} className="md:w-5 md:h-5" />
+                <ChevronLeft size={16} className="shrink-0 sm:w-5 sm:h-5" />
                 <span>{t('previous')}</span>
               </motion.button>
               <motion.button
@@ -717,10 +739,10 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 whileTap={{ scale: 0.98 }}
                 onClick={handleNext}
                 disabled={!amount || baseAmount <= 0}
-                className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base"
+                className="flex-1 max-w-[115px] sm:max-w-none bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl py-2.5 px-2 sm:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-1 sm:space-x-2 text-xs sm:text-sm"
               >
                 <span>{t('next')}</span>
-                <ChevronRight size={18} className="md:w-5 md:h-5" />
+                <ChevronRight size={16} className="shrink-0 sm:w-5 sm:h-5" />
               </motion.button>
             </div>
           </div>
@@ -817,15 +839,15 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                 <p className="text-white/60 text-sm text-center">{t('waitingPaymentHint')}</p>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+              <div className="flex flex-row justify-center items-center gap-2 sm:gap-3 mx-auto w-full max-w-sm">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleBack}
                   disabled={paymentLoading}
-                  className="flex-1 bg-[#101919] text-white rounded-xl p-3 md:p-4 font-semibold hover:bg-[#1a2a2a]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 max-w-[140px] sm:max-w-none py-2.5 px-2 sm:p-4 bg-[#101919] text-white rounded-xl font-semibold hover:bg-[#1a2a2a]/80 transition-colors border border-white/10 flex items-center justify-center gap-1 sm:space-x-2 text-xs sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChevronLeft size={18} className="md:w-5 md:h-5" />
+                  <ChevronLeft size={16} className="shrink-0 sm:w-5 sm:h-5" />
                   <span>{t('previous')}</span>
                 </motion.button>
                 <motion.button
@@ -833,10 +855,10 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                   whileTap={{ scale: 0.98 }}
                   onClick={handleSubmit}
                   disabled={paymentLoading}
-                  className="flex-1 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl p-3 md:p-4 font-semibold hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 max-w-[140px] sm:max-w-none py-2.5 px-2 sm:p-4 bg-gradient-to-r from-[#8fc99e] to-[#20b6b3] text-white rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-1 sm:space-x-2 text-xs sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>{paymentLoading ? t('inProgress') : t('confirm')}</span>
-                  {!paymentLoading && <ChevronRight size={18} className="md:w-5 md:h-5" />}
+                  {!paymentLoading && <ChevronRight size={16} className="shrink-0 sm:w-5 sm:h-5" />}
                 </motion.button>
               </div>
             )}
@@ -1050,13 +1072,32 @@ export default function MakeDepositModal({ isOpen, onClose, onSuccess }: MakeDep
                     <X size={20} />
                   </button>
                 </div>
-                <div className="flex-1 min-h-0 w-full">
-                  <iframe
-                    src={wavePaymentUrl}
-                    title={t('wavePaymentTitle')}
-                    className="w-full h-full border-0"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                  />
+                <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center p-6">
+                  {isIOSDevice ? (
+                    <>
+                      <p className="text-white/80 text-center mb-6 max-w-sm">
+                        {t('waveOpenInBrowser')}
+                      </p>
+                      <motion.a
+                        href={wavePaymentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-6 py-3 rounded-xl font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2"
+                        style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                      >
+                        {t('waveOpenInBrowserButton')}
+                      </motion.a>
+                    </>
+                  ) : (
+                    <iframe
+                      src={wavePaymentUrl}
+                      title={t('wavePaymentTitle')}
+                      className="w-full h-full border-0 min-h-0"
+                      sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                    />
+                  )}
                 </div>
               </motion.div>
             )}
