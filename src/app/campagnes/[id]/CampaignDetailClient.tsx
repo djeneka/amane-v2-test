@@ -9,9 +9,10 @@ import {
   Heart, Users, MapPin, Calendar, ArrowRight, Play, Target,
   Droplets, BookOpen, UtensilsCrossed, CheckCircle2, Apple, HandCoins,
   ChevronDown, CircleHelp, Leaf, Eye, X, ChevronLeft, ChevronRight,
-  FileText, BarChart3, Download, Loader2
+  FileText, BarChart3, Download, Loader2, Share2
 } from 'lucide-react';
 import MakeDonationModal from '@/components/MakeDonationModal';
+import { copyLinkToClipboard } from '@/lib/clipboard';
 import type { PendingDonationState } from '@/components/MakeDonationModal';
 import MakeDepositModal from '@/components/MakeDepositModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -88,6 +89,25 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
       return;
     }
     setShowDonationModal(true);
+  };
+
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/campagnes/${campaign.id}` : '';
+    if (!url) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({
+          title: tc.title || 'Campagne',
+          url,
+        });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+    }
+    const copied = await copyLinkToClipboard(url, tc.title);
+    setToastMessage(copied ? t('linkCopied') : t('linkCopyFailed'));
+    setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
   };
 
   const categoryLabels: Record<string, string> = {
@@ -277,29 +297,30 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 </>
               )}
 
-              {/* Badge catégorie – en haut à gauche (fond sombre, icône cœur + libellé) */}
-              <div className="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-black/75 backdrop-blur-sm px-3 py-2 text-white">
-                <Heart size={16} className="flex-shrink-0" strokeWidth={2} />
-                <span className="text-sm font-medium">{getCategoryLabel(campaign.category)}</span>
-              </div>
-
-              {/* Badge type + bouton vidéo – en haut à droite */}
-              <div className="absolute top-4 right-4 flex items-center gap-2">
-                {/* Bouton lecture vidéo désactivé
-                {campaign.video && !showVideo && (
-                  <button
-                    onClick={() => setShowVideo(true)}
-                    className="bg-white/90 backdrop-blur-sm rounded-full p-3 hover:bg-white transition-colors"
-                    title="Lire la vidéo"
-                  >
-                    <Play size={24} className="text-gray-700" />
-                  </button>
-                )}
-                */}
-                <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2 text-emerald-800">
+              {/* Gauche : catégorie puis type en dessous */}
+              <div className="absolute top-4 left-4 flex flex-col gap-2">
+                <div className="flex items-center gap-2 rounded-full bg-black/75 backdrop-blur-sm px-3 py-2 text-white w-fit">
+                  <Heart size={16} className="flex-shrink-0" strokeWidth={2} />
+                  <span className="text-sm font-medium">{getCategoryLabel(campaign.category)}</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2 text-emerald-800 w-fit">
                   <HandCoins size={16} className="flex-shrink-0" />
                   <span className="text-sm font-bold">{typeLabel}</span>
                 </div>
+              </div>
+
+              {/* Droite : bouton partager par-dessus l'image */}
+              <div className="absolute top-4 right-4 z-10">
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleShare}
+                  className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                  aria-label={t('share')}
+                >
+                  <Share2 size={20} className="text-white" />
+                </motion.button>
               </div>
 
             </div>

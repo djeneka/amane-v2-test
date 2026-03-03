@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from 'next-intl';
 import { useCampaignTranslations } from '@/contexts/CampaignTranslationsContext';
 import { isHtmlContent, getHtmlForRender } from '@/lib/campaign-html';
+import { copyLinkToClipboard } from '@/lib/clipboard';
 
 const COUNTRY_LABELS: Record<string, string> = {
   ci: "côte d'ivoire",
@@ -192,6 +193,26 @@ export default function CampagnesPage() {
   const getProgressPercentage = (current: number, target: number) => {
     if (!target || target <= 0) return 0;
     return Math.min(100, (current / target) * 100);
+  };
+
+  const handleShare = async (campaignId: string, title?: string) => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/campagnes/${campaignId}` : '';
+    if (!url) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({
+          title: title || 'Campagne',
+          url,
+        });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+      // Share non disponible ou annulé : on tente la copie
+    }
+    const copied = await copyLinkToClipboard(url, title);
+    setToastMessage(copied ? t('linkCopied') : t('linkCopyFailed'));
+    setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
   };
 
   const featuredCampaigns = campaigns.filter((c) => c.featured);
@@ -568,6 +589,22 @@ export default function CampagnesPage() {
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                          <div className="absolute top-4 right-4 z-10">
+                            <motion.button
+                              type="button"
+                              whileHover={{ scale: 1.08 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleShare(campaign.id, tc.title);
+                              }}
+                              className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                              aria-label={t('share')}
+                            >
+                              <Share2 size={18} className="text-white" />
+                            </motion.button>
+                          </div>
                           <div className="absolute inset-0 flex flex-col justify-end p-5">
                             <div className="absolute top-4 left-4">
                               <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
@@ -632,6 +669,22 @@ export default function CampagnesPage() {
                                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                                <div className="absolute top-4 right-4 z-10">
+                                  <motion.button
+                                    type="button"
+                                    whileHover={{ scale: 1.08 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleShare(campaign.id, tc.title);
+                                    }}
+                                    className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                                    aria-label={t('share')}
+                                  >
+                                    <Share2 size={18} className="text-white" />
+                                  </motion.button>
+                                </div>
                                 <div className="absolute inset-0 flex flex-col justify-end p-5">
                                   <div className="absolute top-4 left-4">
                                     <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
@@ -743,6 +796,22 @@ export default function CampagnesPage() {
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                          <div className="absolute top-4 right-4 z-10">
+                            <motion.button
+                              type="button"
+                              whileHover={{ scale: 1.08 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleShare(campaign.id, tc.title);
+                              }}
+                              className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                              aria-label={t('share')}
+                            >
+                              <Share2 size={18} className="text-white" />
+                            </motion.button>
+                          </div>
                           <div className="absolute inset-0 flex flex-col justify-end p-5">
                             <div className="absolute top-4 left-4">
                               <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
@@ -807,6 +876,22 @@ export default function CampagnesPage() {
                                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                                <div className="absolute top-4 right-4 z-10">
+                                  <motion.button
+                                    type="button"
+                                    whileHover={{ scale: 1.08 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleShare(campaign.id, tc.title);
+                                    }}
+                                    className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                                    aria-label={t('share')}
+                                  >
+                                    <Share2 size={18} className="text-white" />
+                                  </motion.button>
+                                </div>
                                 <div className="absolute inset-0 flex flex-col justify-end p-5">
                                   <div className="absolute top-4 left-4">
                                     <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
@@ -934,21 +1019,37 @@ export default function CampagnesPage() {
 
                         {/* Contenu superposé */}
                         <div className="relative flex flex-col flex-1 p-5 sm:p-6">
-                          {/* Ligne des tags: catégorie (gauche) + type (droite) */}
+                          {/* Gauche: catégorie + type en dessous. Droite: bouton partage */}
                           <div className="flex justify-between items-start gap-2 mb-3">
-                            <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium">
-                              {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
-                                <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
-                              ) : (categoryConfig && 'icon' in categoryConfig && categoryConfig.icon) ? (
-                                <categoryConfig.icon size={14} className="text-white" />
-                              ) : (
-                                <Star size={14} className="text-white" />
-                              )}
-                              {categoryLabels[campaign.category] ?? campaign.category}
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 bg-[#ffffff] border border-[#00644D] text-[#5ab678] px-3 py-1.5 rounded-full text-xs font-bold">
-                              {typeLabel}
-                            </span>
+                            <div className="flex flex-col gap-1.5">
+                              <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium w-fit">
+                                {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                                  <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                                ) : (categoryConfig && 'icon' in categoryConfig && categoryConfig.icon) ? (
+                                  <categoryConfig.icon size={14} className="text-white" />
+                                ) : (
+                                  <Star size={14} className="text-white" />
+                                )}
+                                {categoryLabels[campaign.category] ?? campaign.category}
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 bg-[#ffffff] border border-[#00644D] text-[#5ab678] px-3 py-1.5 rounded-full text-xs font-bold w-fit">
+                                {typeLabel}
+                              </span>
+                            </div>
+                            <motion.button
+                              type="button"
+                              whileHover={{ scale: 1.08 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleShare(campaign.id, tc.title);
+                              }}
+                              className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white flex-shrink-0"
+                              aria-label={t('share')}
+                            >
+                              <Share2 size={18} className="text-white" />
+                            </motion.button>
                           </div>
 
                           <div className="flex-1 min-h-[2rem]" />
@@ -1043,8 +1144,8 @@ export default function CampagnesPage() {
                             alt={tc.title}
                             className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
                           />
-                          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${
+                          <div className="absolute top-2 left-2 flex flex-col gap-1">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white w-fit ${
                               campaign.category === 'urgence' ? 'bg-red-500' :
                               campaign.category === 'education' ? 'bg-blue-500' :
                               campaign.category === 'sante' ? 'bg-green-500' :
@@ -1055,7 +1156,7 @@ export default function CampagnesPage() {
                             }`}>
                               {categoryLabels[campaign.category] ?? campaign.category}
                             </span>
-                            <span className="px-2 py-1 rounded-full text-xs font-semibold text-white bg-[#00644D]">
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold text-white bg-[#00644D] w-fit">
                               {typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah'}
                             </span>
                           </div>
@@ -1149,6 +1250,20 @@ export default function CampagnesPage() {
                             </div>
                           </div>
                         </div>
+                        <motion.button
+                          type="button"
+                          whileHover={{ scale: 1.08 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleShare(campaign.id, tc.title);
+                          }}
+                          className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white flex-shrink-0 self-center sm:self-center"
+                          aria-label={t('share')}
+                        >
+                          <Share2 size={20} className="text-white" />
+                        </motion.button>
                       </div>
                     </div>
                   </Link>

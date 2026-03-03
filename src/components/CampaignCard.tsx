@@ -1,10 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Heart, Users, MapPin, Calendar, ArrowRight, Play } from 'lucide-react';
+import { Heart, Users, MapPin, Calendar, ArrowRight, Play, Share2 } from 'lucide-react';
 import { Campaign } from '@/data/mockData';
 import { useTranslatedCampaign } from '@/contexts/CampaignTranslationsContext';
+import { useTranslations } from 'next-intl';
+import { copyLinkToClipboard } from '@/lib/clipboard';
 
 interface CampaignCardProps {
   campaign: Campaign;
@@ -13,10 +16,37 @@ interface CampaignCardProps {
   donorCount?: number;
 }
 
+const TOAST_DURATION_MS = 2500;
+
 export default function CampaignCard({ campaign, showVideo = false, donorCount }: CampaignCardProps) {
   const tc = useTranslatedCampaign(campaign);
-  const progress = (campaign.currentAmount / campaign.targetAmount) * 100;
-  
+  const t = useTranslations('campagnes');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const progress = (campaign.targetAmount && campaign.targetAmount > 0)
+    ? (campaign.currentAmount / campaign.targetAmount) * 100
+    : 0;
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/campagnes/${campaign.id}` : '';
+    if (!url) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({
+          title: tc.title || 'Campagne',
+          url,
+        });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+    }
+    const copied = await copyLinkToClipboard(url, tc.title);
+    setToastMessage(copied ? t('linkCopied') : t('linkCopyFailed'));
+    setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+  };
+
   const categoryColors = {
     urgence: 'bg-red-100 text-red-800',
     education: 'bg-blue-100 text-blue-800',
@@ -70,13 +100,23 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-black/20" />
-            {campaign.video && (
-              <div className="absolute top-4 right-4">
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              {campaign.video && (
                 <div className="bg-white/90 backdrop-blur-sm rounded-full p-2">
                   <Play size={16} className="text-gray-700" />
                 </div>
-              </div>
-            )}
+              )}
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleShare}
+                className="rounded-full p-2 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-700 hover:bg-white"
+                aria-label={t('share')}
+              >
+                <Share2 size={16} />
+              </motion.button>
+            </div>
           </div>
         )}
         
@@ -89,7 +129,12 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
       </div>
 
       {/* Content Section */}
-      <div className="p-6">
+      <div className="p-6 relative">
+        {toastMessage && (
+          <div className="absolute top-0 left-0 right-0 mx-4 mt-2 py-2 px-3 rounded-lg bg-green-600 text-white text-sm font-medium text-center shadow-lg z-10">
+            {toastMessage}
+          </div>
+        )}
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
             {tc.title}

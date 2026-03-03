@@ -144,6 +144,7 @@ export default function MakeDonationModal({
     dedicationType: 'LIVING',
     firstName: '',
     lastName: '',
+    emailOrPhoneNumber: '',
     relationshipType: '',
     personalMessage: '',
     showMyNameOnCertificate: false,
@@ -189,6 +190,7 @@ export default function MakeDonationModal({
         dedicationType: 'LIVING',
         firstName: '',
         lastName: '',
+        emailOrPhoneNumber: '',
         relationshipType: '',
         personalMessage: '',
         showMyNameOnCertificate: false,
@@ -291,6 +293,7 @@ export default function MakeDonationModal({
       dedicationType: thirdParty.dedicationType,
       firstName: thirdParty.firstName.trim(),
       lastName: thirdParty.lastName.trim(),
+      emailOrPhoneNumber: thirdParty.emailOrPhoneNumber?.trim() || null,
       relationshipType: thirdParty.relationshipType || 'Ami(e)',
       personalMessage: thirdParty.personalMessage,
       showMyNameOnCertificate: thirdParty.showMyNameOnCertificate,
@@ -691,6 +694,18 @@ export default function MakeDonationModal({
                 placeholder="Exemple : Nadia Elise"
               />
             </label>
+            {(thirdParty.certificateRecipient === 'HONOREE' || thirdParty.certificateRecipient === 'SELF_AND_HONOREE') && (
+              <label className="block">
+                <span className={labelClass}>Email ou numéro de téléphone <span className="text-white/50 font-normal">(Optionnel)</span></span>
+                <input
+                  type="text"
+                  value={thirdParty.emailOrPhoneNumber ?? ''}
+                  onChange={(e) => setThirdParty((p) => ({ ...p, emailOrPhoneNumber: e.target.value || undefined }))}
+                  className={inputClass}
+                  placeholder="de la personne honorée"
+                />
+              </label>
+            )}
             <label className="block">
               <span className={labelClass}>Lien / relation <span className="text-white/50 font-normal">(Optionnel)</span></span>
               <div className="relative">
@@ -706,7 +721,7 @@ export default function MakeDonationModal({
                 <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none" />
               </div>
             </label>
-            <label className="block">
+            {/* <label className="block">
               <span className={labelClass}>Clé RIB</span>
               <input
                 type="text"
@@ -715,7 +730,7 @@ export default function MakeDonationModal({
                 className={inputClass}
                 placeholder="Exemple : 90"
               />
-            </label>
+            </label> */}
             <label className="block">
               <span className={labelClass}>Message personnalisé <span className="text-white/50 font-normal">(Optionnel)</span></span>
               <textarea
