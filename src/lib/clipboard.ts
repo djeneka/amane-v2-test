@@ -1,8 +1,8 @@
 /**
- * Copie une URL dans le presse-papier. Utilise writeText en priorité (meilleur support
- * iOS/Safari), puis repli avec execCommand pour les contextes restreints.
+ * Copie une URL dans le presse-papier (uniquement le lien, sans titre).
+ * Utilise writeText en priorité (meilleur support iOS/Safari), puis repli avec execCommand.
  */
-export async function copyLinkToClipboard(url: string, _linkText?: string): Promise<boolean> {
+export async function copyLinkToClipboard(url: string, _linkTitle?: string): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
   // 1) Priorité à writeText (fiable sur iOS, Safari, et contextes sécurisés)

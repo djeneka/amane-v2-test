@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import MakeDonationModal from '@/components/MakeDonationModal';
 import { copyLinkToClipboard } from '@/lib/clipboard';
+import { getMyZakats, type Zakat } from '@/services/zakat';
+import PayZakatModal from '@/components/PayZakatModal';
 import type { PendingDonationState } from '@/components/MakeDonationModal';
 import MakeDepositModal from '@/components/MakeDepositModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +32,7 @@ interface CampaignDetailClientProps {
 
 export default function CampaignDetailClient({ campaign, donorCount = 0 }: CampaignDetailClientProps) {
   const t = useTranslations('campagnes');
+  const tZakat = useTranslations('zakatPage');
   const tc = useTranslatedCampaign(campaign);
   const router = useRouter();
   const { user, accessToken, isAuthenticated } = useAuth();
@@ -44,6 +47,10 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   const [activitySlideIndex, setActivitySlideIndex] = useState(0);
   const [impactCardsSlideIndex, setImpactCardsSlideIndex] = useState(0);
   const [downloadingDoc, setDownloadingDoc] = useState<'budget' | 'statement' | null>(null);
+  const [myZakats, setMyZakats] = useState<Zakat[]>([]);
+  const [showPayZakatModal, setShowPayZakatModal] = useState(false);
+  const [payZakatZakatId, setPayZakatZakatId] = useState<string | null>(null);
+  const [showZakatSelectModal, setShowZakatSelectModal] = useState(false);
 
   // Réinitialiser le slide à l'ouverture du modal
   useEffect(() => {
@@ -56,7 +63,39 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
     setSelectedImage(0);
   }, [campaign.id]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setMyZakats([]);
+      return;
+    }
+    let cancelled = false;
+    getMyZakats(accessToken)
+      .then((list) => { if (!cancelled) setMyZakats(Array.isArray(list) ? list : []); })
+      .catch(() => { if (!cancelled) setMyZakats([]); });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
   const walletBalance = user?.wallet?.balance ?? 0;
+  const myZakatsWithRemaining = myZakats.filter((z) => (z.remainingAmount ?? 0) > 0);
+  const hasZakatToPay = myZakatsWithRemaining.length >= 1;
+  const isZakatEligibleCampaign =
+    ['ZAKAT', 'ZAKAT_SADAQAH'].includes(String(campaign.type ?? '').toUpperCase());
+
+  const handlePayZakatClick = () => {
+    if (!hasZakatToPay) return;
+    if (myZakatsWithRemaining.length === 1) {
+      setPayZakatZakatId(myZakatsWithRemaining[0].id);
+      setShowPayZakatModal(true);
+    } else {
+      setShowZakatSelectModal(true);
+    }
+  };
+
+  const handleSelectZakatForPayment = (zakatId: string) => {
+    setPayZakatZakatId(zakatId);
+    setShowZakatSelectModal(false);
+    setShowPayZakatModal(true);
+  };
   const progress = campaign.targetAmount > 0 ? (campaign.currentAmount / campaign.targetAmount) * 100 : 0;
   /** Pour la barre au bas de l’image : part déboursée / collectée */
   const spentRatio =
@@ -96,8 +135,10 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
     if (!url) return;
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
+        const shareTitle = tc.title || 'Campagne';
         await navigator.share({
-          title: tc.title || 'Campagne',
+          title: `Amane+ – ${shareTitle}`,
+          text: `${shareTitle}\n${url}`,
           url,
         });
         return;
@@ -129,6 +170,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
   const typeLabels: Record<string, string> = {
     ZAKAT: t('typeZakat'),
     SADAQAH: t('typeSadaqah'),
+    ZAKAT_SADAQAH: t('typeZakatSadaqah'),
   };
   const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? t('typeSadaqah');
 
@@ -326,7 +368,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
             </div>
           </motion.div>
 
-          {/* Bande infos – sous l'image, marge top, fond #101919 */}
+          {/* Bande infos – sous l'image : gauche = catégorie, titre, barres, "Vos dons traçables" ; droite = boutons Donner + Payer ma zakat */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -387,6 +429,16 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     {t('endDateLabel')} : <span className="font-semibold text-white/90">{campaign.endDate ? formatDate(campaign.endDate) : t('na')}</span>
                   </p>
                 )}
+                {isZakatEligibleCampaign && hasZakatToPay && (
+                  <div className="rounded-2xl bg-black/30 px-4 py-3 flex items-center gap-3 mt-4 w-fit">
+                    <div className="w-10 h-10 bg-[#20b6b3] rounded-full flex items-center justify-center flex-shrink-0">
+                      <Image src="/icons/shield-tick.png" alt="Target" width={20} height={20} className="object-contain" />
+                    </div>
+                    <p className="text-white text-sm">
+                      {t('donationsTraceable')}
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col items-stretch lg:items-end gap-3 shrink-0">
                 <motion.button
@@ -406,14 +458,28 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     className="object-contain"
                   />
                 </motion.button>
-                <div className="rounded-2xl bg-black/30 px-4 py-3 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#20b6b3] rounded-full flex items-center justify-center flex-shrink-0">
+                {isZakatEligibleCampaign && hasZakatToPay && (
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handlePayZakatClick}
+                    className="w-full px-8 py-3 rounded-2xl font-bold text-white flex items-center justify-center gap-3 bg-white/20 hover:bg-white/30 border border-white/40 transition-all duration-200"
+                  >
+                    <img src="/icons/purse(2).png" alt="" className="w-6 h-6 object-contain" />
+                    <span>{t('payMyZakat')}</span>
+                  </motion.button>
+                )}
+                {!(isZakatEligibleCampaign && hasZakatToPay) && (
+                  <div className="rounded-2xl bg-black/30 px-4 py-3 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#20b6b3] rounded-full flex items-center justify-center flex-shrink-0">
                       <Image src="/icons/shield-tick.png" alt="Target" width={20} height={20} className="object-contain" />
+                    </div>
+                    <p className="text-white text-sm">
+                      {t('donationsTraceable')}
+                    </p>
                   </div>
-                  <p className="text-white text-sm">
-                    {t('donationsTraceable')}
-                  </p>
-                </div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -1121,6 +1187,75 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
         onSuccess={() => {
           setShowDepositModal(false);
           setShowDonationModal(true);
+        }}
+      />
+
+      {/* Modal choix d'un calcul de zakat (quand plusieurs) avant d'ouvrir PayZakatModal */}
+      <AnimatePresence>
+        {showZakatSelectModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowZakatSelectModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#101919] rounded-2xl border border-white/20 shadow-xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h3 className="text-lg font-bold text-white">{t('selectZakatCalculationTitle')}</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowZakatSelectModal(false)}
+                  className="p-2 rounded-full hover:bg-white/10 text-white"
+                  aria-label={tZakat('closePreview')}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="px-4 pt-3 pb-2 text-sm text-white/70">{t('selectZakatCalculationDescription')}</p>
+              <div className="overflow-y-auto p-4 space-y-2 flex-1">
+                {myZakatsWithRemaining.map((zakat) => (
+                  <button
+                    key={zakat.id}
+                    type="button"
+                    onClick={() => handleSelectZakatForPayment(zakat.id)}
+                    className="w-full text-left p-4 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white transition-colors"
+                  >
+                    <div className="font-medium">
+                      {tZakat('calculationOf', { date: new Date(zakat.calculationDate).toLocaleDateString('fr-FR') })} – {tZakat('zakatForYear', { year: zakat.year })}
+                    </div>
+                    <div className="text-sm text-[#43b48f] mt-1">
+                      {tZakat('zakatToPay')} {formatAmount(zakat.remainingAmount ?? 0)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <PayZakatModal
+        isOpen={showPayZakatModal}
+        onClose={() => {
+          setShowPayZakatModal(false);
+          setPayZakatZakatId(null);
+        }}
+        balance={walletBalance}
+        zakatId={payZakatZakatId}
+        initialAmount={payZakatZakatId ? (myZakats.find((z) => z.id === payZakatZakatId)?.remainingAmount ?? undefined) : undefined}
+        accessToken={accessToken ?? null}
+        initialSelectedCampaignId={campaign.id}
+        onSuccess={() => {
+          if (accessToken) {
+            getMyZakats(accessToken).then((list) => setMyZakats(Array.isArray(list) ? list : []));
+          }
         }}
       />
     </div>

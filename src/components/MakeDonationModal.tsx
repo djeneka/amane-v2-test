@@ -696,13 +696,13 @@ export default function MakeDonationModal({
             </label>
             {(thirdParty.certificateRecipient === 'HONOREE' || thirdParty.certificateRecipient === 'SELF_AND_HONOREE') && (
               <label className="block">
-                <span className={labelClass}>Email ou numéro de téléphone <span className="text-white/50 font-normal">(Optionnel)</span></span>
+                <span className={labelClass}>Email ou numéro de téléphone personne honorée <span className="text-white/50 font-normal">(Optionnel)</span></span>
                 <input
                   type="text"
                   value={thirdParty.emailOrPhoneNumber ?? ''}
                   onChange={(e) => setThirdParty((p) => ({ ...p, emailOrPhoneNumber: e.target.value || undefined }))}
                   className={inputClass}
-                  placeholder="de la personne honorée"
+                  placeholder="nadia@example.com ou +225 07 00 00 00 00"
                 />
               </label>
             )}

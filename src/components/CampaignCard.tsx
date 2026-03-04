@@ -33,8 +33,10 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
     if (!url) return;
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
+        const shareTitle = tc.title || 'Campagne';
         await navigator.share({
-          title: tc.title || 'Campagne',
+          title: `Amane+ – ${shareTitle}`,
+          text: `${shareTitle}\n${url}`,
           url,
         });
         return;

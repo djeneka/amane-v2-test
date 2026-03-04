@@ -82,8 +82,10 @@ export default function TransactionsPage() {
     if (!url) return;
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
+        const shareTitle = title || 'Campagne';
         await navigator.share({
-          title: title || 'Campagne',
+          title: `Amane+ – ${shareTitle}`,
+          text: `${shareTitle}\n${url}`,
           url,
         });
         return;

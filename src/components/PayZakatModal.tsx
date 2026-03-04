@@ -7,13 +7,17 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { payZakat } from '@/services/zakat';
 import { getCurrentUser } from '@/services/user';
-
+import { getActiveCampaignsRaw, type ApiCampaign } from '@/services/campaigns';
 
 const STEPS = [
   { id: 1, label: 'Montant' },
-  { id: 2, label: 'Confirmation' },
-  { id: 3, label: 'Code de sécurité' },
+  { id: 2, label: 'Campagne (optionnel)' },
+  { id: 3, label: 'Confirmation' },
+  { id: 4, label: 'Code de sécurité' },
 ];
+
+/** Types de campagne éligibles pour associer un paiement zakat */
+const ZAKAT_CAMPAIGN_TYPES = ['ZAKAT', 'ZAKAT_SADAQAH'];
 
 type PaymentFrequency = 'monthly' | 'bimonthly' | 'quarterly';
 
@@ -22,6 +26,8 @@ export interface PendingZakatState {
   currentStep: number;
   amount: string;
   zakatId: string | null;
+  /** Campagne éligible zakat sélectionnée (optionnel) */
+  selectedCampaignId: string | null;
   isPaymentPlanned: boolean;
   startDate: string;
   frequency: PaymentFrequency;
@@ -39,6 +45,8 @@ interface PayZakatModalProps {
   onRequestRecharge?: (state: PendingZakatState) => void;
   /** État à restaurer à l'ouverture (après rechargement réussi) */
   initialZakatState?: PendingZakatState | null;
+  /** Campagne éligible zakat présélectionnée (ex. ouverture depuis une card campagne) */
+  initialSelectedCampaignId?: string | null;
 }
 
 function parseApiErrorMessage(err: unknown): string {
@@ -62,6 +70,7 @@ export default function PayZakatModal({
   onSuccess,
   onRequestRecharge,
   initialZakatState = null,
+  initialSelectedCampaignId = null,
 }: PayZakatModalProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -76,6 +85,10 @@ export default function PayZakatModal({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [walletBalanceFromApi, setWalletBalanceFromApi] = useState<number | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [zakatEligibleCampaigns, setZakatEligibleCampaigns] = useState<ApiCampaign[]>([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  const [previewCampaign, setPreviewCampaign] = useState<ApiCampaign | null>(null);
   const securityCodeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   /** Solde affiché : API si dispo, sinon prop balance */
@@ -107,17 +120,25 @@ export default function PayZakatModal({
       setSubmitError(null);
       setIsSubmitting(false);
       setWalletBalanceFromApi(null);
+      setSelectedCampaignId(null);
+      setPreviewCampaign(null);
     } else if (initialZakatState) {
       setCurrentStep(initialZakatState.currentStep);
       setAmount(initialZakatState.amount);
       setIsPaymentPlanned(initialZakatState.isPaymentPlanned);
       setStartDate(initialZakatState.startDate);
       setFrequency(initialZakatState.frequency);
+      setSelectedCampaignId(initialZakatState.selectedCampaignId ?? null);
       setSubmitError(null);
-    } else if (initialAmount !== undefined) {
-      setAmount(initialAmount.toString());
+    } else {
+      if (initialAmount !== undefined) {
+        setAmount(initialAmount.toString());
+      }
+      if (initialSelectedCampaignId) {
+        setSelectedCampaignId(initialSelectedCampaignId);
+      }
     }
-  }, [isOpen, initialZakatState, initialAmount]);
+  }, [isOpen, initialZakatState, initialAmount, initialSelectedCampaignId]);
 
   // Récupérer le solde du wallet à l'ouverture du modal
   useEffect(() => {
@@ -145,6 +166,30 @@ export default function PayZakatModal({
     };
   }, [isOpen, accessToken]);
 
+  // Charger les campagnes éligibles zakat (type ZAKAT ou ZAKAT_SADAQAH) à l'ouverture
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setLoadingCampaigns(true);
+    getActiveCampaignsRaw()
+      .then((list) => {
+        if (cancelled) return;
+        const eligible = (list ?? []).filter((c) =>
+          ZAKAT_CAMPAIGN_TYPES.includes(String(c.type).toUpperCase())
+        );
+        setZakatEligibleCampaigns(eligible);
+      })
+      .catch(() => {
+        if (!cancelled) setZakatEligibleCampaigns([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCampaigns(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
   // Initialiser la date de début à aujourd'hui si vide
   useEffect(() => {
     if (isPaymentPlanned && !startDate) {
@@ -157,10 +202,12 @@ export default function PayZakatModal({
   }, [isPaymentPlanned, startDate]);
 
   const handleNext = () => {
-    if (currentStep < STEPS.length && amount && parseFloat(amount) > 0) {
+    if (currentStep >= STEPS.length) return;
+    if (currentStep === 1) {
+      if (!amount || parseFloat(amount) <= 0) return;
       if (isPaymentPlanned && !startDate) return;
-      setCurrentStep(currentStep + 1);
     }
+    setCurrentStep(currentStep + 1);
   };
 
   const handleBack = () => {
@@ -204,6 +251,7 @@ export default function PayZakatModal({
         zakatId,
         amount: amountToSend,
         paymentDate: new Date().toISOString(),
+        ...(selectedCampaignId ? { campaignId: selectedCampaignId } : {}),
       });
       // Affichage du bouton "Envoi en cours..." au moins 2 secondes
       const elapsed = Date.now() - startTime;
@@ -228,6 +276,7 @@ export default function PayZakatModal({
       setIsPaymentPlanned(false);
       setStartDate('');
       setFrequency('monthly');
+      setSelectedCampaignId(null);
     }
     onClose();
   };
@@ -240,6 +289,7 @@ export default function PayZakatModal({
     setIsPaymentPlanned(false);
     setStartDate('');
     setFrequency('monthly');
+    setSelectedCampaignId(null);
     onClose();
     router.push('/zakat');
   };
@@ -318,15 +368,25 @@ export default function PayZakatModal({
           <p className="text-white text-base sm:text-lg text-center max-w-md">
             Votre Zakat a été versée. Qu'Allah accepte votre aumône.
           </p>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleViewHistory}
-            className="rounded-3xl px-6 sm:px-8 py-3 sm:py-4 font-semibold text-white hover:opacity-90 transition-opacity mt-4 text-sm sm:text-base"
-            style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
-          >
-            Consulter l'historique
-          </motion.button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleClose}
+              className="rounded-3xl px-6 sm:px-8 py-3 sm:py-4 font-semibold text-white border-2 border-white/40 hover:bg-white/10 transition-colors text-sm sm:text-base"
+            >
+              Fermer
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleViewHistory}
+              className="rounded-3xl px-6 sm:px-8 py-3 sm:py-4 font-semibold text-white hover:opacity-90 transition-opacity text-sm sm:text-base"
+              style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
+            >
+              Consulter l'historique
+            </motion.button>
+          </div>
         </div>
       );
     }
@@ -555,6 +615,7 @@ export default function PayZakatModal({
                       currentStep: 1,
                       amount,
                       zakatId: zakatId ?? null,
+                      selectedCampaignId,
                       isPaymentPlanned,
                       startDate,
                       frequency,
@@ -595,13 +656,120 @@ export default function PayZakatModal({
       }
 
       case 2: {
+        const typeLabel = (t: string) => (t === 'ZAKAT_SADAQAH' ? 'Zakat / Sadaqah' : 'Zakat');
+        return (
+          <div className="space-y-4 sm:space-y-6">
+            <div>
+              <h2 className="text-white text-xl sm:text-2xl font-bold mb-2">Campagne (optionnel)</h2>
+              <p className="text-white/60 text-sm">
+                Vous pouvez payer votre zakat sur une campagne éligible ou laisser amane choisi.
+              </p>
+            </div>
+
+            {/* Option : ne pas associer */}
+            <div className="mx-0 sm:mx-12">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => setSelectedCampaignId(null)}
+                className={`w-full text-left rounded-xl p-4 border-2 transition-all ${
+                  selectedCampaignId === null
+                    ? 'bg-[#43B48F]/20 border-[#43B48F] text-white'
+                    : 'bg-[#0F1F1F] border-white/10 text-white hover:border-white/20'
+                }`}
+              >
+                <span className="font-medium">Ne pas associer de campagne</span>
+              </motion.button>
+            </div>
+
+            {/* Liste des campagnes éligibles */}
+            <div className="mx-0 sm:mx-12 space-y-2">
+              {loadingCampaigns ? (
+                <p className="text-white/60 text-sm">Chargement des campagnes...</p>
+              ) : zakatEligibleCampaigns.length === 0 ? (
+                <p className="text-white/50 text-sm">Aucune campagne éligible zakat pour le moment.</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {zakatEligibleCampaigns.map((campaign) => (
+                    <div
+                      key={campaign.id}
+                      className={`rounded-xl border-2 transition-all flex items-center gap-2 overflow-hidden ${
+                        selectedCampaignId === campaign.id
+                          ? 'bg-[#43B48F]/20 border-[#43B48F]'
+                          : 'bg-[#0F1F1F] border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => setSelectedCampaignId(campaign.id)}
+                        className="flex-1 min-w-0 text-left rounded-xl p-3 sm:p-4 flex items-center justify-between gap-2 text-white"
+                      >
+                        <span className="font-medium text-sm sm:text-base truncate">{campaign.title}</span>
+                        <span className="text-xs text-white/70 flex-shrink-0">{typeLabel(String(campaign.type).toUpperCase())}</span>
+                      </motion.button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewCampaign(campaign);
+                        }}
+                        className="flex-shrink-0 p-2.5 rounded-r-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                        aria-label="Aperçu de la campagne"
+                      >
+                        <Eye size={20} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-4 pb-2 mx-0 sm:mx-12">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleBack}
+                className="flex-1 bg-[#0F1F1F] text-white rounded-3xl p-3 sm:p-4 font-semibold hover:bg-[#0F1F1F]/80 transition-colors border border-white/10 flex items-center justify-center space-x-2 text-sm sm:text-base"
+              >
+                <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
+                <span>Précédent</span>
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleNext}
+                className="flex-1 bg-gradient-to-r from-[#8FC99E] to-[#20B6B3] text-white rounded-3xl p-3 sm:p-4 font-semibold hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm sm:text-base"
+              >
+                <span>Suivant</span>
+                <ChevronRight size={18} className="sm:w-5 sm:h-5" />
+              </motion.button>
+            </div>
+          </div>
+        );
+      }
+
+      case 3: {
         const paymentPlan = calculatePaymentPlan();
+        const selectedCampaign = selectedCampaignId
+          ? zakatEligibleCampaigns.find((c) => c.id === selectedCampaignId)
+          : null;
         return (
           <div className="space-y-4 sm:space-y-6">
             <div>
               <h3 className="text-white text-base sm:text-lg mb-2 font-bold">Confirmation</h3>
               <p className="text-white/60 text-xs sm:text-sm">
                 Veuillez confirmer votre transaction
+              </p>
+            </div>
+
+            {/* Campagne associée (si choisie) */}
+            <div className="mx-0 sm:mx-12">
+              <p className="text-white/70 text-sm mb-1">Campagne associée</p>
+              <p className="text-white font-medium">
+                {selectedCampaign ? selectedCampaign.title : 'Aucune'}
               </p>
             </div>
             
@@ -647,9 +815,10 @@ export default function PayZakatModal({
                   onClick={() => {
                     onClose();
                     onRequestRecharge({
-                      currentStep: 2,
+                      currentStep: 3,
                       amount,
                       zakatId: zakatId ?? null,
+                      selectedCampaignId,
                       isPaymentPlanned,
                       startDate,
                       frequency,
@@ -676,7 +845,7 @@ export default function PayZakatModal({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => setCurrentStep(3)}
+                onClick={() => setCurrentStep(4)}
                 disabled={parseFloat(amount) > effectiveBalance}
                 className="flex-1 bg-[#3AE1B4] text-[#101919] rounded-3xl p-3 sm:p-4 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm sm:text-base"
               >
@@ -688,7 +857,7 @@ export default function PayZakatModal({
         );
       }
 
-      case 3: {
+      case 4: {
         const digits = securityCode.split('').concat(Array(4).fill('')).slice(0, 4);
         const handleCodeChange = (index: number, value: string) => {
           const digit = value.replace(/\D/g, '').slice(-1);
@@ -753,9 +922,10 @@ export default function PayZakatModal({
                       onClick={() => {
                         onClose();
                         onRequestRecharge({
-                          currentStep: 3,
+                          currentStep: 4,
                           amount,
                           zakatId: zakatId ?? null,
+                          selectedCampaignId,
                           isPaymentPlanned,
                           startDate,
                           frequency,
@@ -993,6 +1163,61 @@ export default function PayZakatModal({
                       </motion.div>
                     </AnimatePresence>
                   </div>
+
+                  {/* Aperçu campagne (étape 2) */}
+                  <AnimatePresence>
+                  {previewCampaign && (
+                    <motion.div
+                      key="campaign-preview"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 z-20 flex items-center justify-center p-4 bg-[#101919]/95 backdrop-blur-sm"
+                      onClick={() => setPreviewCampaign(null)}
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Aperçu de la campagne"
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-[#1A2A28] rounded-2xl overflow-hidden border border-white/10 shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col"
+                      >
+                        <div className="relative aspect-video w-full bg-[#0F1F1F] flex-shrink-0">
+                          <img
+                            src={previewCampaign.picture && previewCampaign.picture.trim() ? previewCampaign.picture : '/images/no-picture.png'}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPreviewCampaign(null)}
+                            className="absolute top-2 right-2 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+                            aria-label="Fermer l'aperçu"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                        <div className="p-4 sm:p-5 overflow-y-auto flex-1 min-h-0">
+                          <h3 className="text-white font-bold text-lg mb-2">
+                            {previewCampaign.title}
+                          </h3>
+                          {previewCampaign.description && (() => {
+                            const plain = previewCampaign.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                            return (
+                              <p className="text-white/80 text-sm leading-relaxed max-h-40 sm:max-h-52 overflow-y-auto overflow-x-hidden pr-1 custom-scrollbar">
+                                {plain}
+                              </p>
+                            );
+                          })()}
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                  </AnimatePresence>
+
                   <style>{`
                     .custom-scrollbar::-webkit-scrollbar {
                       width: 8px;
