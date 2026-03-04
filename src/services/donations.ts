@@ -57,6 +57,8 @@ export interface CreateDonationThirdPartyInput {
   dedicationType: 'LIVING' | 'IN_MEMORY' | 'IN_HONOR_OF';
   firstName: string;
   lastName: string;
+  /** Email ou numéro de téléphone du bénéficiaire (optionnel, peut être null). */
+  emailOrPhoneNumber?: string | null;
   relationshipType: string;
   personalMessage: string;
   showMyNameOnCertificate: boolean;

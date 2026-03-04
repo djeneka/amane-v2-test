@@ -71,6 +71,8 @@ export interface PayZakatBody {
   zakatId: string;
   amount: number;
   paymentDate: string; // ISO 8601, ex. "2026-02-07T00:00:00Z"
+  /** Campagne éligible zakat (type ZAKAT ou ZAKAT_SADAQAH) à associer au paiement — facultatif */
+  campaignId?: string | null;
 }
 
 /**

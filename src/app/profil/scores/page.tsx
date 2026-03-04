@@ -250,6 +250,7 @@ export default function ScoresPage() {
 
   return (
     <div className="space-y-8">
+      <h1 className="sr-only">{t('sadaqahScores')}</h1>
       <div className="grid lg:grid-cols-[380px_1fr] gap-8">
         {/* Colonne de gauche */}
         <div className="space-y-6">

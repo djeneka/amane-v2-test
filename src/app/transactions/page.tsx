@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -21,6 +21,7 @@ import { getMyDonations, type Donation as ApiDonation } from '@/services/donatio
 import { getDonationsStatistics } from '@/services/statistics';
 import { getMyTransactions, type Transaction as ApiTransaction } from '@/services/transactions';
 import { getRankForScore } from '@/lib/rankRules';
+import { copyLinkToClipboard } from '@/lib/clipboard';
 
 /** Format d’affichage d’une transaction (après formatTransaction) */
 interface FormattedTransaction {
@@ -72,6 +73,30 @@ export default function TransactionsPage() {
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [transactionsError, setTransactionsError] = useState<string | null>(null);
   const [myDonations, setMyDonations] = useState<ApiDonation[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const TOAST_DURATION_MS = 2500;
+
+  const handleShare = async (campaignId: string, title?: string) => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/campagnes/${campaignId}` : '';
+    if (!url) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        const shareTitle = title || 'Campagne';
+        await navigator.share({
+          title: `Amane+ – ${shareTitle}`,
+          text: `${shareTitle}\n${url}`,
+          url,
+        });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+    }
+    const copied = await copyLinkToClipboard(url, title);
+    setToastMessage(copied ? t('linkCopied') : t('linkCopyFailed'));
+    setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+  };
 
   useEffect(() => {
     if (authReady && !isAuthenticated) {
@@ -755,19 +780,35 @@ export default function TransactionsPage() {
                       </div>
                       <div className="relative flex flex-col flex-1 p-5 sm:p-6">
                         <div className="flex justify-between items-start gap-2 mb-3">
-                          <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium">
-                            {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
-                              <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
-                            ) : categoryConfig && 'icon' in categoryConfig && categoryConfig.icon ? (
-                              <categoryConfig.icon size={14} className="text-white" />
-                            ) : (
-                              <Star size={14} className="text-white" />
-                            )}
-                            {campaignCategoryLabels[campaign.category] ?? campaign.category}
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 bg-[#00644D] border border-[#00644D] text-white px-3 py-1.5 rounded-full text-xs font-medium">
-                            {typeLabel}
-                          </span>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium w-fit">
+                              {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                                <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                              ) : categoryConfig && 'icon' in categoryConfig && categoryConfig.icon ? (
+                                <categoryConfig.icon size={14} className="text-white" />
+                              ) : (
+                                <Star size={14} className="text-white" />
+                              )}
+                              {campaignCategoryLabels[campaign.category] ?? campaign.category}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 bg-[#00644D] border border-[#00644D] text-white px-3 py-1.5 rounded-full text-xs font-medium w-fit">
+                              {typeLabel}
+                            </span>
+                          </div>
+                          <motion.button
+                            type="button"
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleShare(campaign.id, translated.title);
+                            }}
+                            className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white flex-shrink-0"
+                            aria-label={t('share')}
+                          >
+                            <Share2 size={18} className="text-white" />
+                          </motion.button>
                         </div>
                         <div className="flex-1 min-h-[2rem]" />
                         <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
@@ -928,6 +969,20 @@ export default function TransactionsPage() {
           </motion.div>
         </div>
       </section>
+
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
     </>
   );

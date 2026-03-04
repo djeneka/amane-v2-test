@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
   ArrowRight, Heart, Users, MapPin, Calendar, ArrowLeft, ChevronDown,
-  Apple, Play, TrendingUp, Bookmark, Star, Clock
+  Apple, Play, TrendingUp, Bookmark, Star, Clock, Share2
 } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
@@ -16,6 +16,7 @@ import { getActiveCampaigns } from '@/services/campaigns';
 import { getDonationsStatistics } from '@/services/statistics';
 import { getActivities, type Activity } from '@/services/activities';
 import { getHtmlForRender, isHtmlContent } from '@/lib/campaign-html';
+import { copyLinkToClipboard } from '@/lib/clipboard';
 
 const DEFAULT_ACTIVITY_IMAGE = '/images/no-picture.png';
 const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
@@ -66,6 +67,30 @@ export default function CommunautePage() {
   const [currentCagnotteSlide, setCurrentCagnotteSlide] = useState(0);
   const [takafulPlans, setTakafulPlans] = useState<TakafulPlan[]>([]);
   const [takafulLoading, setTakafulLoading] = useState(true);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const TOAST_DURATION_MS = 2500;
+
+  const handleShare = async (campaignId: string, title?: string) => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/campagnes/${campaignId}` : '';
+    if (!url) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        const shareTitle = title || 'Campagne';
+        await navigator.share({
+          title: `Amane+ – ${shareTitle}`,
+          text: `${shareTitle}\n${url}`,
+          url,
+        });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+    }
+    const copied = await copyLinkToClipboard(url, title);
+    setToastMessage(copied ? t('linkCopied') : t('linkCopyFailed'));
+    setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+  };
 
   const takafulDisplayPromote = process.env.NEXT_PUBLIC_TAKAFUL_DISPLAY_PROMOTE === 'true';
 
@@ -368,6 +393,22 @@ export default function CommunautePage() {
                             className="w-full h-full object-cover"
                             />
                         </div>
+                        <div className="absolute top-4 right-4 z-10">
+                          <motion.button
+                            type="button"
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleShare(campaign.id, campaign.title);
+                            }}
+                            className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                            aria-label={t('share')}
+                          >
+                            <Share2 size={20} className="text-white" />
+                          </motion.button>
+                        </div>
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-6">
                             <h3 className="text-white text-2xl font-bold mb-2">{campaign.title}</h3>
                             {campaign.description && isHtmlContent(campaign.description) ? (
@@ -511,19 +552,35 @@ export default function CommunautePage() {
                       </div>
                       <div className="relative flex flex-col flex-1 p-5 sm:p-6">
                         <div className="flex justify-between items-start gap-2 mb-3">
-                          <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium">
-                            {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
-                              <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
-                            ) : categoryConfig && 'icon' in categoryConfig && categoryConfig.icon ? (
-                              <categoryConfig.icon size={14} className="text-white" />
-                            ) : (
-                              <Star size={14} className="text-white" />
-                            )}
-                            {categoryLabels[campaign.category] ?? campaign.category}
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 bg-white border border-[#00644D] text-[#5ab678] px-3 py-1.5 rounded-full text-xs font-bold">
-                            {typeLabel}
-                          </span>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium w-fit">
+                              {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                                <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                              ) : categoryConfig && 'icon' in categoryConfig && categoryConfig.icon ? (
+                                <categoryConfig.icon size={14} className="text-white" />
+                              ) : (
+                                <Star size={14} className="text-white" />
+                              )}
+                              {categoryLabels[campaign.category] ?? campaign.category}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 bg-white border border-[#00644D] text-[#5ab678] px-3 py-1.5 rounded-full text-xs font-bold w-fit">
+                              {typeLabel}
+                            </span>
+                          </div>
+                          <motion.button
+                            type="button"
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleShare(campaign.id, campaign.title);
+                            }}
+                            className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white flex-shrink-0"
+                            aria-label={t('share')}
+                          >
+                            <Share2 size={18} className="text-white" />
+                          </motion.button>
                         </div>
                         <div className="flex-1 min-h-[2rem]" />
                         <p className="text-[#5AB678] font-semibold text-base sm:text-lg mb-1">
@@ -986,6 +1043,20 @@ export default function CommunautePage() {
           </motion.div>
         </div>
       </section>
+
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl text-white font-medium shadow-lg"
+            style={{ background: 'linear-gradient(90deg, #8DD17F 0%, #37C2B4 100%)' }}
+          >
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

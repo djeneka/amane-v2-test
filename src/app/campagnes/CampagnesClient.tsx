@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, Heart, Users, Target, Calendar, MapPin, 
   TrendingUp, Star, Eye, Share2, Bookmark, Globe, Zap,
-  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ArrowRight, Play, Pause, Apple
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ArrowRight, Play, Pause, Apple, X
 } from 'lucide-react';
 import Link from 'next/link';
 import CampaignCard from '@/components/CampaignCard';
@@ -20,6 +20,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from 'next-intl';
 import { useCampaignTranslations } from '@/contexts/CampaignTranslationsContext';
 import { isHtmlContent, getHtmlForRender } from '@/lib/campaign-html';
+import { copyLinkToClipboard } from '@/lib/clipboard';
+import { getMyZakats, type Zakat } from '@/services/zakat';
+import PayZakatModal from '@/components/PayZakatModal';
 
 const COUNTRY_LABELS: Record<string, string> = {
   ci: "côte d'ivoire",
@@ -55,6 +58,7 @@ const TOAST_DURATION_MS = 4000;
 
 export default function CampagnesPage() {
   const t = useTranslations('campagnes');
+  const tZakat = useTranslations('zakatPage');
   const { getTranslatedCampaign } = useCampaignTranslations();
   const { user, accessToken, isAuthenticated } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -80,6 +84,14 @@ export default function CampagnesPage() {
   const [ponctualCampaigns, setPonctualCampaigns] = useState<Campaign[]>([]);
   /** Index du slide pour Programmes ponctuels */
   const [ponctualSlideIndex, setPonctualSlideIndex] = useState(0);
+  /** Zakats de l'utilisateur (pour bouton "Payer ma zakat" sur cartes éligibles) */
+  const [myZakats, setMyZakats] = useState<Zakat[]>([]);
+  const [zakatsLoading, setZakatsLoading] = useState(false);
+  const [showPayZakatModal, setShowPayZakatModal] = useState(false);
+  const [payZakatZakatId, setPayZakatZakatId] = useState<string | null>(null);
+  const [payZakatCampaignId, setPayZakatCampaignId] = useState<string | null>(null);
+  const [showZakatSelectModal, setShowZakatSelectModal] = useState(false);
+  const [pendingZakatCampaignId, setPendingZakatCampaignId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,7 +127,49 @@ export default function CampagnesPage() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setMyZakats([]);
+      return;
+    }
+    let cancelled = false;
+    setZakatsLoading(true);
+    getMyZakats(accessToken)
+      .then((list) => { if (!cancelled) setMyZakats(Array.isArray(list) ? list : []); })
+      .catch(() => { if (!cancelled) setMyZakats([]); })
+      .finally(() => { if (!cancelled) setZakatsLoading(false); });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, accessToken]);
+
   const walletBalance = user?.wallet?.balance ?? 0;
+  /** Zakats avec un reste à payer (pour afficher "Payer ma zakat" sur les cartes éligibles) */
+  const myZakatsWithRemaining = myZakats.filter((z) => (z.remainingAmount ?? 0) > 0);
+  const hasZakatToPay = myZakatsWithRemaining.length >= 1;
+
+  const isZakatEligibleCampaign = (c: Campaign) =>
+    ['ZAKAT', 'ZAKAT_SADAQAH'].includes(String(c.type ?? '').toUpperCase());
+
+  const handlePayZakatClick = (e: React.MouseEvent, campaignId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!hasZakatToPay) return;
+    if (myZakatsWithRemaining.length === 1) {
+      setPayZakatZakatId(myZakatsWithRemaining[0].id);
+      setPayZakatCampaignId(campaignId);
+      setShowPayZakatModal(true);
+    } else {
+      setPendingZakatCampaignId(campaignId);
+      setShowZakatSelectModal(true);
+    }
+  };
+
+  const handleSelectZakatForPayment = (zakatId: string) => {
+    setPayZakatZakatId(zakatId);
+    setPayZakatCampaignId(pendingZakatCampaignId);
+    setPendingZakatCampaignId(null);
+    setShowZakatSelectModal(false);
+    setShowPayZakatModal(true);
+  };
 
   const categories = [
     { id: 'all', nameKey: 'categoryAllLabel', icon: Globe, color: 'bg-gray-500' },
@@ -136,6 +190,7 @@ export default function CampagnesPage() {
   const typeLabels: Record<string, string> = {
     ZAKAT: t('typeZakat'),
     SADAQAH: t('typeSadaqah'),
+    ZAKAT_SADAQAH: t('typeZakatSadaqah'),
   };
 
   const sortOptions = [
@@ -192,6 +247,28 @@ export default function CampagnesPage() {
   const getProgressPercentage = (current: number, target: number) => {
     if (!target || target <= 0) return 0;
     return Math.min(100, (current / target) * 100);
+  };
+
+  const handleShare = async (campaignId: string, title?: string) => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/campagnes/${campaignId}` : '';
+    if (!url) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        const shareTitle = title || 'Campagne';
+        await navigator.share({
+          title: `Amane+ – ${shareTitle}`,
+          text: `${shareTitle}\n${url}`,
+          url,
+        });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+      // Share non disponible ou annulé : on tente la copie
+    }
+    const copied = await copyLinkToClipboard(url, title);
+    setToastMessage(copied ? t('linkCopied') : t('linkCopyFailed'));
+    setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
   };
 
   const featuredCampaigns = campaigns.filter((c) => c.featured);
@@ -568,6 +645,22 @@ export default function CampagnesPage() {
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                          <div className="absolute top-4 right-4 z-10">
+                            <motion.button
+                              type="button"
+                              whileHover={{ scale: 1.08 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleShare(campaign.id, tc.title);
+                              }}
+                              className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                              aria-label={t('share')}
+                            >
+                              <Share2 size={18} className="text-white" />
+                            </motion.button>
+                          </div>
                           <div className="absolute inset-0 flex flex-col justify-end p-5">
                             <div className="absolute top-4 left-4">
                               <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
@@ -632,6 +725,22 @@ export default function CampagnesPage() {
                                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                                <div className="absolute top-4 right-4 z-10">
+                                  <motion.button
+                                    type="button"
+                                    whileHover={{ scale: 1.08 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleShare(campaign.id, tc.title);
+                                    }}
+                                    className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                                    aria-label={t('share')}
+                                  >
+                                    <Share2 size={18} className="text-white" />
+                                  </motion.button>
+                                </div>
                                 <div className="absolute inset-0 flex flex-col justify-end p-5">
                                   <div className="absolute top-4 left-4">
                                     <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
@@ -743,6 +852,22 @@ export default function CampagnesPage() {
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                          <div className="absolute top-4 right-4 z-10">
+                            <motion.button
+                              type="button"
+                              whileHover={{ scale: 1.08 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleShare(campaign.id, tc.title);
+                              }}
+                              className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                              aria-label={t('share')}
+                            >
+                              <Share2 size={18} className="text-white" />
+                            </motion.button>
+                          </div>
                           <div className="absolute inset-0 flex flex-col justify-end p-5">
                             <div className="absolute top-4 left-4">
                               <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
@@ -807,6 +932,22 @@ export default function CampagnesPage() {
                                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                                <div className="absolute top-4 right-4 z-10">
+                                  <motion.button
+                                    type="button"
+                                    whileHover={{ scale: 1.08 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleShare(campaign.id, tc.title);
+                                    }}
+                                    className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white"
+                                    aria-label={t('share')}
+                                  >
+                                    <Share2 size={18} className="text-white" />
+                                  </motion.button>
+                                </div>
                                 <div className="absolute inset-0 flex flex-col justify-end p-5">
                                   <div className="absolute top-4 left-4">
                                     <span className="inline-flex items-center gap-1.5 bg-[#5AB678] text-white px-3 py-1.5 rounded-full text-xs font-bold">
@@ -934,21 +1075,37 @@ export default function CampagnesPage() {
 
                         {/* Contenu superposé */}
                         <div className="relative flex flex-col flex-1 p-5 sm:p-6">
-                          {/* Ligne des tags: catégorie (gauche) + type (droite) */}
+                          {/* Gauche: catégorie + type en dessous. Droite: bouton partage */}
                           <div className="flex justify-between items-start gap-2 mb-3">
-                            <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium">
-                              {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
-                                <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
-                              ) : (categoryConfig && 'icon' in categoryConfig && categoryConfig.icon) ? (
-                                <categoryConfig.icon size={14} className="text-white" />
-                              ) : (
-                                <Star size={14} className="text-white" />
-                              )}
-                              {categoryLabels[campaign.category] ?? campaign.category}
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 bg-[#ffffff] border border-[#00644D] text-[#5ab678] px-3 py-1.5 rounded-full text-xs font-bold">
-                              {typeLabel}
-                            </span>
+                            <div className="flex flex-col gap-1.5">
+                              <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium w-fit">
+                                {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
+                                  <Image src={categoryConfig.iconSrc} alt="" width={14} height={14} className="object-contain" />
+                                ) : (categoryConfig && 'icon' in categoryConfig && categoryConfig.icon) ? (
+                                  <categoryConfig.icon size={14} className="text-white" />
+                                ) : (
+                                  <Star size={14} className="text-white" />
+                                )}
+                                {categoryLabels[campaign.category] ?? campaign.category}
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 bg-[#ffffff] border border-[#00644D] text-[#5ab678] px-3 py-1.5 rounded-full text-xs font-bold w-fit">
+                                {typeLabel}
+                              </span>
+                            </div>
+                            <motion.button
+                              type="button"
+                              whileHover={{ scale: 1.08 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleShare(campaign.id, tc.title);
+                              }}
+                              className="p-2 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white flex-shrink-0"
+                              aria-label={t('share')}
+                            >
+                              <Share2 size={18} className="text-white" />
+                            </motion.button>
                           </div>
 
                           <div className="flex-1 min-h-[2rem]" />
@@ -996,17 +1153,31 @@ export default function CampagnesPage() {
                             </div>
                           </div>
 
-                          {/* Bouton CTA */}
-                          <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="mt-4 w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
-                            style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
-                          >
-                            <Heart size={18} className="fill-white" />
-                            <span>{t('supportCampaign')}</span>
-                            <ArrowRight size={18} />
-                          </motion.div>
+                          {/* Boutons CTA */}
+                          <div className="mt-4 flex flex-col gap-2">
+                            <motion.div
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              className="w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
+                              style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                            >
+                              <Heart size={18} className="fill-white" />
+                              <span>{t('supportCampaign')}</span>
+                              <ArrowRight size={18} />
+                            </motion.div>
+                            {isZakatEligibleCampaign(campaign) && hasZakatToPay && (
+                              <motion.button
+                                type="button"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={(ev) => handlePayZakatClick(ev, campaign.id)}
+                                className="w-full py-2.5 rounded-2xl font-semibold text-white flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border border-white/40"
+                              >
+                                <img src="/icons/purse(2).png" alt="" className="w-5 h-5 object-contain" />
+                                <span>{t('payMyZakat')}</span>
+                              </motion.button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </Link>
@@ -1043,8 +1214,8 @@ export default function CampagnesPage() {
                             alt={tc.title}
                             className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
                           />
-                          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white ${
+                          <div className="absolute top-2 left-2 flex flex-col gap-1">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white w-fit ${
                               campaign.category === 'urgence' ? 'bg-red-500' :
                               campaign.category === 'education' ? 'bg-blue-500' :
                               campaign.category === 'sante' ? 'bg-green-500' :
@@ -1055,7 +1226,7 @@ export default function CampagnesPage() {
                             }`}>
                               {categoryLabels[campaign.category] ?? campaign.category}
                             </span>
-                            <span className="px-2 py-1 rounded-full text-xs font-semibold text-white bg-[#00644D]">
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold text-white bg-[#00644D] w-fit">
                               {typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah'}
                             </span>
                           </div>
@@ -1137,18 +1308,50 @@ export default function CampagnesPage() {
 
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                               <div />
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
-                                style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
-                              >
-                                <span>{t('support')}</span>
-                                <ArrowRight size={14} className="sm:w-4 sm:h-4" />
-                              </motion.button>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {isZakatEligibleCampaign(campaign) && hasZakatToPay && (
+                                  <motion.button
+                                    type="button"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handlePayZakatClick(e, campaign.id);
+                                    }}
+                                    className="px-4 py-2 rounded-xl font-semibold text-white bg-white/20 hover:bg-white/30 border border-white/40 flex items-center justify-center gap-2"
+                                  >
+                                    <img src="/icons/purse(2).png" alt="" className="w-5 h-5 object-contain" />
+                                    <span>{t('payMyZakat')}</span>
+                                  </motion.button>
+                                )}
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
+                                  style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                                >
+                                  <span>{t('support')}</span>
+                                  <ArrowRight size={14} className="sm:w-4 sm:h-4" />
+                                </motion.button>
+                              </div>
                             </div>
                           </div>
                         </div>
+                        <motion.button
+                          type="button"
+                          whileHover={{ scale: 1.08 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleShare(campaign.id, tc.title);
+                          }}
+                          className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white flex-shrink-0 self-center sm:self-center"
+                          aria-label={t('share')}
+                        >
+                          <Share2 size={20} className="text-white" />
+                        </motion.button>
                       </div>
                     </div>
                   </Link>
@@ -1270,6 +1473,82 @@ export default function CampagnesPage() {
         onSuccess={() => {
           setShowDepositModal(false);
           setShowDonationModal(true);
+        }}
+      />
+
+      {/* Modal choix d'un calcul de zakat (quand plusieurs) avant d'ouvrir PayZakatModal */}
+      <AnimatePresence>
+        {showZakatSelectModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              setShowZakatSelectModal(false);
+              setPendingZakatCampaignId(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#101919] rounded-2xl border border-white/20 shadow-xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h3 className="text-lg font-bold text-white">{t('selectZakatCalculationTitle')}</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowZakatSelectModal(false);
+                    setPendingZakatCampaignId(null);
+                  }}
+                  className="p-2 rounded-full hover:bg-white/10 text-white"
+                  aria-label={tZakat('closePreview')}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="px-4 pt-3 pb-2 text-sm text-white/70">{t('selectZakatCalculationDescription')}</p>
+              <div className="overflow-y-auto p-4 space-y-2 flex-1">
+                {myZakatsWithRemaining.map((zakat) => (
+                  <button
+                    key={zakat.id}
+                    type="button"
+                    onClick={() => handleSelectZakatForPayment(zakat.id)}
+                    className="w-full text-left p-4 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white transition-colors"
+                  >
+                    <div className="font-medium">
+                      {tZakat('calculationOf', { date: new Date(zakat.calculationDate).toLocaleDateString('fr-FR') })} – {tZakat('zakatForYear', { year: zakat.year })}
+                    </div>
+                    <div className="text-sm text-[#5AB678] mt-1">
+                      {tZakat('zakatToPay')} {formatAmount(zakat.remainingAmount ?? 0)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <PayZakatModal
+        isOpen={showPayZakatModal}
+        onClose={() => {
+          setShowPayZakatModal(false);
+          setPayZakatZakatId(null);
+          setPayZakatCampaignId(null);
+        }}
+        balance={walletBalance}
+        zakatId={payZakatZakatId}
+        initialAmount={payZakatZakatId ? (myZakats.find((z) => z.id === payZakatZakatId)?.remainingAmount ?? undefined) : undefined}
+        accessToken={accessToken ?? null}
+        initialSelectedCampaignId={payZakatCampaignId}
+        onSuccess={() => {
+          if (accessToken) {
+            getMyZakats(accessToken).then((list) => setMyZakats(Array.isArray(list) ? list : []));
+          }
         }}
       />
     </div>
