@@ -8,6 +8,9 @@ import { useRouter } from 'next/navigation';
 import { payZakat } from '@/services/zakat';
 import { getCurrentUser } from '@/services/user';
 import { getActiveCampaignsRaw, type ApiCampaign } from '@/services/campaigns';
+import { generateZakatCertificatePdf, generateZakatCertificatePdfAsBlob } from '@/lib/certificatePdf';
+import { uploadCertificatePdf } from '@/lib/upload';
+import { useTranslations } from 'next-intl';
 
 const STEPS = [
   { id: 1, label: 'Montant' },
@@ -90,6 +93,14 @@ export default function PayZakatModal({
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [previewCampaign, setPreviewCampaign] = useState<ApiCampaign | null>(null);
   const securityCodeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  /** Nom de l'utilisateur (pour le certificat zakat) */
+  const [currentUserName, setCurrentUserName] = useState<string>('');
+  /** Montant effectivement versé au dernier paiement réussi (pour le certificat) */
+  const [successPaymentAmount, setSuccessPaymentAmount] = useState<number>(0);
+  const [downloadingCertificate, setDownloadingCertificate] = useState(false);
+  const [certificateError, setCertificateError] = useState<string | null>(null);
+
+  const t = useTranslations('zakatPage');
 
   /** Solde affiché : API si dispo, sinon prop balance */
   const effectiveBalance = walletBalanceFromApi ?? balance;
@@ -149,6 +160,7 @@ export default function PayZakatModal({
       .then((user) => {
         if (!cancelled) {
           setWalletBalanceFromApi(user?.wallet?.balance ?? 0);
+          setCurrentUserName(user?.name?.trim() ?? '');
         }
       })
       .catch(() => {
@@ -246,12 +258,30 @@ export default function PayZakatModal({
     setIsSubmitting(true);
     const startTime = Date.now();
     try {
+      const selectedCampaign = selectedCampaignId
+        ? zakatEligibleCampaigns.find((c) => c.id === selectedCampaignId)
+        : null;
+      const recipientName = selectedCampaign?.title?.trim() ?? 'Amane Plus';
+      const impactUrl = selectedCampaignId
+        ? `https://amaneplus.ci/campagnes/${selectedCampaignId}`
+        : 'https://amaneplus.ci/zakat';
+
+      const blob = await generateZakatCertificatePdfAsBlob({
+        donorName: currentUserName || 'Utilisateur',
+        recipientName,
+        amount: amountToSend,
+        impactUrl,
+      });
+      const file = new File([blob], 'certificat-zakat.pdf', { type: 'application/pdf' });
+      const certificatUrl = await uploadCertificatePdf(file, accessToken);
+
       await payZakat(accessToken, {
         walletCode: securityCode,
         zakatId,
         amount: amountToSend,
         paymentDate: new Date().toISOString(),
         ...(selectedCampaignId ? { campaignId: selectedCampaignId } : {}),
+        certificatUrl,
       });
       // Affichage du bouton "Envoi en cours..." au moins 2 secondes
       const elapsed = Date.now() - startTime;
@@ -259,6 +289,7 @@ export default function PayZakatModal({
         await new Promise((r) => setTimeout(r, 2000 - elapsed));
       }
       onSuccess?.();
+      setSuccessPaymentAmount(amountToSend);
       setIsSuccess(true);
     } catch (err) {
       setSubmitError(parseApiErrorMessage(err));
@@ -270,6 +301,7 @@ export default function PayZakatModal({
   const handleClose = () => {
     if (isSuccess) {
       setIsSuccess(false);
+      setSuccessPaymentAmount(0);
       setCurrentStep(1);
       setAmount('');
       setSecurityCode('');
@@ -277,12 +309,14 @@ export default function PayZakatModal({
       setStartDate('');
       setFrequency('monthly');
       setSelectedCampaignId(null);
+      setCertificateError(null);
     }
     onClose();
   };
 
   const handleViewHistory = () => {
     setIsSuccess(false);
+    setSuccessPaymentAmount(0);
     setCurrentStep(1);
     setAmount('');
     setSecurityCode('');
@@ -290,8 +324,38 @@ export default function PayZakatModal({
     setStartDate('');
     setFrequency('monthly');
     setSelectedCampaignId(null);
+    setCertificateError(null);
     onClose();
     router.push('/zakat');
+  };
+
+  const handleDownloadZakatCertificate = async () => {
+    const selectedCampaign = selectedCampaignId
+      ? zakatEligibleCampaigns.find((c) => c.id === selectedCampaignId)
+      : null;
+    const recipientName = selectedCampaign?.title?.trim() ?? 'Amane Plus';
+    const impactUrl = selectedCampaignId
+      ? `https://amaneplus.ci/campagnes/${selectedCampaignId}`
+      : 'https://amaneplus.ci/zakat';
+    setCertificateError(null);
+    setDownloadingCertificate(true);
+    try {
+      await generateZakatCertificatePdf(
+        {
+          donorName: currentUserName || 'Utilisateur',
+          recipientName,
+          amount: successPaymentAmount,
+          impactUrl,
+        },
+        'certificat-zakat'
+      );
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : 'Impossible de générer le certificat.';
+      setCertificateError(msg);
+    } finally {
+      setDownloadingCertificate(false);
+    }
   };
 
   // Calculer les détails de la planification
@@ -368,6 +432,24 @@ export default function PayZakatModal({
           <p className="text-white text-base sm:text-lg text-center max-w-md">
             Votre Zakat a été versée. Qu'Allah accepte votre aumône.
           </p>
+
+          {/* Télécharger le certificat zakat */}
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleDownloadZakatCertificate}
+            disabled={downloadingCertificate}
+            className="flex items-center justify-center gap-3 rounded-2xl px-8 py-4 font-semibold border-2 border-dashed transition-opacity min-w-[280px] bg-[#1a2e2a] border-[#66ff99] text-[#66ff99] hover:opacity-90 disabled:opacity-70"
+          >
+            <span>
+              {downloadingCertificate ? t('certificateGenerating') : t('downloadCertificate')}
+            </span>
+          </motion.button>
+          {certificateError && (
+            <p className="text-red-400 text-sm text-center max-w-xs">{certificateError}</p>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
             <motion.button
               whileHover={{ scale: 1.02 }}

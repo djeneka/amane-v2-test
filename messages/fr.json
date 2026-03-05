@@ -235,7 +235,9 @@
     "quote6Text": "Accomplissez la prière et acquittez-vous de la Zakat. Tout bien que vous aurez accompli pour vous-mêmes, vous le retrouverez auprès d'Allah.",
     "quote6Source": "2:110 Coran",
     "quote7Text": "Ô Muhammad, prélève sur leurs biens une aumône qui les purifie et leur permette de prospérer, et invoque sur eux la bénédiction d'Allah. Tes invocations sont pour eux une source de réconfort. Allah est Celui qui entend et qui sait.",
-    "quote7Source": "9:103 Coran"
+    "quote7Source": "9:103 Coran",
+    "downloadCertificate": "Télécharger le certificat",
+    "certificateGenerating": "Génération..."
   },
   "zakatCalculatorModal": {
     "step1": "Mes possessions",

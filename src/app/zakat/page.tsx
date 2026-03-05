@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Calculator, HandCoins, Apple, Play, Trash2, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Calculator, HandCoins, Apple, Play, Trash2, ChevronDown, ChevronUp, Info, FileDown } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useLocale } from '@/components/LocaleProvider';
@@ -11,7 +11,7 @@ import ZakatCalculatorModal from '@/components/ZakatCalculatorModal';
 import PayZakatModal, { type PendingZakatState } from '@/components/PayZakatModal';
 import MakeDepositModal from '@/components/MakeDepositModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMyZakats, deleteZakat, createZakat, PENDING_ZAKAT_STORAGE_KEY, type Zakat, type CreateZakatBody } from '@/services/zakat';
+import { getMyZakats, getMyContributions, deleteZakat, createZakat, PENDING_ZAKAT_STORAGE_KEY, type Zakat, type CreateZakatBody, type ZakatContributionListItem } from '@/services/zakat';
 
 // Composant pour l'icône personnalisée de la main tenant une bourse avec "2,5"
 const ZakatIcon = () => {
@@ -86,7 +86,7 @@ export default function ZakatPage() {
   const t = useTranslations('zakatPage');
   const { locale } = useLocale();
   const router = useRouter();
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
 
   /** Citations et hadiths (traduits) */
   const ZAKAT_QUOTES: { text: string; source: string }[] = [
@@ -113,6 +113,8 @@ export default function ZakatPage() {
   const [zakatToDeleteId, setZakatToDeleteId] = useState<string | null>(null);
   const [expandedZakatIds, setExpandedZakatIds] = useState<Set<string>>(new Set());
   const [openQuoteIndex, setOpenQuoteIndex] = useState<number | null>(null);
+  /** Dernière contribution par zakatId (pour bouton certificat) — clé = zakatId, valeur = contribution la plus récente */
+  const [lastContributionByZakatId, setLastContributionByZakatId] = useState<Record<string, ZakatContributionListItem>>({});
   /** Positions aléatoires des bulles (pourcentages), générées une fois au montage */
   const [bubblePositions, setBubblePositions] = useState<{ top: number; left: number }[]>([]);
 
@@ -156,6 +158,29 @@ export default function ZakatPage() {
     return () => { cancelled = true; };
   }, [accessToken]);
 
+  // Charger les contributions pour dériver la dernière par zakat (certificat)
+  useEffect(() => {
+    if (!accessToken) {
+      setLastContributionByZakatId({});
+      return;
+    }
+    let cancelled = false;
+    getMyContributions(accessToken, { userId: user?.id, page: 1, limit: 20 })
+      .then((list) => {
+        if (cancelled) return;
+        const byZakatId: Record<string, ZakatContributionListItem> = {};
+        const sorted = [...list].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        for (const c of sorted) {
+          if (!byZakatId[c.zakatId]) byZakatId[c.zakatId] = c;
+        }
+        setLastContributionByZakatId(byZakatId);
+      })
+      .catch(() => { if (!cancelled) setLastContributionByZakatId({}); });
+    return () => { cancelled = true; };
+  }, [accessToken, user?.id]);
+
   // Après connexion/inscription : sauvegarder la zakat en attente (calcul ouverte sans être connecté)
   useEffect(() => {
     if (!mounted || !accessToken) return;
@@ -196,6 +221,22 @@ export default function ZakatPage() {
   const refetchZakats = () => {
     if (!accessToken) return;
     getMyZakats(accessToken).then(setMyZakats).catch(() => {});
+  };
+
+  const refetchContributions = () => {
+    if (!accessToken) return;
+    getMyContributions(accessToken, { userId: user?.id, page: 1, limit: 200 })
+      .then((list) => {
+        const byZakatId: Record<string, ZakatContributionListItem> = {};
+        const sorted = [...list].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        for (const c of sorted) {
+          if (!byZakatId[c.zakatId]) byZakatId[c.zakatId] = c;
+        }
+        setLastContributionByZakatId(byZakatId);
+      })
+      .catch(() => setLastContributionByZakatId({}));
   };
 
   const handleZakatCreated = () => {
@@ -440,6 +481,17 @@ export default function ZakatPage() {
                                 {formatAmount(zakat.remainingAmount)} F CFA
                               </span>
                             </div>
+                            {lastContributionByZakatId[zakat.id]?.certificatUrl && (
+                              <a
+                                href={lastContributionByZakatId[zakat.id].certificatUrl!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 w-full py-3 px-6 rounded-3xl border-2 border-dashed border-[#8DD17F] text-[#8DD17F] font-medium transition-colors hover:bg-[#8DD17F]/10"
+                              >
+                                <FileDown size={20} />
+                                <span>{t('downloadCertificate')}</span>
+                              </a>
+                            )}
                             {zakat.remainingAmount > 0 && (
                               <div className="flex gap-4 pt-4">
                                 <button
@@ -621,7 +673,7 @@ export default function ZakatPage() {
         initialAmount={zakatAmountToPay}
         zakatId={zakatIdToPay}
         accessToken={accessToken ?? undefined}
-        onSuccess={refetchZakats}
+        onSuccess={() => { refetchZakats(); refetchContributions(); }}
         onRequestRecharge={(state) => {
           setPendingZakatState(state);
           setIsDonationModalOpen(false);

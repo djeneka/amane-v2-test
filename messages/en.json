@@ -235,7 +235,9 @@
     "quote6Text": "Establish prayer and pay Zakat. Whatever good you send ahead for yourselves, you will find it with Allah.",
     "quote6Source": "2:110 Quran",
     "quote7Text": "O Muhammad, take from their wealth a charity that purifies them and causes them to prosper, and invoke blessings upon them. Your invocations are a source of comfort for them. Allah is All-Hearing, All-Knowing.",
-    "quote7Source": "9:103 Quran"
+    "quote7Source": "9:103 Quran",
+    "downloadCertificate": "Download certificate",
+    "certificateGenerating": "Generating..."
   },
   "zakatCalculatorModal": {
     "step1": "My possessions",

@@ -8,6 +8,7 @@ import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 
 const CERTIFICATE_IMAGE_URL = '/images/Certificat.png';
+const CERTIFICATE_ZAKAT_IMAGE_URL = '/images/Certificat-zakat.png';
 
 /** Dimensions A4 en mm (portrait) */
 const A4_WIDTH = 210;
@@ -119,8 +120,17 @@ export interface CertificateData {
   impactUrl?: string;
 }
 
+/** Options optionnelles pour la génération du certificat (ex. image de fond zakat). */
+export interface CertificateBuildOptions {
+  /** URL de l'image de fond. Par défaut : Certificat.png (don). */
+  backgroundImageUrl?: string;
+}
+
 /** Construit le document PDF du certificat et retourne le jsPDF (pour réutilisation). */
-async function buildCertificateDoc(data: CertificateData): Promise<jsPDF> {
+async function buildCertificateDoc(
+  data: CertificateData,
+  options?: CertificateBuildOptions
+): Promise<jsPDF> {
   const certNumber = generateCertificateNumber();
   const impactUrl =
     data.impactUrl ||
@@ -128,7 +138,8 @@ async function buildCertificateDoc(data: CertificateData): Promise<jsPDF> {
       ? `${window.location.origin}/transactions`
       : 'https://amaneplus.ci/campagnes');
 
-  const imageDataUrl = await loadBackgroundAsJpegDataUrl(CERTIFICATE_IMAGE_URL);
+  const imageUrl = options?.backgroundImageUrl ?? CERTIFICATE_IMAGE_URL;
+  const imageDataUrl = await loadBackgroundAsJpegDataUrl(imageUrl);
   const qrDataUrl = await getQrDataUrl(impactUrl);
 
   const doc = new jsPDF({
@@ -227,5 +238,32 @@ export async function generateCertificatePdf(
   fileName: string = 'certificat-don'
 ): Promise<void> {
   const doc = await buildCertificateDoc(data);
+  doc.save(`${fileName}.pdf`);
+}
+
+/**
+ * Génère le PDF du certificat zakat en Blob (pour upload S3).
+ * Données : donorName = nom du payeur, recipientName = titre campagne ou "Amane Plus", amount, impactUrl = amaneplus.ci/campagnes/id ou amaneplus.ci/zakat.
+ */
+export async function generateZakatCertificatePdfAsBlob(
+  data: CertificateData
+): Promise<Blob> {
+  const doc = await buildCertificateDoc(data, {
+    backgroundImageUrl: CERTIFICATE_ZAKAT_IMAGE_URL,
+  });
+  return doc.output('blob');
+}
+
+/**
+ * Génère le PDF du certificat zakat (image Certificat-zakat.png) et déclenche le téléchargement.
+ * Données : donorName = nom du payeur, recipientName = titre campagne ou "Amane Plus", amount, impactUrl = amaneplus.ci/campagnes/id ou amaneplus.ci/zakat.
+ */
+export async function generateZakatCertificatePdf(
+  data: CertificateData,
+  fileName: string = 'certificat-zakat'
+): Promise<void> {
+  const doc = await buildCertificateDoc(data, {
+    backgroundImageUrl: CERTIFICATE_ZAKAT_IMAGE_URL,
+  });
   doc.save(`${fileName}.pdf`);
 }
