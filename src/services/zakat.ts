@@ -23,14 +23,43 @@ export interface Zakat {
   _count: {
     payments: number;
   };
+  /** URL du certificat de la dernière contribution (PDF S3), si le backend l'expose */
+  lastContributionCertificatUrl?: string | null;
 }
 
-/** Zakat embarquée dans une contribution (réponse payZakat) */
+/** Zakat embarquée dans une contribution (réponse payZakat ou GET contributions) */
 export interface ZakatContributionZakat {
   id: string;
   year: number;
   totalAmount: number;
   remainingAmount: number;
+  calculationDate?: string;
+}
+
+/** Campagne embarquée dans une contribution (GET contributions) */
+export interface ZakatContributionCampaign {
+  id: string;
+  title: string;
+  status: string;
+  currentAmount: number;
+  targetAmount: number;
+}
+
+/** Élément retourné par GET /api/zakat-contributions (liste des contributions du user) */
+export interface ZakatContributionListItem {
+  id: string;
+  transactionId: string;
+  zakatId: string;
+  userId: string;
+  amount: number;
+  paymentDate: string;
+  campaignId: string | null;
+  certificatUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  zakat: ZakatContributionZakat;
+  campaign: ZakatContributionCampaign | null;
+  user: ZakatUser;
 }
 
 /** Réponse POST /api/zakat-contributions (paiement zakat) */
@@ -73,6 +102,8 @@ export interface PayZakatBody {
   paymentDate: string; // ISO 8601, ex. "2026-02-07T00:00:00Z"
   /** Campagne éligible zakat (type ZAKAT ou ZAKAT_SADAQAH) à associer au paiement — facultatif */
   campaignId?: string | null;
+  /** URL du certificat zakat (PDF uploadé sur S3) — facultatif */
+  certificatUrl?: string | null;
 }
 
 /**
@@ -83,6 +114,34 @@ export interface PayZakatBody {
  */
 export async function getMyZakats(accessToken: string): Promise<Zakat[]> {
   const list = await apiGet<Zakat[]>(MY_ZAKATS_URL, { token: accessToken });
+  return Array.isArray(list) ? list : [];
+}
+
+/** Paramètres optionnels pour getMyContributions */
+export interface GetMyContributionsParams {
+  userId?: string;
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * Récupère les contributions zakat de l'utilisateur.
+ * GET /api/zakat-contributions?userId=...&page=1&limit=20
+ * @param accessToken - JWT (Bearer)
+ * @param params - userId (optionnel, peut être déduit du token), page, limit
+ * @returns Liste des contributions (zakat, campaign, certificatUrl, etc.)
+ */
+export async function getMyContributions(
+  accessToken: string,
+  params?: GetMyContributionsParams
+): Promise<ZakatContributionListItem[]> {
+  const search = new URLSearchParams();
+  if (params?.userId) search.set('userId', params.userId);
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  const query = search.toString();
+  const path = query ? `${ZAKAT_CONTRIBUTIONS_URL}?${query}` : ZAKAT_CONTRIBUTIONS_URL;
+  const list = await apiGet<ZakatContributionListItem[]>(path, { token: accessToken });
   return Array.isArray(list) ? list : [];
 }
 
