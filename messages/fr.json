@@ -844,6 +844,8 @@
     "activityNextAria": "Activité suivante",
     "noMedia": "Pas de média",
     "noDetails": "Aucun détail renseigné.",
+    "activityDocuments": "Documents",
+    "downloadDocument": "Télécharger le document",
     "typeZakat": "Zakat",
     "typeSadaqah": "Sadaqah"
   },
@@ -1399,7 +1401,9 @@
       "comingSoon": "Bientôt disponible",
       "comingSoonDesc": "Les actualités et activités seront affichées ici très prochainement.",
       "learnMore": "En savoir plus",
-      "slideAria": "Aller au slide"
+      "slideAria": "Aller au slide",
+      "prevAria": "Activité précédente",
+      "nextAria": "Activité suivante"
     },
     "whyAmane": {
       "title": "Pourquoi choisir Amane+ ?",

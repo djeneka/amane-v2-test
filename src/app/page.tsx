@@ -1375,6 +1375,30 @@ export default function Home() {
           </div>
         ) : (
           <>
+            {activities.length > 1 && (
+              <>
+                <motion.button
+                  type="button"
+                  onClick={() => setCurrentSlide((s) => (s === 0 ? activities.length - 1 : s - 1))}
+                  aria-label={t('activities.prevAria')}
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-white/20 hover:bg-white/35 border border-white/30 text-white transition-colors"
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <ChevronLeft size={28} className="sm:w-8 sm:h-8" />
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={() => setCurrentSlide((s) => (s === activities.length - 1 ? 0 : s + 1))}
+                  aria-label={t('activities.nextAria')}
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-white/20 hover:bg-white/35 border border-white/30 text-white transition-colors"
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <ChevronRight size={28} className="sm:w-8 sm:h-8" />
+                </motion.button>
+              </>
+            )}
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentSlide}
@@ -1384,13 +1408,7 @@ export default function Home() {
                 transition={{ duration: 0.5 }}
                 className="absolute inset-0"
               >
-                {currentActivity.images?.length > 0 ? (
-                  <img
-                    src={currentActivity.images[0]}
-                    alt={currentActivity.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : currentActivity.video ? (
+                {currentActivity.video ? (
                   <video
                     src={currentActivity.video}
                     className="w-full h-full object-cover"
@@ -1398,6 +1416,12 @@ export default function Home() {
                     muted
                     loop
                     playsInline
+                  />
+                ) : currentActivity.images?.length > 0 ? (
+                  <img
+                    src={currentActivity.images[0]}
+                    alt={currentActivity.title}
+                    className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full bg-[#101919]" />

@@ -33,6 +33,12 @@ export interface Campaign {
   duration?: string;
 }
 
+/** Document attaché à une activité (téléchargeable) */
+export interface CampaignActivityDocument {
+  url?: string;
+  label?: string;
+}
+
 /** Une activité d'une campagne (impact, réalisation) */
 export interface CampaignActivity {
   id?: string;
@@ -42,6 +48,7 @@ export interface CampaignActivity {
   result?: string;
   videos?: string[];
   images?: string[];
+  documents?: CampaignActivityDocument[];
 }
 
 export interface User {

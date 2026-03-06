@@ -736,27 +736,7 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                   transition={{ duration: 0.4, delay: 0.06 * (i % 4) }}
                   className="rounded-2xl bg-[#1A1A1A] overflow-hidden flex flex-col cursor-pointer hover:ring-2 hover:ring-[#4DE676]/50 transition-shadow w-full max-w-sm mx-auto"
                 >
-                  <div className="p-4 flex-1">
-                    <h3 className="text-white font-bold text-sm sm:text-base mb-2">{title}</h3>
-                    {lines.length > 0 ? (
-                      <ul className="space-y-1 text-sm text-white/90">
-                        {lines.map((line, j) => (
-                          <li key={j}>
-                            {typeof line === 'string' && line.includes(t('disbursed')) ? (
-                              <span className="text-[#4DE676]">{line}</span>
-                            ) : typeof line === 'string' && isHtmlContent(line) ? (
-                              <span dangerouslySetInnerHTML={{ __html: getHtmlForRender(line) }} />
-                            ) : (
-                              line
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-white/70 text-sm">{t('noDetails')}</p>
-                    )}
-                  </div>
-                  <div className="h-32 sm:h-36 relative bg-[#2a2a2a]">
+                  <div className="h-32 sm:h-36 relative bg-[#2a2a2a] shrink-0">
                     {mediaUrl ? (
                       activity.videos?.length && activity.videos[0] === mediaUrl ? (
                         <video
@@ -778,6 +758,54 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-white/40 text-sm">
                         {t('noMedia')}
+                      </div>
+                    )}
+                    <div className="absolute -top-1 right-2 pointer-events-none" aria-hidden>
+                      <span className="rounded-full bg-black/40 p-1.5">
+                        <Eye className="w-4 h-4 text-[#101919]" />
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4 flex-1">
+                    <h3 className="text-white font-bold text-sm sm:text-base mb-2">{title}</h3>
+                    {lines.length > 0 ? (
+                      <ul className="space-y-1 text-sm text-white/90">
+                        {lines.map((line, j) => (
+                          <li key={j}>
+                            {typeof line === 'string' && line.includes(t('disbursed')) ? (
+                              <span className="text-[#4DE676]">{line}</span>
+                            ) : typeof line === 'string' && isHtmlContent(line) ? (
+                              <span dangerouslySetInnerHTML={{ __html: getHtmlForRender(line) }} />
+                            ) : (
+                              line
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-white/70 text-sm">{t('noDetails')}</p>
+                    )}
+                    {activity.documents && activity.documents.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/10 space-y-1.5">
+                        <span className="text-white/60 text-xs font-medium">{t('activityDocuments')}</span>
+                        {activity.documents.map((doc, k) => (
+                          doc.url ? (
+                            <a
+                              key={k}
+                              href={doc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-2 text-sm text-[#4DE676] hover:text-[#5ff088] transition-colors"
+                              aria-label={t('downloadDocument') + (doc.label ? `: ${doc.label}` : '')}
+                            >
+                              <FileText className="w-4 h-4 shrink-0" />
+                              <span className="truncate">{doc.label || t('downloadDocument')}</span>
+                              <Download className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                            </a>
+                          ) : null
+                        ))}
                       </div>
                     )}
                   </div>
@@ -1134,6 +1162,31 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                     ) : (
                       <p className="text-white/80 leading-relaxed">{selectedTa.result.trim()}</p>
                     )
+                  )}
+                  {selectedActivity.documents && selectedActivity.documents.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-white/80 font-semibold text-sm">{t('activityDocuments')}</h4>
+                      <ul className="space-y-2">
+                        {selectedActivity.documents.map((doc, k) => (
+                          doc.url ? (
+                            <li key={k}>
+                              <a
+                                href={doc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download
+                                className="inline-flex items-center gap-2 text-[#4DE676] hover:text-[#5ff088] transition-colors"
+                                aria-label={t('downloadDocument') + (doc.label ? `: ${doc.label}` : '')}
+                              >
+                                <FileText className="w-4 h-4 shrink-0" />
+                                <span>{doc.label || t('downloadDocument')}</span>
+                                <Download className="w-4 h-4 shrink-0 opacity-80" />
+                              </a>
+                            </li>
+                          ) : null
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               </div>

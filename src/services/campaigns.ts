@@ -1,6 +1,12 @@
 import { apiGet } from '@/lib/api';
 import type { Campaign, CampaignActivity } from '@/data/mockData';
 
+/** Document attaché à une activité (réponse API) */
+export interface ApiActivityDocument {
+  url?: string;
+  label?: string;
+}
+
 /** Activité d'une campagne (réponse API) */
 export interface ApiCampaignActivity {
   id?: string;
@@ -10,6 +16,9 @@ export interface ApiCampaignActivity {
   images?: string[];
   amountSpent?: number;
   result?: string;
+  /** Statut de publication (ex. PUBLISHED) – seules les PUBLISHED sont exposées en section impacts */
+  status?: string;
+  documents?: ApiActivityDocument[];
   [key: string]: unknown;
 }
 
@@ -73,28 +82,36 @@ function mapApiCampaignToCampaign(api: ApiCampaign): Campaign {
   const otherPics = Array.isArray(api.otherPictures)
     ? api.otherPictures.filter((url): url is string => typeof url === 'string' && !!url.trim())
     : [];
-  const activityImages =
-    Array.isArray(api.activities) ?
-      api.activities.flatMap((a) => (Array.isArray(a.images) ? a.images : [])) :
-      [];
+  /** Seules les activités PUBLISHED sont exposées (section impacts + médias campagne) */
+  const publishedActivities = Array.isArray(api.activities)
+    ? api.activities.filter((a) => (a.status ?? '').toUpperCase() === 'PUBLISHED')
+    : [];
+  const activityImages = publishedActivities.flatMap((a) =>
+    Array.isArray(a.images) ? a.images.filter((url): url is string => typeof url === 'string' && !!url.trim()) : []
+  );
   const allImages = [mainImage, ...otherPics, ...activityImages].filter(Boolean);
   const firstVideo =
-    Array.isArray(api.activities) &&
-    api.activities[0]?.videos?.length
-      ? api.activities[0].videos[0]
+    publishedActivities[0]?.videos?.length
+      ? publishedActivities[0].videos[0]
       : undefined;
 
-  const activities: CampaignActivity[] = Array.isArray(api.activities)
-    ? api.activities.map((a) => ({
-        id: typeof a.id === 'string' ? a.id : undefined,
-        title: typeof a.title === 'string' ? a.title : undefined,
-        description: typeof a.description === 'string' ? a.description : undefined,
-        amountSpent: typeof a.amountSpent === 'number' ? a.amountSpent : undefined,
-        result: typeof a.result === 'string' ? a.result : undefined,
-        videos: Array.isArray(a.videos) ? a.videos.filter((v): v is string => typeof v === 'string') : undefined,
-        images: Array.isArray(a.images) ? a.images.filter((v): v is string => typeof v === 'string') : undefined,
-      }))
-    : [];
+  const activities: CampaignActivity[] = publishedActivities.map((a) => {
+    const documents = Array.isArray(a.documents)
+      ? a.documents
+          .filter((d): d is { url: string; label?: string } => typeof d?.url === 'string' && !!d.url.trim())
+          .map((d) => ({ url: d.url!.trim(), label: typeof d.label === 'string' ? d.label.trim() : undefined }))
+      : undefined;
+    return {
+      id: typeof a.id === 'string' ? a.id : undefined,
+      title: typeof a.title === 'string' ? a.title : undefined,
+      description: typeof a.description === 'string' ? a.description : undefined,
+      amountSpent: typeof a.amountSpent === 'number' ? a.amountSpent : undefined,
+      result: typeof a.result === 'string' ? a.result : undefined,
+      videos: Array.isArray(a.videos) ? a.videos.filter((v): v is string => typeof v === 'string') : undefined,
+      images: Array.isArray(a.images) ? a.images.filter((v): v is string => typeof v === 'string') : undefined,
+      documents: documents && documents.length > 0 ? documents : undefined,
+    };
+  });
 
   return {
     id: api.id,
@@ -147,18 +164,14 @@ export async function getActiveCampaigns(options?: { duration?: string }): Promi
 }
 
 /**
- * Récupère une campagne par ID. Utilise d'abord la liste des campagnes actives
- * (même source que la liste) pour éviter les écarts de données, sinon appelle GET /api/campaigns/:id.
+ * Récupère une campagne par ID avec son détail complet (activités, etc.).
+ * Appelle GET /api/campaigns/:id pour avoir le payload complet incluant activities.
  */
 export async function getCampaignById(id: string): Promise<Campaign | null> {
-  const list = await apiGet<ApiCampaign[]>(
-    `/api/campaigns?${new URLSearchParams({ status: 'ACTIVE' }).toString()}`,
-    { cache: 'no-store' }
-  );
-  const inList = Array.isArray(list) ? list.find((c) => c.id === id) : null;
-  if (inList) {
-    return mapApiCampaignToCampaign(inList);
+  try {
+    const campaign = await apiGet<ApiCampaign>(`/api/campaigns/${id}`, { cache: 'no-store' });
+    return campaign ? mapApiCampaignToCampaign(campaign) : null;
+  } catch {
+    return null;
   }
-  const campaign = await apiGet<ApiCampaign>(`/api/campaigns/${id}`, { cache: 'no-store' });
-  return campaign ? mapApiCampaignToCampaign(campaign) : null;
 }
