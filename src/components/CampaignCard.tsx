@@ -49,13 +49,16 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
     setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
   };
 
-  const categoryColors = {
-    urgence: 'bg-red-100 text-red-800',
-    education: 'bg-blue-100 text-blue-800',
-    sante: 'bg-green-100 text-green-800',
-    developpement: 'bg-purple-100 text-purple-800',
-    refugies: 'bg-orange-100 text-orange-800',
-  };
+const categoryColors = {
+  urgence: 'bg-red-100 text-red-800',
+  education: 'bg-blue-100 text-blue-800',
+  sante: 'bg-green-100 text-green-800',
+  developpement: 'bg-purple-100 text-purple-800',
+  refugies: 'bg-orange-100 text-orange-800',
+  'special-ramadan': 'bg-indigo-100 text-indigo-800',
+  'special-tabaski': 'bg-yellow-100 text-yellow-800',
+  autres: 'bg-gray-100 text-gray-800',
+};
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {

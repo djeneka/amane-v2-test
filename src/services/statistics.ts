@@ -112,7 +112,7 @@ export async function getMyRank(options?: {
   const url = `/api/ranking?category=${encodeURIComponent(category)}&page=${page}&limit=${limit}`;
   const raw = await apiGet<{ data?: unknown[]; meta?: { total?: number; page?: number; limit?: number; totalPages?: number } }>(url, { token });
 
-  const data = Array.isArray(raw?.data) ? raw.data : [];
+  const data = (Array.isArray(raw?.data) ? raw.data : []) as Record<string, unknown>[];
   const meta = raw?.meta ?? {};
   const entries: RankingEntry[] = data.map((entry: Record<string, unknown>) => {
     const rawPic = entry.profilePicture;
