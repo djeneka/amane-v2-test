@@ -25,6 +25,17 @@ import type { Campaign, CampaignActivity } from '@/data/mockData';
 
 const TOAST_DURATION_MS = 4000;
 
+/** Retourne l’URL d’embed YouTube si l’URL est une vidéo YouTube, sinon null. */
+function getYoutubeEmbedUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const u = url.trim();
+  const watchMatch = u.match(/(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/);
+  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  const shortMatch = u.match(/(?:youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+  return null;
+}
+
 interface CampaignDetailClientProps {
   campaign: Campaign;
   donorCount?: number;
@@ -739,15 +750,25 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                   <div className="h-32 sm:h-36 relative bg-[#2a2a2a] shrink-0">
                     {mediaUrl ? (
                       activity.videos?.length && activity.videos[0] === mediaUrl ? (
-                        <video
-                          src={mediaUrl}
-                          className="w-full h-full object-cover"
-                          muted
-                          playsInline
-                          autoPlay
-                          loop
-                          preload="metadata"
-                        />
+                        getYoutubeEmbedUrl(mediaUrl) ? (
+                          <iframe
+                            src={`${getYoutubeEmbedUrl(mediaUrl)!}?autoplay=1&mute=1&controls=0&loop=1&playlist=${getYoutubeEmbedUrl(mediaUrl)!.split('/').pop()}`}
+                            title={title}
+                            className="w-full h-full object-cover pointer-events-none"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        ) : (
+                          <video
+                            src={mediaUrl}
+                            className="w-full h-full object-cover"
+                            muted
+                            playsInline
+                            autoPlay
+                            loop
+                            preload="metadata"
+                          />
+                        )
                       ) : (
                         <img
                           src={mediaUrl}
@@ -769,9 +790,9 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                   <div className="p-4 flex-1">
                     <h3 className="text-white font-bold text-sm sm:text-base mb-2">{title}</h3>
                     {lines.length > 0 ? (
-                      <ul className="space-y-1 text-sm text-white/90">
+                      <ul className="space-y-1 text-sm text-white/90 line-clamp-3 overflow-hidden">
                         {lines.map((line, j) => (
-                          <li key={j}>
+                          <li key={j} className="[&:not(:last-child)]:mb-0.5">
                             {typeof line === 'string' && line.includes(t('disbursed')) ? (
                               <span className="text-[#4DE676]">{line}</span>
                             ) : typeof line === 'string' && isHtmlContent(line) ? (
@@ -1069,15 +1090,26 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                       {current && (
                         <div className="absolute inset-0">
                           {current.type === 'video' ? (
-                            <video
-                              key={current.url + activitySlideIndex}
-                              src={current.url}
-                              className="w-full h-full object-contain"
-                              controls
-                              autoPlay
-                              muted={false}
-                              playsInline
-                            />
+                            getYoutubeEmbedUrl(current.url) ? (
+                              <iframe
+                                key={current.url + activitySlideIndex}
+                                src={`${getYoutubeEmbedUrl(current.url)!}?autoplay=1&mute=0&controls=1`}
+                                title={selectedActivity?.title ?? ''}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            ) : (
+                              <video
+                                key={current.url + activitySlideIndex}
+                                src={current.url}
+                                className="w-full h-full object-contain"
+                                controls
+                                autoPlay
+                                muted={false}
+                                playsInline
+                              />
+                            )
                           ) : (
                             <img
                               src={current.url}
