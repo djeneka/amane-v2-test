@@ -31,8 +31,20 @@ import { getMyTransactions, type Transaction } from '@/services/transactions';
 import { getMyZakats, type Zakat } from '@/services/zakat';
 import { getRankForScore } from '@/lib/rankRules';
 import { copyLinkToClipboard } from '@/lib/clipboard';
+import { isHtmlContent, getHtmlForRender } from '@/lib/campaign-html';
 import PayZakatModal from '@/components/PayZakatModal';
 import ZakatCalculatorModal from '@/components/ZakatCalculatorModal';
+
+/** Retourne l’URL d’embed YouTube si l’URL est une vidéo YouTube, sinon null. */
+function getYoutubeEmbedUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const u = url.trim();
+  const watchMatch = u.match(/(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/);
+  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  const shortMatch = u.match(/(?:youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+  return null;
+}
 
 export default function Home() {
   const { isAuthenticated, user, accessToken } = useAuth();
@@ -1408,7 +1420,15 @@ export default function Home() {
                 transition={{ duration: 0.5 }}
                 className="absolute inset-0"
               >
-                {currentActivity.video ? (
+                {getYoutubeEmbedUrl(currentActivity.video) ? (
+                  <iframe
+                    src={`${getYoutubeEmbedUrl(currentActivity.video)!}?autoplay=1&mute=1&controls=1`}
+                    title={currentActivity.title}
+                    className="w-full h-full object-cover pointer-events-none"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : currentActivity.video ? (
                   <video
                     src={currentActivity.video}
                     className="w-full h-full object-cover"
@@ -1442,13 +1462,27 @@ export default function Home() {
                   <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-white">
                     {currentActivity.title}
                   </h2>
-                  <p className="text-lg text-white mb-4 leading-relaxed max-w-2xl mx-auto">
-                    {currentActivity.description}
-                  </p>
-                  {currentActivity.result && (
-                    <p className="text-lg text-white/90 mb-8 leading-relaxed max-w-2xl mx-auto">
-                      {currentActivity.result}
+                  {isHtmlContent(currentActivity.description) ? (
+                    <div
+                      className="text-lg text-white mb-4 leading-relaxed max-w-2xl mx-auto line-clamp-2"
+                      dangerouslySetInnerHTML={{ __html: getHtmlForRender(currentActivity.description) }}
+                    />
+                  ) : (
+                    <p className="text-lg text-white mb-4 leading-relaxed max-w-2xl mx-auto line-clamp-2">
+                      {currentActivity.description}
                     </p>
+                  )}
+                  {currentActivity.result && (
+                    isHtmlContent(currentActivity.result) ? (
+                      <div
+                        className="text-lg text-white/90 mb-8 leading-relaxed max-w-2xl mx-auto line-clamp-2"
+                        dangerouslySetInnerHTML={{ __html: getHtmlForRender(currentActivity.result) }}
+                      />
+                    ) : (
+                      <p className="text-lg text-white/90 mb-8 leading-relaxed max-w-2xl mx-auto line-clamp-2">
+                        {currentActivity.result}
+                      </p>
+                    )
                   )}
                   <Link href={currentActivity.campaignId ? `/campagnes/${currentActivity.campaignId}` : '/#'}>
                     <motion.button
