@@ -113,6 +113,10 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
     campaign.currentAmount > 0
       ? Math.min(100, ((campaign.amountSpent ?? 0) / campaign.currentAmount) * 100)
       : 0;
+  /** Campagne clôturée (objectif atteint) : badge + boutons Donner désactivés */
+  const targetAmountD = campaign.targetAmount ?? 0;
+  const currentAmountD = campaign.currentAmount ?? 0;
+  const isClosed = targetAmountD > 0 && currentAmountD >= targetAmountD;
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -362,8 +366,8 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 </div>
               </div>
 
-              {/* Droite : bouton partager par-dessus l'image */}
-              <div className="absolute top-4 right-4 z-10">
+              {/* Droite : bouton partager par-dessus l'image (descendu si badge Clôturé) */}
+              <div className={`absolute right-4 z-10 ${isClosed ? 'top-14' : 'top-4'}`}>
                 <motion.button
                   type="button"
                   whileHover={{ scale: 1.08 }}
@@ -375,6 +379,22 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                   <Share2 size={20} className="text-white" />
                 </motion.button>
               </div>
+
+              {/* Badge "Clôturé" si objectif atteint */}
+              {isClosed && (
+                <div className="absolute top-3 right-3 z-20 pointer-events-none" aria-label={t('closed')}>
+                  <span
+                    className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                    style={{
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      transform: 'rotate(18deg)',
+                    }}
+                  >
+                    {t('closed')}
+                  </span>
+                </div>
+              )}
 
             </div>
           </motion.div>
@@ -452,24 +472,45 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
                 )}
               </div>
               <div className="flex flex-col items-stretch lg:items-end gap-3 shrink-0">
-                <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleDonateClick}
-                  className="w-full px-8 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-3 transition-all duration-200"
-                  style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
-                >
-                  <span>{t('donate')}</span>
-                  <Image
-                    src="/icons/hand-coin(2).png"
-                    alt=""
-                    width={24}
-                    height={24}
-                    className="object-contain"
-                  />
-                </motion.button>
-                {isZakatEligibleCampaign && hasZakatToPay && (
+                {isClosed ? (
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setToastMessage(t('campaignClosedToast'));
+                      setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                    }}
+                    className="w-full px-8 py-4 rounded-2xl font-bold text-white/90 flex items-center justify-center gap-3 bg-gray-500 cursor-not-allowed"
+                  >
+                    <span>{t('donate')}</span>
+                    <Image
+                      src="/icons/hand-coin(2).png"
+                      alt=""
+                      width={24}
+                      height={24}
+                      className="object-contain opacity-80"
+                    />
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleDonateClick}
+                    className="w-full px-8 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-3 transition-all duration-200"
+                    style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
+                  >
+                    <span>{t('donate')}</span>
+                    <Image
+                      src="/icons/hand-coin(2).png"
+                      alt=""
+                      width={24}
+                      height={24}
+                      className="object-contain"
+                    />
+                  </motion.button>
+                )}
+                {isZakatEligibleCampaign && hasZakatToPay && !isClosed && (
                   <motion.button
                     type="button"
                     whileHover={{ scale: 1.02 }}
@@ -961,23 +1002,44 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
 
           {/* Bouton Donner */}
           <div className="flex justify-center">
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleDonateClick}
-              className="w-1/3 px-8 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-3 transition-all duration-200"
-              style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
-            >
-              <span>{t('donate')}</span>
-              <Image
-                src="/icons/hand-coin(2).png"
-                alt=""
-                width={24}
-                height={24}
-                className="object-contain"
-              />
-            </motion.button>
+            {isClosed ? (
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setToastMessage(t('campaignClosedToast'));
+                  setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                }}
+                className="w-1/3 px-8 py-4 rounded-2xl font-bold text-white/90 flex items-center justify-center gap-3 bg-gray-500 cursor-not-allowed"
+              >
+                <span>{t('donate')}</span>
+                <Image
+                  src="/icons/hand-coin(2).png"
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="object-contain opacity-80"
+                />
+              </motion.button>
+            ) : (
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleDonateClick}
+                className="w-1/3 px-8 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-3 transition-all duration-200"
+                style={{ background: 'linear-gradient(to right, #3AE1B4, #13A98B)' }}
+              >
+                <span>{t('donate')}</span>
+                <Image
+                  src="/icons/hand-coin(2).png"
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="object-contain"
+                />
+              </motion.button>
+            )}
           </div>
         </div>
       </section>

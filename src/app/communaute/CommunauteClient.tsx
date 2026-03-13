@@ -233,12 +233,47 @@ export default function CommunautePage() {
                       <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
                         {currentActivity.title}
                       </h2>
-                      <p className="text-lg text-white/80 mb-6 leading-relaxed">
-                        {currentActivity.description}
-                      </p>
-                      <p className="text-lg text-[#5AB678] font-bold mb-6 leading-relaxed">
-                        {currentActivity.result}
-                      </p>
+                      {currentActivity.description && isHtmlContent(currentActivity.description) ? (
+                        <div
+                          className="text-lg text-white/80 mb-6 leading-relaxed line-clamp-3 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
+                          dangerouslySetInnerHTML={{ __html: getHtmlForRender(currentActivity.description) }}
+                        />
+                      ) : (
+                        <p className="text-lg text-white/80 mb-6 leading-relaxed line-clamp-3">
+                          {currentActivity.description}
+                        </p>
+                      )}
+                      {currentActivity.result && (
+                        isHtmlContent(currentActivity.result) ? (
+                          <div
+                            className="text-lg text-[#5AB678] font-bold mb-6 leading-relaxed line-clamp-3 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
+                            dangerouslySetInnerHTML={{ __html: getHtmlForRender(currentActivity.result) }}
+                          />
+                        ) : (
+                          <p className="text-lg text-[#5AB678] font-bold mb-6 leading-relaxed line-clamp-3">
+                            {currentActivity.result}
+                          </p>
+                        )
+                      )}
+                      {currentActivity.documents && currentActivity.documents.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-white/80 text-sm font-medium mb-2">{t('activityDocuments')}</p>
+                          <ul className="space-y-1">
+                            {currentActivity.documents.map((doc, k) => (
+                              <li key={k}>
+                                <a
+                                  href={doc.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#5AB678] hover:underline text-sm"
+                                >
+                                  {doc.label || t('downloadDocument')}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </motion.div>
                   </AnimatePresence>
                 )}
@@ -383,9 +418,27 @@ export default function CommunautePage() {
                     className="flex transition-transform duration-500 ease-in-out"
                     style={{ transform: `translateX(-${currentCagnotteSlide * 100}%)` }}
                 >
-                    {latestCampaigns.map((campaign) => (
+                    {latestCampaigns.map((campaign) => {
+                      const targetAmountS = campaign.targetAmount ?? 0;
+                      const currentAmountS = campaign.currentAmount ?? 0;
+                      const isClosedS = targetAmountS > 0 && currentAmountS >= targetAmountS;
+                      return (
                     <div key={campaign.id} className="min-w-full px-2">
                         <div className="bg-white rounded-3xl overflow-hidden relative" style={{ height: '600px' }}>
+                        {isClosedS && (
+                          <div className="absolute top-3 right-3 z-20 pointer-events-none" aria-label={t('closed')}>
+                            <span
+                              className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                              style={{
+                                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                transform: 'rotate(18deg)',
+                              }}
+                            >
+                              {t('closed')}
+                            </span>
+                          </div>
+                        )}
                         <div className="absolute inset-0">
                             <img 
                             src={campaign.image || '/images/no-picture.png'} 
@@ -393,7 +446,7 @@ export default function CommunautePage() {
                             className="w-full h-full object-cover"
                             />
                         </div>
-                        <div className="absolute top-4 right-4 z-10">
+                        <div className={`absolute right-4 z-10 ${isClosedS ? 'top-14' : 'top-4'}`}>
                           <motion.button
                             type="button"
                             whileHover={{ scale: 1.08 }}
@@ -429,7 +482,8 @@ export default function CommunautePage() {
                         </div>
                         </div>
                     </div>
-                    ))}
+                    );
+                    })}
                 </div>
                 </div>
 
@@ -532,6 +586,7 @@ export default function CommunautePage() {
                 : (Math.max(currentAmount, amountSpent, 1) > 0 ? (amountSpent / Math.max(currentAmount, amountSpent, 1)) * 100 : 0);
               const categoryConfig = categories.find((c) => c.id === campaign.category);
               const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
+              const isClosed = targetAmount > 0 && currentAmount >= targetAmount;
               return (
                 <motion.div
                   key={campaign.id}
@@ -542,6 +597,20 @@ export default function CommunautePage() {
                 >
                   <Link href={`/campagnes/${campaign.id}`}>
                     <div className="relative rounded-2xl overflow-hidden shadow-lg min-h-[480px] sm:min-h-[520px] flex flex-col">
+                      {isClosed && (
+                        <div className="absolute top-3 right-1 z-20 pointer-events-none" aria-label={t('closed')}>
+                          <span
+                            className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                            style={{
+                              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                              transform: 'rotate(18deg)',
+                            }}
+                          >
+                            {t('closed')}
+                          </span>
+                        </div>
+                      )}
                       <div className="absolute inset-0">
                         <img
                           src={campaign.image || '/images/no-picture.png'}
@@ -551,7 +620,7 @@ export default function CommunautePage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
                       </div>
                       <div className="relative flex flex-col flex-1 p-5 sm:p-6">
-                        <div className="flex justify-between items-start gap-2 mb-3">
+                        <div className={`flex justify-between items-start gap-2 mb-3 ${isClosed ? 'mt-10' : ''}`}>
                           <div className="flex flex-col gap-1.5">
                             <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium w-fit">
                               {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
@@ -622,16 +691,42 @@ export default function CommunautePage() {
                             />
                           </div>
                         </div>
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          className="mt-4 w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
-                          style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
-                        >
-                          <Heart size={18} className="fill-white" />
-                          <span>{t('supportCampaign')}</span>
-                          <ArrowRight size={18} />
-                        </motion.div>
+                        {isClosed ? (
+                          <motion.div
+                            role="button"
+                            tabIndex={0}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setToastMessage(t('campaignClosedToast'));
+                              setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setToastMessage(t('campaignClosedToast'));
+                                setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                              }
+                            }}
+                            className="mt-4 w-full py-3 rounded-2xl font-semibold text-white/90 flex items-center justify-center gap-2 bg-gray-500 cursor-not-allowed"
+                          >
+                            <Heart size={18} className="fill-white/80" />
+                            <span>{t('supportCampaign')}</span>
+                            <ArrowRight size={18} className="text-white/80" />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="mt-4 w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
+                            style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                          >
+                            <Heart size={18} className="fill-white" />
+                            <span>{t('supportCampaign')}</span>
+                            <ArrowRight size={18} />
+                          </motion.div>
+                        )}
                       </div>
                     </div>
                   </Link>
@@ -719,10 +814,36 @@ export default function CommunautePage() {
                 <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-white">
                     {currentActivity?.title}
                 </h2>
-                <p className="text-lg text-white mb-8 leading-relaxed max-w-2xl mx-auto">
+                {currentActivity?.description && isHtmlContent(currentActivity.description) ? (
+                  <div
+                    className="text-lg text-white mb-8 leading-relaxed max-w-2xl mx-auto line-clamp-3 [&_div]:my-0.5 [&_div]:leading-snug [&_div:first-child]:mt-0 [&_div:last-child]:mb-0"
+                    dangerouslySetInnerHTML={{ __html: getHtmlForRender(currentActivity.description) }}
+                  />
+                ) : (
+                  <p className="text-lg text-white mb-8 leading-relaxed max-w-2xl mx-auto line-clamp-3">
                     {currentActivity?.description}
-                </p>
-                <Link href="/don">
+                  </p>
+                )}
+                {currentActivity?.documents && currentActivity.documents.length > 0 && (
+                  <div className="mb-6">
+                    <p className="text-white/80 text-sm font-medium mb-2">{t('activityDocuments')}</p>
+                    <ul className="space-y-1 flex flex-wrap justify-center gap-x-4 gap-y-1">
+                      {currentActivity.documents.map((doc, k) => (
+                        <li key={k}>
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#5AB678] hover:underline text-sm"
+                          >
+                            {doc.label || t('downloadDocument')}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <Link href={currentActivity?.campaignId ? `/campagnes/${currentActivity.campaignId}` : '/don'}>
                     <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
