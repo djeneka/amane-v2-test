@@ -630,6 +630,9 @@ export default function CampagnesPage() {
                 {featuredCampaigns.map((campaign, index) => {
                   const tc = getTranslatedCampaign(campaign);
                   const categoryConfig = categories.find((c) => c.id === campaign.category);
+                  const targetAmountF = campaign.targetAmount ?? 0;
+                  const currentAmountF = campaign.currentAmount ?? 0;
+                  const isClosedF = targetAmountF > 0 && currentAmountF >= targetAmountF;
                   return (
                     <motion.div
                       key={campaign.id}
@@ -645,7 +648,21 @@ export default function CampagnesPage() {
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                          <div className="absolute top-4 right-4 z-10">
+                          {isClosedF && (
+                            <div className="absolute top-3 right-3 z-20 pointer-events-none" aria-label={t('closed')}>
+                              <span
+                                className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                                style={{
+                                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                  transform: 'rotate(18deg)',
+                                }}
+                              >
+                                {t('closed')}
+                              </span>
+                            </div>
+                          )}
+                          <div className={`absolute right-4 z-10 ${isClosedF ? 'top-14' : 'top-4'}`}>
                             <motion.button
                               type="button"
                               whileHover={{ scale: 1.08 }}
@@ -716,6 +733,9 @@ export default function CampagnesPage() {
                         {featuredCampaigns.slice(pageIndex * 3, pageIndex * 3 + 3).map((campaign, index) => {
                           const tc = getTranslatedCampaign(campaign);
                           const categoryConfig = categories.find((c) => c.id === campaign.category);
+                          const targetAmountF = campaign.targetAmount ?? 0;
+                          const currentAmountF = campaign.currentAmount ?? 0;
+                          const isClosedF = targetAmountF > 0 && currentAmountF >= targetAmountF;
                           return (
                             <Link key={campaign.id} href={`/campagnes/${campaign.id}`}>
                               <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
@@ -725,7 +745,21 @@ export default function CampagnesPage() {
                                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                                <div className="absolute top-4 right-4 z-10">
+                                {isClosedF && (
+                                  <div className="absolute top-3 right-3 z-20 pointer-events-none" aria-label={t('closed')}>
+                                    <span
+                                      className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                                      style={{
+                                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                        transform: 'rotate(18deg)',
+                                      }}
+                                    >
+                                      {t('closed')}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className={`absolute right-4 z-10 ${isClosedF ? 'top-14' : 'top-4'}`}>
                                   <motion.button
                                     type="button"
                                     whileHover={{ scale: 1.08 }}
@@ -837,6 +871,9 @@ export default function CampagnesPage() {
                 {ponctualCampaigns.map((campaign, index) => {
                   const tc = getTranslatedCampaign(campaign);
                   const categoryConfig = categories.find((c) => c.id === campaign.category);
+                  const targetAmountP = campaign.targetAmount ?? 0;
+                  const currentAmountP = campaign.currentAmount ?? 0;
+                  const isClosedP = targetAmountP > 0 && currentAmountP >= targetAmountP;
                   return (
                     <motion.div
                       key={campaign.id}
@@ -852,7 +889,21 @@ export default function CampagnesPage() {
                             className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                          <div className="absolute top-4 right-4 z-10">
+                          {isClosedP && (
+                            <div className="absolute top-3 right-3 z-20 pointer-events-none" aria-label={t('closed')}>
+                              <span
+                                className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                                style={{
+                                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                  transform: 'rotate(18deg)',
+                                }}
+                              >
+                                {t('closed')}
+                              </span>
+                            </div>
+                          )}
+                          <div className={`absolute right-4 z-10 ${isClosedP ? 'top-14' : 'top-4'}`}>
                             <motion.button
                               type="button"
                               whileHover={{ scale: 1.08 }}
@@ -923,6 +974,9 @@ export default function CampagnesPage() {
                         {ponctualCampaigns.slice(pageIndex * 3, pageIndex * 3 + 3).map((campaign, index) => {
                           const tc = getTranslatedCampaign(campaign);
                           const categoryConfig = categories.find((c) => c.id === campaign.category);
+                          const targetAmountP = campaign.targetAmount ?? 0;
+                          const currentAmountP = campaign.currentAmount ?? 0;
+                          const isClosedP = targetAmountP > 0 && currentAmountP >= targetAmountP;
                           return (
                             <Link key={campaign.id} href={`/campagnes/${campaign.id}`}>
                               <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
@@ -932,7 +986,21 @@ export default function CampagnesPage() {
                                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                                <div className="absolute top-4 right-4 z-10">
+                                {isClosedP && (
+                                  <div className="absolute top-3 right-3 z-20 pointer-events-none" aria-label={t('closed')}>
+                                    <span
+                                      className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                                      style={{
+                                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                        transform: 'rotate(18deg)',
+                                      }}
+                                    >
+                                      {t('closed')}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className={`absolute right-4 z-10 ${isClosedP ? 'top-14' : 'top-4'}`}>
                                   <motion.button
                                     type="button"
                                     whileHover={{ scale: 1.08 }}
@@ -1053,6 +1121,7 @@ export default function CampagnesPage() {
                   : (Math.max(currentAmount, amountSpent, 1) > 0 ? (amountSpent / Math.max(currentAmount, amountSpent, 1)) * 100 : 0);
                 const categoryConfig = categories.find((c) => c.id === campaign.category);
                 const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
+                const isClosed = targetAmount > 0 && currentAmount >= targetAmount;
                 return (
                   <motion.div
                     key={campaign.id}
@@ -1063,6 +1132,24 @@ export default function CampagnesPage() {
                   >
                     <Link href={`/campagnes/${campaign.id}`}>
                       <div className="relative rounded-2xl overflow-hidden shadow-lg min-h-[480px] sm:min-h-[520px] flex flex-col">
+                        {/* Badge "Clôturé" en ruban oblique (décalé pour éviter le clip du coin arrondi) */}
+                        {isClosed && (
+                          <div
+                            className="absolute top-3 right-1 z-20 pointer-events-none"
+                            aria-label={t('closed')}
+                          >
+                            <span
+                              className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                              style={{
+                                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                transform: 'rotate(18deg)',
+                              }}
+                            >
+                              {t('closed')}
+                            </span>
+                          </div>
+                        )}
                         {/* Image de fond avec overlay */}
                         <div className="absolute inset-0">
                           <img
@@ -1075,8 +1162,8 @@ export default function CampagnesPage() {
 
                         {/* Contenu superposé */}
                         <div className="relative flex flex-col flex-1 p-5 sm:p-6">
-                          {/* Gauche: catégorie + type en dessous. Droite: bouton partage */}
-                          <div className="flex justify-between items-start gap-2 mb-3">
+                          {/* Gauche: catégorie + type en dessous. Droite: bouton partage (descendu si badge Clôturé) */}
+                          <div className={`flex justify-between items-start gap-2 mb-3 ${isClosed ? 'mt-10' : ''}`}>
                             <div className="flex flex-col gap-1.5">
                               <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium w-fit">
                                 {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
@@ -1155,17 +1242,43 @@ export default function CampagnesPage() {
 
                           {/* Boutons CTA */}
                           <div className="mt-4 flex flex-col gap-2">
-                            <motion.div
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              className="w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
-                              style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
-                            >
-                              <Heart size={18} className="fill-white" />
-                              <span>{t('supportCampaign')}</span>
-                              <ArrowRight size={18} />
-                            </motion.div>
-                            {isZakatEligibleCampaign(campaign) && hasZakatToPay && (
+                            {isClosed ? (
+                              <motion.div
+                                role="button"
+                                tabIndex={0}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setToastMessage(t('campaignClosedToast'));
+                                  setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setToastMessage(t('campaignClosedToast'));
+                                    setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                                  }
+                                }}
+                                className="w-full py-3 rounded-2xl font-semibold text-white/90 flex items-center justify-center gap-2 bg-gray-500 cursor-not-allowed"
+                              >
+                                <Heart size={18} className="fill-white/80" />
+                                <span>{t('supportCampaign')}</span>
+                                <ArrowRight size={18} className="text-white/80" />
+                              </motion.div>
+                            ) : (
+                              <motion.div
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
+                                style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                              >
+                                <Heart size={18} className="fill-white" />
+                                <span>{t('supportCampaign')}</span>
+                                <ArrowRight size={18} />
+                              </motion.div>
+                            )}
+                            {isZakatEligibleCampaign(campaign) && hasZakatToPay && !isClosed && (
                               <motion.button
                                 type="button"
                                 whileHover={{ scale: 1.02 }}
@@ -1196,6 +1309,9 @@ export default function CampagnesPage() {
             >
               {filteredCampaigns.map((campaign, index) => {
                 const tc = getTranslatedCampaign(campaign);
+                const targetAmountList = campaign.targetAmount ?? 0;
+                const currentAmountList = campaign.currentAmount ?? 0;
+                const isClosedList = targetAmountList > 0 && currentAmountList >= targetAmountList;
                 return (
                 <motion.div
                   key={campaign.id}
@@ -1214,6 +1330,23 @@ export default function CampagnesPage() {
                             alt={tc.title}
                             className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
                           />
+                          {isClosedList && (
+                            <div
+                              className="absolute top-3 right-2 z-10 pointer-events-none"
+                              aria-label={t('closed')}
+                            >
+                              <span
+                                className="inline-block px-4 py-2.5 text-xs font-bold text-white text-center whitespace-nowrap"
+                                style={{
+                                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                                  transform: 'rotate(18deg)',
+                                }}
+                              >
+                                {t('closed')}
+                              </span>
+                            </div>
+                          )}
                           <div className="absolute top-2 left-2 flex flex-col gap-1">
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold text-white w-fit ${
                               campaign.category === 'urgence' ? 'bg-red-500' :
@@ -1309,7 +1442,7 @@ export default function CampagnesPage() {
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                               <div />
                               <div className="flex flex-wrap items-center gap-2">
-                                {isZakatEligibleCampaign(campaign) && hasZakatToPay && (
+                                {isZakatEligibleCampaign(campaign) && hasZakatToPay && !isClosedList && (
                                   <motion.button
                                     type="button"
                                     whileHover={{ scale: 1.05 }}
@@ -1325,15 +1458,33 @@ export default function CampagnesPage() {
                                     <span>{t('payMyZakat')}</span>
                                   </motion.button>
                                 )}
-                                <motion.button
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
-                                  style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
-                                >
-                                  <span>{t('support')}</span>
-                                  <ArrowRight size={14} className="sm:w-4 sm:h-4" />
-                                </motion.button>
+                                {isClosedList ? (
+                                  <motion.button
+                                    type="button"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setToastMessage(t('campaignClosedToast'));
+                                      setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                                    }}
+                                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-white/90 rounded-xl font-semibold bg-gray-500 cursor-not-allowed flex items-center justify-center gap-2"
+                                  >
+                                    <span>{t('support')}</span>
+                                    <ArrowRight size={14} className="sm:w-4 sm:h-4 text-white/80" />
+                                  </motion.button>
+                                ) : (
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2"
+                                    style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                                  >
+                                    <span>{t('support')}</span>
+                                    <ArrowRight size={14} className="sm:w-4 sm:h-4" />
+                                  </motion.button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1347,7 +1498,7 @@ export default function CampagnesPage() {
                             e.stopPropagation();
                             handleShare(campaign.id, tc.title);
                           }}
-                          className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white flex-shrink-0 self-center sm:self-center"
+                          className={`p-2.5 rounded-full bg-white/20 hover:bg-white/30 border border-white/20 text-white flex-shrink-0 self-center sm:self-center ${isClosedList ? 'sm:mt-10 sm:self-start' : ''}`}
                           aria-label={t('share')}
                         >
                           <Share2 size={20} className="text-white" />

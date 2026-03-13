@@ -760,6 +760,7 @@ export default function TransactionsPage() {
                 : (Math.max(currentAmount, amountSpent, 1) > 0 ? (amountSpent / Math.max(currentAmount, amountSpent, 1)) * 100 : 0);
               const categoryConfig = campaignCategoriesForCards.find((c) => c.id === campaign.category);
               const typeLabel = campaignTypeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
+              const isClosed = targetAmount > 0 && currentAmount >= targetAmount;
               return (
                 <motion.div
                   key={campaign.id}
@@ -770,6 +771,20 @@ export default function TransactionsPage() {
                 >
                   <Link href={`/campagnes/${campaign.id}`}>
                     <div className="relative rounded-2xl overflow-hidden shadow-lg min-h-[480px] sm:min-h-[520px] flex flex-col">
+                      {isClosed && (
+                        <div className="absolute top-3 right-1 z-20 pointer-events-none" aria-label={t('closed')}>
+                          <span
+                            className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                            style={{
+                              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                              transform: 'rotate(18deg)',
+                            }}
+                          >
+                            {t('closed')}
+                          </span>
+                        </div>
+                      )}
                       <div className="absolute inset-0">
                         <img
                           src={campaign.image || '/images/no-picture.png'}
@@ -779,7 +794,7 @@ export default function TransactionsPage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
                       </div>
                       <div className="relative flex flex-col flex-1 p-5 sm:p-6">
-                        <div className="flex justify-between items-start gap-2 mb-3">
+                        <div className={`flex justify-between items-start gap-2 mb-3 ${isClosed ? 'mt-10' : ''}`}>
                           <div className="flex flex-col gap-1.5">
                             <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/20 text-white px-3 py-1.5 rounded-full text-xs font-medium w-fit">
                               {categoryConfig && 'iconSrc' in categoryConfig && categoryConfig.iconSrc ? (
@@ -850,16 +865,42 @@ export default function TransactionsPage() {
                             />
                           </div>
                         </div>
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          className="mt-4 w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
-                          style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
-                        >
-                          <Heart size={18} className="fill-white" />
-                          <span>{t('supportCampaign')}</span>
-                          <ArrowRight size={18} />
-                        </motion.div>
+                        {isClosed ? (
+                          <motion.div
+                            role="button"
+                            tabIndex={0}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setToastMessage(t('campaignClosedToast'));
+                              setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setToastMessage(t('campaignClosedToast'));
+                                setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+                              }
+                            }}
+                            className="mt-4 w-full py-3 rounded-2xl font-semibold text-white/90 flex items-center justify-center gap-2 bg-gray-500 cursor-not-allowed"
+                          >
+                            <Heart size={18} className="fill-white/80" />
+                            <span>{t('supportCampaign')}</span>
+                            <ArrowRight size={18} className="text-white/80" />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="mt-4 w-full py-3 rounded-2xl font-semibold text-white flex items-center justify-center gap-2"
+                            style={{ background: 'linear-gradient(to right, #5AB678, #20B6B3)' }}
+                          >
+                            <Heart size={18} className="fill-white" />
+                            <span>{t('supportCampaign')}</span>
+                            <ArrowRight size={18} />
+                          </motion.div>
+                        )}
                       </div>
                     </div>
                   </Link>

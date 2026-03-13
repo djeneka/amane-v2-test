@@ -22,8 +22,11 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
   const tc = useTranslatedCampaign(campaign);
   const t = useTranslations('campagnes');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const progress = (campaign.targetAmount && campaign.targetAmount > 0)
-    ? (campaign.currentAmount / campaign.targetAmount) * 100
+  const targetAmount = campaign.targetAmount ?? 0;
+  const currentAmount = campaign.currentAmount ?? 0;
+  const isClosed = targetAmount > 0 && currentAmount >= targetAmount;
+  const progress = targetAmount > 0
+    ? Math.min(100, (currentAmount / targetAmount) * 100)
     : 0;
 
   const handleShare = async (e: React.MouseEvent) => {
@@ -105,7 +108,21 @@ const categoryColors = {
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-black/20" />
-            <div className="absolute top-4 right-4 flex items-center gap-2">
+            {isClosed && (
+              <div className="absolute top-3 right-3 z-20 pointer-events-none" aria-label={t('closed')}>
+                <span
+                  className="inline-block px-5 py-2 text-sm font-bold text-white text-center whitespace-nowrap"
+                  style={{
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    transform: 'rotate(18deg)',
+                  }}
+                >
+                  {t('closed')}
+                </span>
+              </div>
+            )}
+            <div className={`absolute right-4 flex items-center gap-2 ${isClosed ? 'top-14' : 'top-4'}`}>
               {campaign.video && (
                 <div className="bg-white/90 backdrop-blur-sm rounded-full p-2">
                   <Play size={16} className="text-gray-700" />
@@ -197,17 +214,41 @@ const categoryColors = {
         </div>
 
         {/* Action Button */}
-        <Link href={`/campagnes/${campaign.id}`}>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
+        {isClosed ? (
+          <motion.div
+            role="button"
+            tabIndex={0}
             whileTap={{ scale: 0.98 }}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+            onClick={() => {
+              setToastMessage(t('campaignClosedToast'));
+              setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setToastMessage(t('campaignClosedToast'));
+                setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+              }
+            }}
+            className="w-full bg-gray-500 cursor-not-allowed text-white/90 font-medium py-3 px-4 rounded-lg flex items-center justify-center space-x-2"
           >
-            <Heart size={16} />
-            <span>Soutenir cette campagne</span>
-            <ArrowRight size={16} />
-          </motion.button>
-        </Link>
+            <Heart size={16} className="fill-white/80" />
+            <span>{t('supportCampaign')}</span>
+            <ArrowRight size={16} className="text-white/80" />
+          </motion.div>
+        ) : (
+          <Link href={`/campagnes/${campaign.id}`}>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+            >
+              <Heart size={16} />
+              <span>{t('supportCampaign')}</span>
+              <ArrowRight size={16} />
+            </motion.button>
+          </Link>
+        )}
       </div>
     </motion.div>
   );
