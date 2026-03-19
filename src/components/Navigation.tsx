@@ -157,7 +157,7 @@ export default function Navigation() {
               {isAuthenticated ? (
                 <div className="w-36 h-36 rounded-lg flex items-center justify-center">
                 <Image 
-                  src="/logo/AMANE%201.svg" 
+                  src="/logo/amane-1.svg" 
                   alt="Amane Logo" 
                   width={48} 
                   height={48}
@@ -167,7 +167,7 @@ export default function Navigation() {
               ) : (
                 <div className="w-36 h-36 rounded-lg flex items-center justify-center">
                   <Image 
-                    src="/logo/AMANE%201.svg" 
+                    src="/logo/amane-1.svg" 
                     alt="Amane Logo" 
                     width={48} 
                     height={48}

@@ -55,7 +55,7 @@ export default function Footer() {
                 />
               <div className="w-16 h-16 rounded-lg flex items-center justify-center">
                   <img 
-                    src="/logo/AMANE%201.svg" 
+                    src="/logo/amane-1.svg" 
                     alt="Amane+ Logo" 
                     className="w-full h-full object-contain"
                   />
