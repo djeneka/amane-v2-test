@@ -18,7 +18,7 @@ export interface Campaign {
   beneficiaries: number;
   /** Liste des libellés bénéficiaires (API: beneficiaries array) */
   beneficiariesList?: string[];
-  status: 'active' | 'completed' | 'upcoming';
+  status: 'active' | 'completed' | 'upcoming' | 'closed';
   /** Campagne mise en avant (API: featured) */
   featured?: boolean;
   /** Budget prévisionnel (API: provisionalBudget) */

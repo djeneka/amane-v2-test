@@ -22,6 +22,7 @@ import { getDonationsStatistics } from '@/services/statistics';
 import { getMyTransactions, type Transaction as ApiTransaction } from '@/services/transactions';
 import { getRankForScore } from '@/lib/rankRules';
 import { copyLinkToClipboard } from '@/lib/clipboard';
+import { isCampaignDonationClosed } from '@/lib/campaign-closed';
 
 /** Format d’affichage d’une transaction (après formatTransaction) */
 interface FormattedTransaction {
@@ -760,7 +761,7 @@ export default function TransactionsPage() {
                 : (Math.max(currentAmount, amountSpent, 1) > 0 ? (amountSpent / Math.max(currentAmount, amountSpent, 1)) * 100 : 0);
               const categoryConfig = campaignCategoriesForCards.find((c) => c.id === campaign.category);
               const typeLabel = campaignTypeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
-              const isClosed = targetAmount > 0 && currentAmount >= targetAmount;
+              const isClosed = isCampaignDonationClosed(campaign);
               return (
                 <motion.div
                   key={campaign.id}

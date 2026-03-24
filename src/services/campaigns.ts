@@ -132,7 +132,13 @@ function mapApiCampaignToCampaign(api: ApiCampaign): Campaign {
     beneficiariesList: Array.isArray(api.beneficiaries)
       ? api.beneficiaries.filter((b): b is string => typeof b === 'string')
       : undefined,
-    status: api.status === 'ACTIVE' ? 'active' : api.status === 'COMPLETED' ? 'completed' : 'upcoming',
+    status: (() => {
+      const s = (api.status ?? '').toUpperCase();
+      if (s === 'ACTIVE') return 'active';
+      if (s === 'COMPLETED') return 'completed';
+      if (s === 'CLOSED') return 'closed';
+      return 'upcoming';
+    })(),
     featured: Boolean(api.featured),
     provisionalBudget: api.provisionalBudget ?? null,
     financialStatement: api.financialStatement ?? null,
