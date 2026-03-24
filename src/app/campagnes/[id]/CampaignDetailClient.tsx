@@ -22,6 +22,7 @@ import { useTranslations } from 'next-intl';
 import { useTranslatedCampaign } from '@/contexts/CampaignTranslationsContext';
 import { isHtmlContent, getHtmlForRender } from '@/lib/campaign-html';
 import type { Campaign, CampaignActivity } from '@/data/mockData';
+import { isCampaignDonationClosed } from '@/lib/campaign-closed';
 
 const TOAST_DURATION_MS = 4000;
 
@@ -113,10 +114,8 @@ export default function CampaignDetailClient({ campaign, donorCount = 0 }: Campa
     campaign.currentAmount > 0
       ? Math.min(100, ((campaign.amountSpent ?? 0) / campaign.currentAmount) * 100)
       : 0;
-  /** Campagne clôturée (objectif atteint) : badge + boutons Donner désactivés */
-  const targetAmountD = campaign.targetAmount ?? 0;
-  const currentAmountD = campaign.currentAmount ?? 0;
-  const isClosed = targetAmountD > 0 && currentAmountD >= targetAmountD;
+  /** Campagne clôturée (objectif atteint ou statut CLOSED) : badge + boutons Donner / Zakat */
+  const isClosed = isCampaignDonationClosed(campaign);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {

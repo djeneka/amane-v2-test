@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Heart, Users, MapPin, Calendar, ArrowRight, Play, Share2 } from 'lucide-react';
 import { Campaign } from '@/data/mockData';
+import { isCampaignDonationClosed } from '@/lib/campaign-closed';
 import { useTranslatedCampaign } from '@/contexts/CampaignTranslationsContext';
 import { useTranslations } from 'next-intl';
 import { copyLinkToClipboard } from '@/lib/clipboard';
@@ -24,7 +25,7 @@ export default function CampaignCard({ campaign, showVideo = false, donorCount }
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const targetAmount = campaign.targetAmount ?? 0;
   const currentAmount = campaign.currentAmount ?? 0;
-  const isClosed = targetAmount > 0 && currentAmount >= targetAmount;
+  const isClosed = isCampaignDonationClosed(campaign);
   const progress = targetAmount > 0
     ? Math.min(100, (currentAmount / targetAmount) * 100)
     : 0;

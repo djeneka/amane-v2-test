@@ -17,6 +17,7 @@ import { getDonationsStatistics } from '@/services/statistics';
 import { getActivities, type Activity } from '@/services/activities';
 import { getHtmlForRender, isHtmlContent } from '@/lib/campaign-html';
 import { copyLinkToClipboard } from '@/lib/clipboard';
+import { isCampaignDonationClosed } from '@/lib/campaign-closed';
 
 const DEFAULT_ACTIVITY_IMAGE = '/images/no-picture.png';
 const DEFAULT_TAKAFUL_IMAGE = '/images/no-picture.png';
@@ -419,9 +420,7 @@ export default function CommunautePage() {
                     style={{ transform: `translateX(-${currentCagnotteSlide * 100}%)` }}
                 >
                     {latestCampaigns.map((campaign) => {
-                      const targetAmountS = campaign.targetAmount ?? 0;
-                      const currentAmountS = campaign.currentAmount ?? 0;
-                      const isClosedS = targetAmountS > 0 && currentAmountS >= targetAmountS;
+                      const isClosedS = isCampaignDonationClosed(campaign);
                       return (
                     <div key={campaign.id} className="min-w-full px-2">
                         <div className="bg-white rounded-3xl overflow-hidden relative" style={{ height: '600px' }}>
@@ -586,7 +585,7 @@ export default function CommunautePage() {
                 : (Math.max(currentAmount, amountSpent, 1) > 0 ? (amountSpent / Math.max(currentAmount, amountSpent, 1)) * 100 : 0);
               const categoryConfig = categories.find((c) => c.id === campaign.category);
               const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
-              const isClosed = targetAmount > 0 && currentAmount >= targetAmount;
+              const isClosed = isCampaignDonationClosed(campaign);
               return (
                 <motion.div
                   key={campaign.id}

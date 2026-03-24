@@ -21,6 +21,7 @@ import { useTranslations } from 'next-intl';
 import { useCampaignTranslations } from '@/contexts/CampaignTranslationsContext';
 import { isHtmlContent, getHtmlForRender } from '@/lib/campaign-html';
 import { copyLinkToClipboard } from '@/lib/clipboard';
+import { isCampaignDonationClosed } from '@/lib/campaign-closed';
 import { getMyZakats, type Zakat } from '@/services/zakat';
 import PayZakatModal from '@/components/PayZakatModal';
 
@@ -630,9 +631,7 @@ export default function CampagnesPage() {
                 {featuredCampaigns.map((campaign, index) => {
                   const tc = getTranslatedCampaign(campaign);
                   const categoryConfig = categories.find((c) => c.id === campaign.category);
-                  const targetAmountF = campaign.targetAmount ?? 0;
-                  const currentAmountF = campaign.currentAmount ?? 0;
-                  const isClosedF = targetAmountF > 0 && currentAmountF >= targetAmountF;
+                  const isClosedF = isCampaignDonationClosed(campaign);
                   return (
                     <motion.div
                       key={campaign.id}
@@ -733,9 +732,7 @@ export default function CampagnesPage() {
                         {featuredCampaigns.slice(pageIndex * 3, pageIndex * 3 + 3).map((campaign, index) => {
                           const tc = getTranslatedCampaign(campaign);
                           const categoryConfig = categories.find((c) => c.id === campaign.category);
-                          const targetAmountF = campaign.targetAmount ?? 0;
-                          const currentAmountF = campaign.currentAmount ?? 0;
-                          const isClosedF = targetAmountF > 0 && currentAmountF >= targetAmountF;
+                          const isClosedF = isCampaignDonationClosed(campaign);
                           return (
                             <Link key={campaign.id} href={`/campagnes/${campaign.id}`}>
                               <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
@@ -871,9 +868,7 @@ export default function CampagnesPage() {
                 {ponctualCampaigns.map((campaign, index) => {
                   const tc = getTranslatedCampaign(campaign);
                   const categoryConfig = categories.find((c) => c.id === campaign.category);
-                  const targetAmountP = campaign.targetAmount ?? 0;
-                  const currentAmountP = campaign.currentAmount ?? 0;
-                  const isClosedP = targetAmountP > 0 && currentAmountP >= targetAmountP;
+                  const isClosedP = isCampaignDonationClosed(campaign);
                   return (
                     <motion.div
                       key={campaign.id}
@@ -974,9 +969,7 @@ export default function CampagnesPage() {
                         {ponctualCampaigns.slice(pageIndex * 3, pageIndex * 3 + 3).map((campaign, index) => {
                           const tc = getTranslatedCampaign(campaign);
                           const categoryConfig = categories.find((c) => c.id === campaign.category);
-                          const targetAmountP = campaign.targetAmount ?? 0;
-                          const currentAmountP = campaign.currentAmount ?? 0;
-                          const isClosedP = targetAmountP > 0 && currentAmountP >= targetAmountP;
+                          const isClosedP = isCampaignDonationClosed(campaign);
                           return (
                             <Link key={campaign.id} href={`/campagnes/${campaign.id}`}>
                               <div className="relative rounded-2xl overflow-hidden shadow-lg aspect-[16/9] min-h-[180px] group">
@@ -1121,7 +1114,7 @@ export default function CampagnesPage() {
                   : (Math.max(currentAmount, amountSpent, 1) > 0 ? (amountSpent / Math.max(currentAmount, amountSpent, 1)) * 100 : 0);
                 const categoryConfig = categories.find((c) => c.id === campaign.category);
                 const typeLabel = typeLabels[campaign.type?.toUpperCase?.() ?? ''] ?? campaign.type ?? 'Sadaqah';
-                const isClosed = targetAmount > 0 && currentAmount >= targetAmount;
+                const isClosed = isCampaignDonationClosed(campaign);
                 return (
                   <motion.div
                     key={campaign.id}
@@ -1311,7 +1304,7 @@ export default function CampagnesPage() {
                 const tc = getTranslatedCampaign(campaign);
                 const targetAmountList = campaign.targetAmount ?? 0;
                 const currentAmountList = campaign.currentAmount ?? 0;
-                const isClosedList = targetAmountList > 0 && currentAmountList >= targetAmountList;
+                const isClosedList = isCampaignDonationClosed(campaign);
                 return (
                 <motion.div
                   key={campaign.id}
