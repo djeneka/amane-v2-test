@@ -17,6 +17,14 @@ export const dynamic = 'force-dynamic';
 const DEFAULT_NEXT = '/';
 const HANDOFF_MAX_AGE_S = 120;
 
+function getPublicOrigin(request: NextRequest): string {
+  const publicBase = process.env.WEB_PUBLIC_BASE_URL?.trim();
+  if (publicBase) {
+    return publicBase.replace(/\/$/, '');
+  }
+  return request.nextUrl.origin;
+}
+
 function sanitizeNext(next: string | null): string {
   if (!next || typeof next !== 'string') return DEFAULT_NEXT;
   const trimmed = next.trim();
@@ -28,7 +36,7 @@ export async function GET(request: NextRequest) {
   const st = request.nextUrl.searchParams.get('st');
   const nextPath = sanitizeNext(request.nextUrl.searchParams.get('next'));
   const secret = getPortalBridgeSecret();
-  const origin = request.nextUrl.origin;
+  const origin = getPublicOrigin(request);
 
   if (!st?.trim()) {
     logPortalBridgeEvent('missing_st', { next_path: nextPath });
