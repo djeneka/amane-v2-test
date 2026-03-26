@@ -9,7 +9,7 @@ import {
   AUTH_STORAGE_USER,
 } from '@/lib/auth-storage-keys';
 
-const DEFAULT_NEXT = '/don';
+const DEFAULT_NEXT = '/';
 
 function sanitizeNext(raw: string | null): string {
   if (!raw || typeof raw !== 'string') return DEFAULT_NEXT;
@@ -32,12 +32,26 @@ function HandoffInner() {
 
     (async () => {
       try {
+        const existingAccessToken = localStorage.getItem(AUTH_STORAGE_ACCESS_TOKEN);
+        const existingRefreshToken = localStorage.getItem(AUTH_STORAGE_REFRESH_TOKEN);
+        if (existingAccessToken && existingRefreshToken) {
+          if (!cancelled) window.location.assign(nextPath);
+          return;
+        }
+
         const res = await fetch('/api/auth/portal-handoff', {
           credentials: 'include',
         });
         const body = await res.json().catch(() => ({}));
 
         if (!res.ok) {
+          const stillHasTokens =
+            Boolean(localStorage.getItem(AUTH_STORAGE_ACCESS_TOKEN)) &&
+            Boolean(localStorage.getItem(AUTH_STORAGE_REFRESH_TOKEN));
+          if (stillHasTokens) {
+            if (!cancelled) window.location.assign(nextPath);
+            return;
+          }
           if (!cancelled) {
             setMessage(
               typeof body.error === 'string'

@@ -29,6 +29,9 @@ export type ConsumeApiResponse = {
   accessToken?: string;
   refreshToken?: string;
   user?: AuthUser;
+  /** Optionnel : pour logs / audit si l’API les expose */
+  expiresAt?: string;
+  ttlSeconds?: number;
 };
 
 function joinApiUrl(base: string, path: string): string {
