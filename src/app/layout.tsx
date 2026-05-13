@@ -8,6 +8,7 @@ import TopBanner from "@/components/TopBanner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LocaleProvider } from "@/components/LocaleProvider";
 import { CampaignTranslationsProvider } from "@/contexts/CampaignTranslationsContext";
+import FloatingChatWidget from "@/components/FloatingChatWidget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -86,6 +87,7 @@ export default function RootLayout({
                 </main>
                 <Footer />
               </div>
+              <FloatingChatWidget />
             </CampaignTranslationsProvider>
           </LocaleProvider>
         </AuthProvider>

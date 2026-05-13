@@ -5,6 +5,25 @@
     "disable": "Disable",
     "open": "Open"
   },
+  "floatingChat": {
+    "title": "Amane+ assistant",
+    "subtitle": "We’re here to help",
+    "welcome": "Hello, I’m the Amane+ virtual assistant.",
+    "choiceAction1": "Type 1 to speak with a human agent on WhatsApp.",
+    "choiceAction2": "Type 2 to continue with the virtual assistant.",
+    "inputPlaceholder": "Type your message…",
+    "inputPlaceholderChoice": "Reply with 1 or 2…",
+    "sendAria": "Send message",
+    "openAria": "Open chat",
+    "closeAria": "Close chat",
+    "invalidChoice": "Please reply with 1 (WhatsApp agent) or 2 (virtual assistant).",
+    "virtualFollowUp": "How can we help you?",
+    "whatsappIntro": "Great. Tap the link below to open WhatsApp and reach an agent.",
+    "whatsappOpenLink": "Open WhatsApp",
+    "whatsappAfterHint": "If nothing opened, use the green link in the message above.",
+    "chatLoading": "Waiting for a reply…",
+    "chatError": "Sorry, something went wrong. Please try again in a moment."
+  },
   "makeDepositModal": {
     "closeAria": "Close",
     "step1Label": "Basic information",
